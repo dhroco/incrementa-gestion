@@ -1,0 +1,848 @@
+.rich-text-editor {
+  border: 1px solid #E3E6E8;
+  border-radius: 4px;
+  background: white;
+}
+
+.toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid #E3E6E8;
+  background: #F7F7F7;
+}
+
+.toolbar-button {
+  padding: 6px 10px;
+  background: #657A8A;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.toolbar-button:hover {
+  opacity: 0.92;
+}
+
+.toolbar-button-active {
+  background: #031B30;
+  opacity: 1;
+}
+
+.editor-content {
+  padding: 12px;
+  min-height: 200px;
+  outline: none;
+}
+
+/* El foco real está en .ProseMirror (contenteditable); sin :global() el módulo CSS
+   transforma “ProseMirror” y el outline:none no aplica → rectángulo de foco del navegador. */
+.editor-content:focus-within {
+  outline: none;
+}
+
+/* TipTap editor styles — :global(.ProseMirror) coincide con el DOM real */
+.editor-content :global(.ProseMirror) {
+  outline: none;
+  box-shadow: none;
+}
+
+.editor-content :global(.ProseMirror:focus),
+.editor-content :global(.ProseMirror:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.editor-content :global(.ProseMirror h1) {
+  font-size: 24px;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror h2) {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 14px 0 6px 0;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror h3) {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 12px 0 4px 0;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror h1 strong),
+.editor-content :global(.ProseMirror h1 b),
+.editor-content :global(.ProseMirror h2 strong),
+.editor-content :global(.ProseMirror h2 b),
+.editor-content :global(.ProseMirror h3 strong),
+.editor-content :global(.ProseMirror h3 b) {
+  font-weight: 700;
+}
+
+.editor-content :global(.ProseMirror p) {
+  margin: 8px 0;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror ul) {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: black;
+}
+
+.editor-content :global(.ProseMirror li) {
+  margin: 4px 0;
+}
+
+.editor-content :global(.ProseMirror strong) {
+  font-weight: 600;
+}
+
+.editor-content :global(.ProseMirror em) {
+  font-style: italic;
+}
+
+/* Gap cursor entre bloques (prosemirror-gapcursor): por defecto línea negra */
+.editor-content :global(.ProseMirror-gapcursor::after) {
+  border-top-color: #657a8a;
+}
+
+/* Variable node styles */
+.variable-wrapper {
+  display: inline;
+}
+
+.variable-node {
+  display: inline-block;
+  background: #F5F5F5;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  font-weight: 400;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.variable-node:hover {
+  background: #E8E8E8;
+  border-color: #D0D0D0;
+}
+
+.variable-node[data-group="trabajador"] {
+  background: #E8F4FD;
+  border-color: #B3D9F2;
+  color: #0366D6;
+}
+
+.variable-node[data-group="empresa"] {
+  background: #F0F9E8;
+  border-color: #D4E8B3;
+  color: #2D5F3B;
+}
+
+.variable-node[data-group="contrato"] {
+  background: #FFF4E8;
+  border-color: #FFE0B3;
+  color: #E65100;
+}
+
+.variable-node[data-group="trabajador"]:hover {
+  background: #D1E9FB;
+  border-color: #93C5F0;
+}
+
+.variable-node[data-group="empresa"]:hover {
+  background: #E5F3D1;
+  border-color: #C4DF93;
+}
+
+.variable-node[data-group="contrato"]:hover {
+  background: #FFE8CC;
+  border-color: #FFD093;
+}
+
+/* Variable Catalog styles */
+.variable-catalog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.variable-catalog {
+  background: white;
+  border-radius: 8px;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.variable-catalog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #E3E6E8;
+}
+
+.variable-catalog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: black;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.variable-catalog-controls {
+  padding: 16px 20px;
+  border-bottom: 1px solid #E3E6E8;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #E3E6E8;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #657A8A;
+}
+
+.group-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.group-filter {
+  padding: 6px 12px;
+  background: #F7F7F7;
+  border: 1px solid #E3E6E8;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.group-filter:hover {
+  background: #E8E8E8;
+}
+
+.group-filter-active {
+  background: #657A8A;
+  color: white;
+  border-color: #657A8A;
+}
+
+.variable-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px 20px 20px;
+}
+
+.variable-item {
+  padding: 12px;
+  border: 1px solid #E3E6E8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.variable-item:hover {
+  background: #F7F7F7;
+  border-color: #657A8A;
+}
+
+.variable-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.variable-label {
+  font-weight: 500;
+  color: black;
+}
+
+.variable-group-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.variable-group-badge:global(.trabajador) {
+  background: #E8F4FD;
+  color: #0366D6;
+}
+
+.variable-group-badge:global(.empresa) {
+  background: #F0F9E8;
+  color: #2D5F3B;
+}
+
+.variable-group-badge:global(.contrato) {
+  background: #FFF4E8;
+  color: #E65100;
+}
+
+.variable-description {
+  font-size: 12px;
+  color: #666;
+}
+
+.no-results {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+}
+
+/* Toolbar divider */
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: #E3E6E8;
+  margin: 0 4px;
+}
+
+/* Variable button in toolbar */
+.toolbar-button.variable-button {
+  background: #0366D6;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.toolbar-button.variable-button:hover {
+  opacity: 0.92;
+}
+
+.rich-text-editor--readonly {
+  min-height: 0;
+}
+
+.rich-text-editor--readonly .editor-content :global(.ProseMirror) {
+  cursor: default;
+  user-select: text;
+}
+
+/* —— Variante “documento”: hoja centrada sobre área de trabajo —— */
+.rich-text-editor--document {
+  border: none;
+  background: transparent;
+}
+
+.document-shell {
+  background: #f0f1f2;
+  border-radius: 4px;
+  padding: 0;
+  border: 1px solid #e3e6e8;
+}
+
+.document-page {
+  width: 720px;
+  margin: 0;
+  background: #fff;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(3, 27, 48, 0.07);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Sensación de hoja tamaño carta (alto aprox a 96dpi) */
+  min-height: 1056px;
+}
+
+.toolbar-document {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e3e6e8;
+  background: #fafafa;
+  width: 100%;
+  border: none;
+  box-shadow: 0 2px 8px rgba(3, 27, 48, 0.06);
+}
+
+.toolbar-document-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-document-title {
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  padding: 0 6px;
+}
+
+.toolbar-document-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-document-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  background: transparent;
+  color: #031b30;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.toolbar-document-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-document-button-active {
+  background: rgba(101, 122, 138, 0.22);
+  color: #031b30;
+  border-color: rgba(101, 122, 138, 0.45);
+}
+
+.toolbar-document-divider {
+  width: 1px;
+  height: 22px;
+  background: #e3e6e8;
+  margin: 0 4px;
+}
+
+.toolbar-document-variable {
+  margin-left: 4px;
+  padding: 0 12px;
+  border: 1px solid #657a8a;
+  background: #fff;
+  color: #657a8a;
+  font-weight: 600;
+}
+
+.toolbar-document-variable:hover {
+  background: rgba(101, 122, 138, 0.08);
+}
+
+.toolbar-document-bold {
+  font-weight: 700;
+}
+
+.toolbar-document-italic {
+  font-style: italic;
+}
+
+.toolbar-document-underline {
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.toolbar-document-align-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.toolbar-document-listicon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.toolbar-document-listicon-dot {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.toolbar-document-listicon-num {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.toolbar-document-listicon-lines {
+  font-size: 14px;
+  letter-spacing: -1px;
+  opacity: 0.9;
+}
+
+.toolbar-document-zoom {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+.toolbar-document-zoom-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: #031b30;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.toolbar-document-zoom-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.toolbar-document-zoom-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-document-zoom-pill {
+  height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  color: #031b30;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.toolbar-document-zoom-pill:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.document-zoom-viewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  /* Mantener el contenedor estable y hacer scroll interno sobre la hoja */
+  max-height: 720px;
+  padding: 12px;
+}
+
+.document-zoom-stage {
+  width: max-content;
+  transform-origin: top center;
+  margin: 0 auto;
+}
+
+.rich-text-editor--document .editor-content {
+  padding: 48px 28px 36px;
+  min-height: 360px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: var(--font-family-clause-editor);
+}
+
+.rich-text-editor--document .editor-content :global(.ProseMirror) {
+  min-height: 320px;
+  font-family: var(--font-family-clause-editor);
+}
+
+.rich-text-editor--document .editor-content :global(.ProseMirror h1) {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.rich-text-editor--document .editor-content :global(.ProseMirror h2) {
+  font-size: 18px;
+  margin: 16px 0 8px 0;
+}
+
+.rich-text-editor--document .editor-content :global(.ProseMirror h3) {
+  font-size: 16px;
+  margin: 14px 0 6px 0;
+}
+
+.rich-text-editor--document .editor-content :global(.ProseMirror p) {
+  margin: 8px 0;
+}
+
+.rich-text-editor--document .variable-node {
+  font-family: var(--font-family-clause-editor);
+}
+
+.embedded-clause-wrapper {
+  margin: 8px 0;
+}
+
+.embedded-clause-block {
+  border: 1px solid #E3E6E8;
+  background: #F0F1F2;
+  border-radius: 4px;
+  padding: 8px 10px;
+  /* Tamaño de cuerpo/títulos del contenido: ver .embedded-clause-preview-editor (alinea con el documento) */
+  color: #000000;
+  /* El bloque solo crece con su contenido (sin estirar altura vacía) */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Metadato: no competir visualmente con el cuerpo de la cláusula (negro #000) */
+.embedded-clause-block__heading {
+  font-size: 11px;
+  font-weight: 600;
+  color: #657a8a;
+  margin: 0 0 6px 0;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+}
+
+.embedded-clause-block__missing {
+  font-size: 12px;
+  color: #657a8a;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+/* Contenedor del texto de la cláusula: sin caja blanca; mismo fondo gris que .embedded-clause-block */
+.embedded-clause-preview-wrap {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.embedded-clause-preview-editor {
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
+.embedded-clause-preview-editor :global(.ProseMirror) {
+  outline: none;
+  min-height: 0 !important;
+  height: auto;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror p) {
+  margin: 0;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror p + p) {
+  margin-top: 6px;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror > *:first-child) {
+  margin-top: 0;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror > *:last-child) {
+  margin-bottom: 0;
+}
+
+/* Tipografía del cuerpo incrustado = misma escala que el editor principal (variante default, sin “document”) */
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror) {
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: var(--font-family-clause-editor);
+}
+
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h1) {
+  font-size: 24px;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+}
+
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h2) {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 14px 0 6px 0;
+}
+
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h3) {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 12px 0 4px 0;
+}
+
+.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror p) {
+  margin: 8px 0;
+}
+
+/* Variante documento (templates estándar, cláusulas en “hoja”): mismos valores que .rich-text-editor--document .editor-content */
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror) {
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: var(--font-family-clause-editor);
+}
+
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h1) {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h2) {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+}
+
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h3) {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 14px 0 6px 0;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror h1 strong),
+.embedded-clause-preview-editor :global(.ProseMirror h1 b),
+.embedded-clause-preview-editor :global(.ProseMirror h2 strong),
+.embedded-clause-preview-editor :global(.ProseMirror h2 b),
+.embedded-clause-preview-editor :global(.ProseMirror h3 strong),
+.embedded-clause-preview-editor :global(.ProseMirror h3 b) {
+  font-weight: 700;
+}
+
+.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror p) {
+  margin: 8px 0;
+}
+
+.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root ul),
+.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root ol) {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.embedded-clause-block__action {
+  display: block;
+  font-size: 12px;
+  padding: 0;
+  margin-top: 6px;
+  border: none;
+  background: none;
+  color: #194166;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.embedded-clause-block__action:hover {
+  opacity: 0.9;
+}
+
+.embedded-clause-catalog-body {
+  padding: 12px 16px 16px;
+}
+
+.embedded-clause-catalog-label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #000000;
+}
+
+.embedded-clause-select {
+  width: 100%;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #E3E6E8;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.embedded-clause-catalog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.embedded-clause-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 8px;
+  border-bottom: 1px solid #E3E6E8;
+  background: #fafbfc;
+}
+
+.embedded-clause-tab {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: #4a5b66;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.embedded-clause-tab:hover {
+  color: #031B30;
+  background: #f0f2f3;
+}
+
+.embedded-clause-tab--active {
+  color: #031B30;
+  border-bottom-color: #657A8A;
+  background: #fff;
+}

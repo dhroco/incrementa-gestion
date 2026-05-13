@@ -1,0 +1,1121 @@
+.clause-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+label.clause-field,
+.clause-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clause-field > span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+}
+
+/* Estado + checkbox + "Activo" en una sola línea, misma altura visual */
+.clause-field--estado-inline {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.clause-label--estado {
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+}
+
+.clause-estado-activo {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  color: #000;
+}
+
+.clause-estado-activo input[type='checkbox'] {
+  margin: 0;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.clause-estado-activo.clause-estado-activo--readonly {
+  cursor: default;
+}
+
+.clause-estado-activo.clause-estado-activo--readonly input[type='checkbox'] {
+  cursor: default;
+}
+
+.employee-form-panel .clause-estado-activo--readonly input[type='checkbox'][disabled] {
+  opacity: 1;
+  accent-color: #657a8a;
+}
+
+/* Filas de empresas asignadas (contador) en modo solo lectura: mismo layout que Crear/Editar */
+.clause-company-assign-row--readonly {
+  cursor: default;
+}
+
+.clause-company-assign-row--readonly input[type='checkbox'] {
+  margin: 0;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  cursor: default;
+}
+
+/* En listado de cláusulas universales, el título debe verse regular (no bold) */
+.clause-universal-list-page .ph-title {
+  font-weight: 400;
+}
+
+.clause-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clause-form-row--audit-four {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .clause-form-row--audit-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.clause-form-row--audit-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .clause-form-row--audit-three {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Título + Código en una sola fila (desktop), apilado en móvil */
+.clause-form-row--two-col {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.clause-form-row--two-col > .clause-form-col:first-child {
+  flex: 2 1 0;
+}
+
+.clause-form-row--two-col > .clause-form-col:not(:first-child) {
+  flex: 1 1 0;
+}
+
+/* Dos columnas iguales (formulario contador: correo/nombre, teléfono/RUT) */
+.clause-form-row--two-equal {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.clause-form-row--two-equal > .clause-form-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Título (2x) + Código + Estado (desktop), apilado en móvil */
+.clause-form-row--three-col {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.clause-form-row--three-col > .clause-form-col:first-child {
+  flex: 2 1 0;
+}
+
+.clause-form-row--three-col > .clause-form-col:not(:first-child) {
+  flex: 1 1 0;
+}
+
+.clause-form-col {
+  flex: 1 1 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clause-form-row--three-equal {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.clause-form-row--three-equal > .clause-form-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .clause-form-row--two-col {
+    flex-direction: column;
+  }
+  .clause-form-row--two-equal {
+    flex-direction: column;
+  }
+  .clause-form-row--three-col {
+    flex-direction: column;
+  }
+  .clause-form-row--three-equal {
+    flex-direction: column;
+  }
+}
+
+/* Delimitador sutil del contenedor blanco del formulario */
+.clause-card {
+  border: 1px solid #e3e6e8;
+}
+
+/* El editor “documento” aporta su propio fondo (#F0F1F2); evitamos doble marco */
+.clause-form-row--editor .clause-label {
+  margin-bottom: 2px;
+}
+
+.clause-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+}
+
+.clause-input,
+.clause-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-family-base);
+  line-height: 1.4;
+  outline: none;
+  background: #fff;
+}
+
+/* Mayor especificidad que `.clause-input` solo: el fondo blanco iba después y lo pisaba */
+.clause-input.clause-input--readonly,
+.clause-textarea.clause-textarea--readonly {
+  background: var(--color-form-field-readonly-bg);
+  color: var(--color-form-field-readonly-text);
+  cursor: default;
+  border-color: var(--color-form-field-readonly-border);
+}
+
+.clause-textarea {
+  resize: vertical;
+}
+
+.clause-error {
+  padding: 10px;
+  border: 1px solid #e3e6e8;
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+}
+
+.clause-success {
+  padding: 10px;
+  border: 1px solid #e3e6e8;
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+}
+
+.clause-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.clause-button {
+  background: #657a8a;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.clause-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.clause-button--secondary {
+  background: #fff;
+  color: #031b30;
+  border: 1px solid #e3e6e8;
+}
+
+.clause-button--secondary:hover:not(:disabled) {
+  background: #f7f7f7;
+}
+
+.clause-form-section {
+  border: 1px solid #e3e6e8;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Empresa: secciones solo con separadores (sin caja) */
+.clause-form-section--separated {
+  border: none;
+  background: transparent;
+  padding: 0;
+  gap: 8px;
+}
+
+.clause-form-section--separated .clause-form-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.company-form-section-rule {
+  border: 0;
+  border-top: 1px solid #e3e6e8;
+  margin: 0;
+  width: 100%;
+}
+
+/*
+ * Regla + tabla sucursales: combinar con `.clause-form-section--separated` en el JSX
+ * para el mismo gap (8px) regla → título que en Domicilio (FormSection).
+ */
+.company-form-branches-block > .company-form-section-rule {
+  flex-shrink: 0;
+}
+
+.clause-form-section-title {
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+}
+
+/* Formulario trabajador: caja blanca y columnas que no desbordan el grid */
+.employee-trabajador-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.employee-trabajador-form-actions {
+  margin-top: 8px;
+}
+
+.employee-form-panel .clause-line--hint {
+  color: #5a6b76;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Vista trabajador (solo lectura): mismo aspecto que .clause-input--readonly; texto multilínea p. ej. cargo + descripción */
+.clause-readonly-box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--color-form-field-readonly-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-family-base);
+  line-height: 1.4;
+  background: var(--color-form-field-readonly-bg);
+  color: var(--color-form-field-readonly-text);
+  cursor: default;
+  min-height: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.clause-readonly-box--inline {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.clause-readonly-box--inline .clause-line--hint {
+  margin-top: 0;
+  width: 100%;
+  padding-left: 0;
+  flex-basis: 100%;
+}
+
+.employee-form-panel .clause-form-row--employee-id .clause-form-col,
+.employee-form-panel .clause-form-row--audit-four .clause-form-col,
+.employee-form-panel .clause-form-row--three-equal .clause-form-col,
+.employee-form-panel .clause-form-row--address-line .clause-form-col,
+.employee-form-panel .clause-form-row--two-equal .clause-form-col {
+  min-width: 0;
+}
+
+.employee-form-panel .clause-form-section-title:first-of-type {
+  margin-top: 0;
+}
+
+/* Fila identificación: nombre (más ancho) + RUT + correo */
+.clause-form-row--employee-id {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .clause-form-row--employee-id {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dirección (más ancho) + Comuna + Ciudad */
+.clause-form-row--address-line {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .clause-form-row--address-line {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Remuneraciones + Previsión: un solo grid; un solo separador vertical (columna 4, filas 1–3) */
+.employee-remuneraciones-block {
+  width: 100%;
+}
+
+.employee-remuneraciones-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 1px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 10px 16px;
+  align-items: start;
+  margin-top: 4px;
+}
+
+.employee-remuneraciones-grid .clause-form-section-title {
+  margin: 0;
+  padding: 0;
+  line-height: 1.25;
+}
+
+.employee-remuneraciones-grid__title-rem {
+  grid-column: 1 / 4;
+  grid-row: 1;
+  align-self: end;
+}
+
+.employee-remuneraciones-grid__title-prev {
+  grid-column: 5;
+  grid-row: 1;
+  min-width: 0;
+  align-self: end;
+}
+
+.employee-remuneraciones-grid__vbar {
+  grid-column: 4;
+  grid-row: 1 / 4;
+  width: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  justify-self: center;
+  background: #e3e6e8;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.employee-remuneraciones-grid .clause-form-col {
+  min-width: 0;
+}
+
+.employee-remuneraciones-grid__c1r1 {
+  grid-column: 1;
+  grid-row: 2;
+}
+.employee-remuneraciones-grid__c2r1 {
+  grid-column: 2;
+  grid-row: 2;
+}
+.employee-remuneraciones-grid__c3r1 {
+  grid-column: 3;
+  grid-row: 2;
+}
+.employee-remuneraciones-grid__c1r2 {
+  grid-column: 1;
+  grid-row: 3;
+}
+.employee-remuneraciones-grid__c2r2 {
+  grid-column: 2;
+  grid-row: 3;
+}
+.employee-remuneraciones-grid__c3r2 {
+  grid-column: 3;
+  grid-row: 3;
+}
+.employee-remuneraciones-grid__c5r1 {
+  grid-column: 5;
+  grid-row: 2;
+}
+.employee-remuneraciones-grid__c5r2 {
+  grid-column: 5;
+  grid-row: 3;
+}
+
+@media (max-width: 800px) {
+  .employee-remuneraciones-grid {
+    display: block;
+  }
+
+  .employee-remuneraciones-grid__title-prev {
+    border-top: 1px solid #e3e6e8;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .employee-remuneraciones-grid__vbar {
+    display: block;
+    grid-column: unset;
+    grid-row: unset;
+    width: 100%;
+    height: 1px;
+    min-height: 0;
+    margin: 4px 0 10px 0;
+    background: #e3e6e8;
+  }
+
+  .employee-remuneraciones-grid__c1r1,
+  .employee-remuneraciones-grid__c2r1,
+  .employee-remuneraciones-grid__c3r1,
+  .employee-remuneraciones-grid__c1r2,
+  .employee-remuneraciones-grid__c2r2,
+  .employee-remuneraciones-grid__c5r1 {
+    margin-bottom: 10px;
+  }
+
+  .employee-remuneraciones-grid__c3r2 {
+    margin-bottom: 0;
+  }
+
+  .employee-remuneraciones-grid__c5r2 {
+    margin-bottom: 0;
+  }
+}
+
+.clause-form-section-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.company-branch-editor {
+  border: 1px solid #e3e6e8;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.company-branch-editor--separated {
+  border: none;
+  background: transparent;
+  padding: 0;
+  gap: 8px;
+  margin-top: 0;
+}
+
+/* Cabecera de empresa (solo lectura) en pantalla de sucursal */
+.company-branch-work-empresa-context {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e3e6e8;
+}
+
+.company-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.company-branch-card {
+  border: 1px solid #e5e7e9;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Empresa: segunda fila (Giro + Correo + Teléfono) */
+.company-form-level2 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .company-form-level2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Empresa: Representantes 1 y 2 al mismo nivel, separador vertical */
+.company-form-rep-row-with-vrule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+}
+
+.company-form-rep-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.company-form-rep-vrule {
+  width: 0;
+  align-self: stretch;
+  border-left: 1px solid #e3e6e8;
+  margin: 0 12px;
+}
+
+@media (max-width: 900px) {
+  .company-form-rep-row-with-vrule {
+    grid-template-columns: 1fr;
+  }
+
+  .company-form-rep-vrule {
+    width: 100%;
+    height: 0;
+    border-left: none;
+    border-top: 1px solid #e3e6e8;
+    margin: 10px 0;
+  }
+}
+
+.company-form-rep-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .company-form-rep-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tres columnas iguales (Comuna / Ciudad / Región) */
+.clause-form-row--three-equal {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .clause-form-row--three-equal {
+    grid-template-columns: 1fr;
+  }
+}
+
+.company-branch-table-wrap {
+  margin-top: 0;
+}
+
+.company-branch-name-link {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  color: #031b30;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.company-branch-name-link:hover {
+  opacity: 0.85;
+}
+
+.clause-view-field {
+  font-size: 13px;
+  color: #000;
+  padding: 8px 0;
+  line-height: 1.4;
+}
+
+/* Vista: reducir altura vertical para mayor proporción */
+.clause-universal-view-page .clause-form {
+  gap: 8px;
+}
+
+.clause-universal-view-page .clause-view-field {
+  padding:  2px 0;
+}
+
+.clause-universal-view-page .clause-view-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  column-gap: 8px;
+  align-items: start;
+}
+
+.clause-universal-view-page .clause-view-row .clause-label {
+  padding: 2px 0;
+}
+
+/* En vista, separar un poco más el bloque "Contenido" del bloque superior */
+.clause-universal-view-page .clause-form-row--editor {
+  margin-top: 8px;
+}
+
+.clause-universal-view-page .clause-form-row--editor .clause-label {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 700px) {
+  .clause-universal-view-page .clause-view-row {
+    grid-template-columns: 1fr;
+  }
+  .clause-universal-view-page .clause-view-row .clause-label {
+    padding-bottom: 0;
+  }
+}
+
+.clause-view-field--multiline {
+  white-space: pre-wrap;
+}
+
+.clause-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.accountant-list-cell-companies {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Barra de navegación local (debajo del subheader del shell) */
+.clause-local-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Dentro de ph-local-toolbar: ocupar ancho completo para alinear Volver / Guardar */
+.accountant-form-toolbar {
+  flex: 1;
+  min-width: 0;
+}
+
+.clause-local-toolbar__left,
+.clause-local-toolbar__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clause-nav-button {
+  font-size: 13px;
+  font-family: inherit;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid #e3e6e8;
+  background: #fff;
+  color: #031b30;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.clause-nav-button__icon {
+  display: block;
+}
+
+.clause-nav-button:not(.clause-nav-button--primary):hover:not(:disabled) {
+  background: #f7f7f7;
+}
+
+.clause-nav-button--primary {
+  background: #657a8a;
+  color: #fff;
+  border-color: #657a8a;
+}
+
+.clause-nav-button--danger {
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.clause-nav-button--danger:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.clause-nav-button--primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+/* Modal (confirmaciones) */
+.gc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 27, 48, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.gc-modal {
+  width: min(520px, 100%);
+  background: #fff;
+  border: 1px solid #e3e6e8;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.gc-modal__header {
+  padding: 14px 16px 6px;
+}
+
+.gc-modal__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #031b30;
+}
+
+.gc-modal__body {
+  padding: 0 16px 14px;
+  font-size: 13px;
+  color: #031b30;
+  line-height: 1.4;
+}
+
+.gc-modal__footer {
+  padding: 12px 16px 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.clause-list-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clause-list-intro {
+  margin: 0;
+  font-size: 13px;
+  color: #000;
+  max-width: 720px;
+  line-height: 1.4;
+}
+
+/* Usuarios plataforma: intro y buscador como un solo bloque (sin doble margen + gap) */
+.clause-platform-users-list .clause-list-card > .clause-list-intro + .clause-list-toolbar {
+  margin-top: -4px;
+}
+
+.clause-list-toolbar--row {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.clause-list-search-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 280px;
+  min-width: 200px;
+}
+
+.clause-list-search-input {
+  max-width: none;
+  width: 100%;
+}
+
+.clause-list-loading {
+  font-size: 13px;
+  color: #000;
+}
+
+.clause-list-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+}
+
+.clause-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+
+.clause-list-table th,
+.clause-list-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e3e6e8;
+  vertical-align: top;
+}
+
+.clause-list-table th {
+  font-weight: 600;
+  background: #f7f7f7;
+  color: #000;
+}
+
+/* Resize/sort helpers (no visual changes by default) */
+.clause-list-th {
+  position: relative;
+  user-select: none;
+}
+
+.clause-list-th-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.clause-list-th-button:focus-visible {
+  outline: 2px solid rgba(101, 122, 138, 0.45);
+  outline-offset: 2px;
+}
+
+.clause-list-th-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.clause-list-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clause-list-empty {
+  text-align: center;
+  color: #666;
+  padding: 24px 12px !important;
+}
+
+.clause-list-col-actions {
+  white-space: nowrap;
+  width: 1%;
+  vertical-align: middle;
+}
+
+/* Ver + Editar (u otras acciones) en una sola línea, misma altura visual */
+.clause-list-actions-group {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.3;
+}
+
+.clause-list-actions-group .clause-link-button {
+  margin: 0;
+  padding: 0;
+  align-self: center;
+}
+
+.clause-link-button {
+  background: none;
+  border: none;
+  color: var(--color-selection);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-right: 4px;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.clause-link-button:hover {
+  color: var(--color-main-headerbar);
+}
+
+/* Panel colapsable: metadatos cláusula / plantilla (openspec: collapsible-metadata-clauses-templates-readonly-token) */
+.clause-metadata-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.clause-metadata-panel__bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 0;
+  padding: 0 0 0 8px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+}
+
+.clause-metadata-panel__bar--hidden {
+  display: none !important;
+}
+
+.clause-metadata-panel__summary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 600;
+  color: #000;
+}
+
+.clause-metadata-panel__code,
+.clause-metadata-panel__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.clause-metadata-panel__sep {
+  flex-shrink: 0;
+  color: #657a8a;
+  font-weight: 600;
+}
+
+.clause-metadata-panel__toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #031b30;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.clause-metadata-panel__toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #d0d5d9;
+}
+
+.clause-metadata-panel__body-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.clause-metadata-panel__body-wrap[hidden] {
+  display: none !important;
+}
+
+.clause-metadata-panel__header {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0;
+  min-height: 0;
+  border-bottom: 1px solid #e3e6e8;
+  background: #fff;
+}
+
+.clause-metadata-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+

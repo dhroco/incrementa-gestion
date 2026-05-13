@@ -1,0 +1,110 @@
+.ph-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Debajo del AppSubHeader: acciones de página (p. ej. Volver) alineadas a la izquierda */
+.ph-local-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ph-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ph-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+}
+
+.ph-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  opacity: 0.85;
+}
+
+.ph-under-construction {
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  padding: 12px;
+}
+
+.ph-toolbar {
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.ph-panel {
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  padding: 12px;
+}
+
+.ph-panel__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 6px 0;
+}
+
+.ph-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .ph-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ph-card {
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  padding: 12px;
+}
+
+.ph-card__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 6px 0;
+}
+
+.ph-card__value {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--color-text-dark);
+}
+
+.ph-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ph-table__th {
+  text-align: left;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  padding: 6px;
+  border-bottom: 1px solid var(--color-table-lines);
+}
+
+.ph-table__td {
+  padding: 6px;
+  border-bottom: 1px solid var(--color-table-lines);
+  font-size: var(--font-size-base);
+}
+

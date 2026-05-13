@@ -1,0 +1,43 @@
+.accessDeniedPage {
+  padding: 16px;
+  min-height: calc(100vh - 44px);
+  background: var(--color-work-area);
+  font-family: var(--font-family-base);
+  font-size: 13px;
+  color: var(--color-text-dark);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.accessDeniedCard {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  padding: 12px;
+}
+
+.accessDeniedTitle {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.accessDeniedText {
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+.accessDeniedMeta {
+  margin: 0 0 10px 0;
+  color: var(--color-text-dark);
+  opacity: 0.85;
+}
+
+.accessDeniedActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+

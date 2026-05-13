@@ -1,0 +1,262 @@
+schema: spec-driven
+
+# Project context
+context: |
+  # Incrementa-Gestion
+  
+  ## Descripción
+  Sistema de gestión de templates de contratos, con proyección a incorporar
+  otras componentes de gestión en el futuro.
+  
+  ## Tech Stack
+  
+  **Frontend**
+  - Vite + React
+  - Redux para manejo de estado
+  - Syne (Google Fonts) como fuente exclusiva del sistema; pesos 400, 600, 700, 800
+  - React Router para navegación
+  - CSS personalizado siguiendo guías de diseño corporativo
+  
+  **Backend**
+  - Node.js + Express (REST API)
+  
+  **Base de datos**
+  - PostgreSQL en GCP
+  - Knex.js para migraciones y gestión de versiones de BD
+  
+  ## Autenticación y Seguridad
+  
+  **Autenticación de usuarios (frontend)**
+  - Login simulado en esta etapa (pendiente integración con SSO de incrementa.la)
+  - En el futuro: autenticación unificada con el ecosistema incrementa.la
+  
+  **Validación en API (backend)**
+  - Cada endpoint protegido valida una de dos credenciales:
+    - **JWT**: a definir según integración futura con incrementa.la
+    - **API Key**: header `x-api-key`, validado con clave en config
+  - Rutas públicas se declaran explícitamente; el resto requiere autenticación por defecto
+  
+  ## Entornos
+  
+  Tres ambientes: `local`, `dev`, `prod`
+  Selección mediante variable única: `ENVIRONMENT`
+  
+  **Configuración por archivos (no .env):**
+  - Frontend: `config.js` exporta objeto con configuración por ambiente
+  - Backend: `config.js` exporta objeto con configuración por ambiente
+  
+  ## Infraestructura
+  
+  - `dev` y `prod` desplegados en GCP
+  - IaC a definir
+  
+  ## Workflow de desarrollo
+  
+  - Frontend y backend con hot reload en desarrollo
+  - Ambos servicios corren simultáneamente en sesiones de consola separadas
+  
+  ## Locale - Chile
+  
+  - País: Chile
+  - Timezone: `America/Santiago`
+  - Idioma: `es-CL`
+  - Formato numérico: `XXX.XXX,X` (separador de miles: punto, decimal: coma)
+  - Formato de fecha: `YYYY-MM-DD` (ISO 8601)
+  
+  ## Convenciones de Base de Datos (naming)
+  
+  - Nombres de tablas en **inglés** y en **singular** por defecto
+  - Nombres de columnas/campos en **inglés** (snake_case)
+  - Excepciones (plural) solo cuando exista una razón clara y documentada
+  - Mantener consistencia en todo el esquema
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Incluir siempre sección de "Consideraciones de seguridad" para funcionalidades que manejen datos sensibles
+    - Especificar validaciones tanto en frontend como backend
+    - Considerar locale chileno en formatos de fecha y números
+    - Incluir manejo de errores en español (es-CL)
+  
+  tasks:
+    - Dividir tareas en chunks máximo de 2 horas
+    - Incluir tests unitarios para lógica de negocio crítica
+    - Considerar configuración por ambiente en cada feature
+    - Validar autenticación y autorización en endpoints protegidos
+  
+  design:
+    - "Seguir estrictamente las guías de diseño corporativo ERP"
+    - "Implementar responsive design (mobile-first)"
+    - "Usar timezone America/Santiago para fechas"
+    - "Aplicar formato numérico chileno en displays de montos"
+    - "Las reglas visuales y de UI definidas en este archivo (`config.yaml`) son la fuente oficial para implementar el frontend; no reinterpretar estilos ni inventar variantes fuera de estas definiciones"
+    
+    # OBJETIVO VISUAL GENERAL
+    - "Transmitir imagen corporativa, sobria, ordenada, compacta y de alta densidad de información"
+    - "Estética tipo ERP moderno: profesional, serio, limpio, consistente y productivo"
+    - "NO lúdico, decorativo ni \"marketing-style\""
+    - "Priorizar claridad, jerarquía visual, alineación, compactación y repetibilidad"
+    
+    # TIPOGRAFÍA
+    - "Fuente exclusiva: Syne (Google Fonts); no usar Inter, Roboto ni otras fuentes como principal"
+    - "Pesos permitidos: 400 (cuerpo), 600 (subtítulos/labels), 700 (títulos/encabezados), 800 (destacados/hero)"
+    - "Tamaño base: 13px para casi todo el sistema"
+    - "Títulos: 13px bold (peso 700)"
+    - "Valores numéricos destacados en cards: 18px"
+    - "NO usar tamaños grandes innecesarios"
+    
+    # PALETA DE COLORES EXACTA
+    - "Main Headerbar: #031B30"
+    - "Sidebar: #194166"
+    - "Área de trabajo: #F0F1F2"
+    - "Sub-header: #F0F1F2"
+    - "Color de selección menú/botones: #F62C84"
+    - "Cards y superficies internas: #FFFFFF"
+    - "Texto oscuro: #000000"
+    - "Ícono \"GCC\": fondo #FFF0C0, texto #000000"
+    - "Borde cards: #E3E6E8"
+    - "Borde sub-header: #DADDE1"
+    - "Borde botón hamburguesa: #D0D5D9"
+    - "Líneas tabla: #E5E7E9"
+    
+    # REGLAS GENERALES
+    - "NO usar sombras en el sistema, salvo la excepción explícita del dropdown de usuario (sombra ligera)"
+    - "NO usar gradientes"
+    - "NO usar efectos brillantes"
+    - "NO usar colores adicionales innecesarios"
+    - "Apoyarse en contraste, borde sutil, espaciado y alineación"
+    - "Densidad visual compacta, estilo herramienta profesional"
+    - "Coherencia con layout base en todos los componentes"
+    
+    # ESTRUCTURA LAYOUT
+    - "Aplicación ocupa toda la altura: min-height: 100vh"
+    - "Layout bajo header: height: calc(100vh - 44px)"
+    - "Componentes: Main Headerbar (44px) + Sidebar (250px colapsable) + Área trabajo + Sub-header (48px) + Contenido"
+    
+    # MAIN HEADERBAR
+    - "Altura: 44px, fondo: #031B30, texto: blanco"
+    - "Padding horizontal: 20px"
+    - "Layout: flex horizontal; align-items center; justify-content space-between (izquierda: identidad; derecha: acciones)"
+    - "Izquierda: ícono de incrementa.la (28x28px, placeholder hasta integración; pendiente) + título del sistema \"Incrementa Gestión\" (13px bold)"
+    - "Gap ícono-título: 12px"
+    - "Derecha: enlace \"Notificaciones\" + avatar usuario (32x32px circular) como único trigger del menú de usuario; NO mostrar nombre fijo junto al avatar"
+    - "Menú desplegable al activar avatar: ítems \"Mi perfil\" y \"Salir\""
+    - "Dropdown de usuario: única excepción donde se permite sombra ligera (box-shadow sutil); resto del sistema sin sombras"
+    - "Gap elementos derecha: 14px"
+    
+    # SIDEBAR
+    - "Ancho expandido: 250px, fondo: #194166, texto: blanco"
+    - "Comportamiento colapsable (expandir/colapsar)"
+    - "Esquina superior derecha: botón de cierre \"X\""
+    - "Bloque de información de usuario dentro del sidebar (debajo del área superior)"
+    - "Separador visual entre bloque de usuario y menú principal"
+    - "Menú principal debajo del separador; soporte para grupos desplegables (submenús) con expandir/contraer por grupo"
+    - "Estado activo del ítem de menú visible (#F62C84)"
+    - "Padding-top: 10px (ajustar según bloque usuario si aplica)"
+    - "Transición suave: width/min-width/opacity 0.25s ease"
+    - "Menú: items con padding 10px 16px, gap ícono-texto 10px; grupos anidan subítems con indentación clara"
+    - "Hover: rgba(255,255,255,0.06)"
+    - "Activo: #F62C84"
+    - "Íconos: 16x16px, stroke blanco, lineales, stroke-width 1.8"
+    - "Al colapsar: width 0, min-width 0, opacity 0, pointer-events none"
+    
+    # BOTÓN HAMBURGUESA
+    - "Visible en el área principal cuando el sidebar está colapsado (p. ej. en sub-header junto al título del módulo)"
+    - "30x30px, borde 1px solid #D0D5D9, fondo blanco"
+    - "Border-radius: 4px, hover: fondo #F7F7F7"
+    - "Ícono stroke #194166, tamaño ~16px"
+    - "Al pulsar: expandir sidebar (eliminar estado colapsado)"
+    
+    # COMPORTAMIENTO SIDEBAR (reglas de interacción)
+    - "Sidebar puede expandirse y colapsarse"
+    - "Jerarquía de menú: grupos y submenús; cada grupo puede expandirse/contraerse independientemente"
+    - "Ítem activo de navegación claramente distinguible"
+    - "Botón X: agrega clase 'sidebar-collapsed' a contenedor '.app' (o equivalente)"
+    - "Botón hamburguesa: elimina clase 'sidebar-collapsed'"
+    
+    # SUB-HEADER ÁREA TRABAJO
+    - "Altura: 48px, fondo: #F0F1F2"
+    - "Borde inferior: 1px solid #DADDE1"
+    - "Padding horizontal: 20px"
+    - "Layout: flex, align-items center, justify-content space-between"
+    - "Izquierda: botón hamburguesa (si sidebar colapsado) + título módulo (13px bold negro)"
+    - "Derecha: botones acción (gap 8px)"
+    
+    # PANTALLA DE LOGIN (UI)
+    - "NO debe existir selector manual de perfil o rol en la pantalla de login"
+    - "El perfil/alcance del usuario se resuelve automáticamente tras el login según la lógica de negocio y backend; cualquier referencia a selección manual de perfil en login es inválida para la UI"
+    
+    # BOTONES
+    - "Fondo: #F62C84, texto: blanco, sin borde"
+    - "Border-radius: 4px, font-size: 13px, padding: 4px 10px"
+    - "Hover: opacity 0.92"
+    - "NO sombras, gradientes o relieves (salvo excepción del dropdown de usuario)"
+    
+    # CONTENEDOR CONTENIDO
+    - "Padding: 16px, layout vertical, gap: 10px"
+    - "Estilo compacto, poco aire visual, tipo ERP"
+    
+    # CARDS
+    - "Fondo: blanco, borde: 1px solid #E3E6E8"
+    - "Sin sombra, padding: 12px"
+    - "Esquinas rectas o redondeo mínimo"
+    - "Grid 3 columnas (responsive: 1 columna <900px)"
+    - "Gap: 10px"
+    - "Título card: 13px bold negro, margin-bottom 6px"
+    - "Valor principal: 18px negro"
+    
+    # FORMULARIO — CAMPOS NO EDITABLES (solo lectura / metadatos)
+    - "Colores obligatorios definidos en la clave raíz `ui_tokens.form_field_readonly` de este archivo; en CSS implementar solo vía variables en `frontend/src/styles/variables.css` (no duplicar hex en componentes)"
+    
+    # TABLAS
+    - "Contenedor: fondo blanco, borde 1px solid #E3E6E8, padding 12px"
+    - "Tabla: width 100%, border-collapse collapse"
+    - "Celdas: padding 6px, borde inferior 1px solid #E5E7E9"
+    - "Texto: negro 13px, headers: 13px bold"
+    - "NO rayado alternado ni colores decorativos"
+    
+    # ESPACIADOS CONSISTENTES
+    - "Main header: 20px horizontal"
+    - "Sub-header: 20px horizontal  "
+    - "Content: 16px"
+    - "Card padding: 12px"
+    - "Gap cards: 10px"
+    - "Gap ícono-título header: 12px"
+    - "Gap ícono-texto menú: 10px"
+    - "Gap acciones sub-header: 8px"
+    
+    # ESTADOS INTERACTIVOS
+    - "Menú normal: transparente, hover: rgba(255,255,255,0.06), activo: #F62C84"
+    - "Link notificaciones: normal sin subrayado, hover: subrayado"
+    - "Botones: normal #F62C84, hover: opacity 0.92"
+    
+    # RESPONSIVE <900px
+    - "Cards: grid-template-columns 1fr"
+    - "Mantener identidad visual y estructura (sin depender de nombre de usuario en header; el avatar permanece como trigger)"
+    
+    # CRITERIOS CONSISTENCIA
+    - "Reutilizar mismo headerbar, sidebar, sub-header en todas las vistas"
+    - "Misma tipografía, tamaños, pesos, densidad visual"
+    - "Cards blancas con borde sutil sin sombra"
+    - "Botones #F62C84"
+    - "Texto negro en área trabajo, blanco en header/sidebar"
+    - "Respetar paddings, gaps y estados definidos"
+    
+    # PROHIBIDO
+    - "Otros azules, sombras (fuera de la excepción del dropdown de usuario), bordes gruesos"
+    - "Botones con estilos distintos al #F62C84 definido, tipografías distintas a Syne"
+    - "Cards con excesivo aire interno"
+    - "Íconos de otro grosor/color"
+    - "Jerarquías visuales fuera de guía"
+    - "Estilos \"dashboard marketing\""
+    - "Selector manual de perfil en la pantalla de login"
+
+# Tokens de UI (hex canónicos). El frontend las expone como variables CSS en `variables.css`.
+ui_tokens:
+  form_field_readonly:
+    description: >
+      Campos de formulario no editables: solo lectura, metadatos del sistema, valores
+      calculados o deshabilitados. Misma regla en todo el sistema.
+    background: "#FAFAFA"
+    text: "#727F9A"
+    border: "#E3E6E8"

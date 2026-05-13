@@ -1,0 +1,28 @@
+{
+  "name": "gestion-contrato",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión de Contratos y Contabilidad - Monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm run build && npm run preview",
+    "start:backend": "cd backend && npm run start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build": "cd frontend && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "keywords": [
+    "contracts",
+    "accounting",
+    "management",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "ISC"
+}

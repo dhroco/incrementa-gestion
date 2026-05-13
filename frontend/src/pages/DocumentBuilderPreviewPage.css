@@ -1,0 +1,59 @@
+.document-builder-preview-page .document-builder-preview-banner {
+  margin-bottom: 10px;
+}
+
+.document-builder-preview-workarea {
+  background: transparent;
+  padding: 0;
+  position: relative;
+}
+
+.document-builder-preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(240, 241, 242, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.db-dots {
+  display: inline-flex;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e3e6e8;
+}
+
+.db-dots > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #657a8a;
+  opacity: 0.35;
+  animation: db-dot 1.05s ease-in-out infinite;
+}
+
+.db-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.db-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes db-dot {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+}
+

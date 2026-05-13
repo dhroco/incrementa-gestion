@@ -1,0 +1,110 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-work-area);
+}
+
+.login-page__card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-cards);
+  border: 1px solid var(--color-border-card);
+  padding: var(--spacing-card);
+}
+
+.login-page__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+  margin: 0 0 8px;
+}
+
+.login-page__intro {
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  margin: 0 0 16px;
+}
+
+.login-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login-page__label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+}
+
+.login-page__input {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.login-page__input:focus {
+  outline: 2px solid var(--color-selection);
+  outline-offset: 0;
+}
+
+.login-page__input:disabled {
+  opacity: 0.7;
+}
+
+.login-page__error {
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-sub-header);
+  background: var(--color-work-area);
+}
+
+.login-page__message {
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-sub-header);
+  background: var(--color-work-area);
+}
+
+.login-page__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.login-page__link {
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.login-page__link:hover {
+  opacity: 1;
+}
+
+.login-page__submit {
+  width: fit-content;
+  min-width: 110px;
+  height: 32px;
+  padding: 4px 14px;
+}

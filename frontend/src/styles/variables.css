@@ -1,0 +1,85 @@
+/* Design System Variables - Sistema de Gestión de Contratos y Contabilidad */
+
+:root {
+  /* Color Palette */
+  /* Main Layout Colors */
+  --color-main-headerbar: #031B30;
+  --color-sidebar: #194166;
+  --color-sidebar-submenu: #133553;
+  --color-work-area: #F0F1F2;
+  --color-sub-header: #F0F1F2;
+  
+  /* Interactive Colors */
+  /* Acciones de texto en tablas (Ver/Editar) y enlaces de breadcrumb del subheader: normal `--color-selection`, hover `--color-main-headerbar`. */
+  --color-selection: #657A8A;
+  --color-cards: #FFFFFF;
+  
+  /* Text Colors */
+  --color-text-dark: #000000;
+  --color-text-light: #FFFFFF;
+  
+  /* Institutional Colors */
+  --color-gcc-background: #FFF0C0;
+  --color-gcc-text: #000000;
+  
+  /* Campos de formulario no editables (openspec/config.yaml → ui_tokens.form_field_readonly) */
+  --color-form-field-readonly-bg: #fafafa;
+  --color-form-field-readonly-text: #727f9a;
+  --color-form-field-readonly-border: #e3e6e8;
+
+  /* Border Colors */
+  --color-border-card: #E3E6E8;
+  --color-border-sub-header: #DADDE1;
+  --color-border-hamburger: #D0D5D9;
+  --color-border-table-lines: #E5E7E9;
+  
+  /* Interactive States */
+  --color-hover-menu: rgba(255, 255, 255, 0.06);
+  --color-hover-hamburger: #F7F7F7;
+  
+  /* Typography */
+  --font-family-base: 'Inter', sans-serif;
+  /* Cuerpo del editor de cláusulas (variante documento) */
+  --font-family-clause-editor: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Font Sizes */
+  --font-size-base: 13px;
+  --font-size-highlighted: 18px;
+  --font-size-icon: 11px;
+  --font-size-button: 18px;
+  
+  /* Spacing */
+  --spacing-main-header: 20px;
+  --spacing-sub-header: 20px;
+  --spacing-content: 16px;
+  --spacing-card: 12px;
+  --spacing-table: 12px;
+  --spacing-gap-cards: 10px;
+  --spacing-gap-content: 10px;
+  --spacing-gap-header-icon: 12px;
+  --spacing-gap-menu-icon: 10px;
+  --spacing-gap-actions: 8px;
+  
+  /* Layout Dimensions */
+  --height-main-header: 44px;
+  --height-sub-header: 48px;
+  --width-sidebar: 250px;
+  --size-avatar: 32px;
+  --size-app-icon: 28px;
+  --size-hamburger-btn: 30px;
+  --size-menu-icon: 16px;
+  
+  /* Border Radius */
+  --border-radius-small: 4px;
+  --border-radius-icon: 6px;
+  
+  /* Transitions */
+  --transition-sidebar: width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease;
+
+  /* Exceptions: only user dropdown may use shadow (openspec/config.yaml) */
+  --shadow-user-dropdown: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
