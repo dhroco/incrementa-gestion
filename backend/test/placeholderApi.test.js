@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const request = require('supertest')
 const { createApp } = require('../app')
 const { sendError } = require('../http/responses')
+const { attachAbilityWithRules } = require('./testAbilityHelpers')
 
 function authOk(req, _res, next) {
   req.auth = { userId: 'u1', email: 'a@b.cl' }
@@ -17,21 +18,11 @@ function authMissing(_req, res) {
   })
 }
 
-function grantOk() {
-  return (_req, _res, next) => next()
-}
-
-function grantForbidden() {
-  return (_req, res) =>
-    sendError(res, {
-      status: 403,
-      code: 'FORBIDDEN',
-      message: 'Acceso denegado. No tiene permisos para realizar esta acción.'
-    })
-}
-
 test('GET /api/placeholder/dashboard returns envelope + meta.timestamp (200)', async () => {
-  const app = createApp({ requireAuth: authOk, requireGrant: () => grantOk() })
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Dashboard']])
+  })
   const res = await request(app).get('/api/placeholder/dashboard')
 
   assert.equal(res.statusCode, 200)
@@ -41,7 +32,10 @@ test('GET /api/placeholder/dashboard returns envelope + meta.timestamp (200)', a
 })
 
 test('GET /api/placeholder/dashboard returns structured 401 when missing auth', async () => {
-  const app = createApp({ requireAuth: authMissing, requireGrant: () => grantOk() })
+  const app = createApp({
+    requireAuth: authMissing,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Dashboard']])
+  })
   const res = await request(app).get('/api/placeholder/dashboard')
 
   assert.equal(res.statusCode, 401)
@@ -51,16 +45,21 @@ test('GET /api/placeholder/dashboard returns structured 401 when missing auth', 
 })
 
 test('GET /api/placeholder/dashboard returns structured 403 when missing grant', async () => {
-  const app = createApp({ requireAuth: authOk, requireGrant: () => grantForbidden() })
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([])
+  })
   const res = await request(app).get('/api/placeholder/dashboard')
 
   assert.equal(res.statusCode, 403)
-  assert.equal(res.body?.error?.code, 'FORBIDDEN')
-  assert.equal(typeof res.body?.meta?.timestamp, 'string')
+  assert.equal(res.body?.status, 'forbidden')
 })
 
 test('GET /api/placeholder/contratos/list returns items and meta.total (200)', async () => {
-  const app = createApp({ requireAuth: authOk, requireGrant: () => grantOk() })
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'All']])
+  })
   const res = await request(app).get('/api/placeholder/contratos/list')
 
   assert.equal(res.statusCode, 200)
@@ -69,4 +68,3 @@ test('GET /api/placeholder/contratos/list returns items and meta.total (200)', a
   assert.equal(res.body?.meta?.module, 'contratos')
   assert.equal(typeof res.body?.meta?.timestamp, 'string')
 })
-

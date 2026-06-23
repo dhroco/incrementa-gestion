@@ -1,9 +1,21 @@
 const { randomUUID } = require('node:crypto')
 const { stableJsonStringify } = require('../lib/stableJsonStringify')
-const { collectEmbeddedClauseIdsFromDoc, collectEmbeddedClauseRefsFromDoc } = require('../utils/templateContentJson')
 
 function isUniqueViolation(err) {
   return err && err.code === '23505'
+}
+
+const VALID_SUPPLIER_TYPES = ['persona_natural', 'empresa']
+const VALID_TEMPLATE_STATUSES = ['active', 'inactive']
+
+function normalizeTemplateStatus(value) {
+  return VALID_TEMPLATE_STATUSES.includes(value) ? value : 'inactive'
+}
+
+function normalizeSupplierType(value) {
+  if (typeof value !== 'string') return null
+  const v = value.trim()
+  return VALID_SUPPLIER_TYPES.includes(v) ? v : null
 }
 
 function mapTemplateRow(row) {
@@ -12,6 +24,7 @@ function mapTemplateRow(row) {
     id: row.id,
     name: row.name ?? null,
     code: row.code ?? null,
+    supplier_type: row.supplier_type ?? null,
     description: row.description ?? null,
     status: row.status ?? null,
     document_type_id: row.document_type_id ?? null,
@@ -33,32 +46,6 @@ function createStandardTemplatesService({ db }) {
     return row?.id ?? null
   }
 
-  async function assertUniversalClauseIds(trx, clauseIds) {
-    if (clauseIds.length === 0) return { ok: true }
-    const rows = await trx('clause_universal').select('id').whereIn('id', clauseIds)
-    if (rows.length !== clauseIds.length) {
-      return {
-        ok: false,
-        code: 'TEMPLATE_INVALID_EMBEDDED_CLAUSE',
-        message: 'Una o más cláusulas incrustadas no existen o no son universales.',
-      }
-    }
-    return { ok: true }
-  }
-
-  function assertOnlyUniversalClauseRefs(contentJson) {
-    const refs = collectEmbeddedClauseRefsFromDoc(contentJson)
-    const hasNonUniversal = refs.some((r) => r.clauseKind !== 'universal')
-    if (hasNonUniversal) {
-      return {
-        ok: false,
-        code: 'TEMPLATE_INVALID_EMBEDDED_CLAUSE_KIND',
-        message: 'Las plantillas estándar sólo permiten cláusulas universales.',
-      }
-    }
-    return { ok: true }
-  }
-
   function selectAuthorJoins(q) {
     return q
       .leftJoin('user_profile as up_created', 'up_created.id', 't.created_by')
@@ -71,6 +58,7 @@ function createStandardTemplatesService({ db }) {
       't.id',
       't.name',
       't.code',
+      't.supplier_type',
       't.description',
       't.status',
       't.document_type_id',
@@ -87,18 +75,30 @@ function createStandardTemplatesService({ db }) {
   }
 
   /**
-   * @param {{ name: string, code: string, description: string | null, content_json: object, status?: string, document_type_id?: string | null, actorUserProfileId: string }} input
+   * @param {{ name: string, code: string, supplier_type: string, description: string | null, content_json: object, status?: string, document_type_id?: string | null, actorUserProfileId: string }} input
    */
   async function createStandardTemplate(input) {
     const {
       name,
       code,
+      supplier_type: supplierTypeIn,
       description,
       content_json,
-      status = 'draft',
+      status = 'inactive',
       document_type_id: dtIn,
       actorUserProfileId,
     } = input
+
+    const supplier_type = normalizeSupplierType(supplierTypeIn)
+    if (!supplier_type) {
+      return {
+        ok: false,
+        error: {
+          type: 'invalid_supplier_type',
+          message: 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
+        },
+      }
+    }
 
     return await db.transaction(async (trx) => {
       let document_type_id = dtIn
@@ -107,29 +107,6 @@ function createStandardTemplatesService({ db }) {
       }
       if (!document_type_id) {
         return { ok: false, error: { type: 'no_document_type', message: 'No hay tipo documental disponible para la plantilla.' } }
-      }
-
-      const kindCheck = assertOnlyUniversalClauseRefs(content_json)
-      if (!kindCheck.ok) {
-        return {
-          ok: false,
-          error: {
-            type: 'invalid_clauses',
-            code: kindCheck.code,
-            message: kindCheck.message,
-          },
-        }
-      }
-      const embeddedCheck = await assertUniversalClauseIds(trx, collectEmbeddedClauseIdsFromDoc(content_json))
-      if (!embeddedCheck.ok) {
-        return {
-          ok: false,
-          error: {
-            type: 'invalid_clauses',
-            code: embeddedCheck.code,
-            message: embeddedCheck.message,
-          },
-        }
       }
 
       const id = randomUUID()
@@ -141,9 +118,10 @@ function createStandardTemplatesService({ db }) {
           document_type_id,
           name: name.trim(),
           code: codeTrimmed,
+          supplier_type,
           description: description === null || description === undefined ? null : String(description).trim() || null,
           content_json,
-          status: ['draft', 'active', 'inactive'].includes(status) ? status : 'draft',
+          status: normalizeTemplateStatus(status),
           created_by: actorUserProfileId,
           updated_by: actorUserProfileId,
           last_edited_by: actorUserProfileId,
@@ -174,16 +152,18 @@ function createStandardTemplatesService({ db }) {
   }
 
   /**
-   * @param {{ search?: string }} [opts]
+   * @param {{ search?: string, supplier_type?: string, status?: string }} [opts]
    */
-  async function listStandardTemplates({ search } = {}) {
+  async function listStandardTemplates({ search, supplier_type: supplierTypeIn, status: statusIn } = {}) {
     const q = typeof search === 'string' ? search.trim() : ''
+    const supplier_type = normalizeSupplierType(supplierTypeIn)
     let query = selectAuthorJoins(db('template as t'))
       .join('template_standard as ts', 'ts.id', 't.id')
       .select(
         't.id',
         't.name',
         't.code',
+        't.supplier_type',
         't.description',
         't.status',
         't.created_at',
@@ -213,6 +193,14 @@ function createStandardTemplatesService({ db }) {
       })
     }
 
+    if (supplier_type) {
+      query = query.where('t.supplier_type', supplier_type)
+    }
+
+    if (VALID_TEMPLATE_STATUSES.includes(statusIn)) {
+      query = query.where('t.status', statusIn)
+    }
+
     const rows = await query
 
     return {
@@ -226,6 +214,7 @@ function createStandardTemplatesService({ db }) {
           id: r.id,
           name: r.name,
           code: r.code ?? null,
+          supplier_type: r.supplier_type ?? null,
           description: r.description ?? null,
           status: r.status,
           created_at: r.created_at,
@@ -259,18 +248,30 @@ function createStandardTemplatesService({ db }) {
 
   /**
    * @param {string} id
-   * @param {{ name: string, code: string, description: string | null, content_json: object, status?: string, document_type_id?: string | null, actorUserProfileId: string }} input
+   * @param {{ name: string, code: string, supplier_type: string, description: string | null, content_json: object, status?: string, document_type_id?: string | null, actorUserProfileId: string }} input
    */
   async function updateStandardTemplate(id, input) {
     const {
       name,
       code,
+      supplier_type: supplierTypeIn,
       description,
       content_json,
-      status = 'draft',
+      status = 'inactive',
       document_type_id: dtIn,
       actorUserProfileId,
     } = input
+
+    const supplier_type = normalizeSupplierType(supplierTypeIn)
+    if (!supplier_type) {
+      return {
+        ok: false,
+        error: {
+          type: 'invalid_supplier_type',
+          message: 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
+        },
+      }
+    }
 
     return await db.transaction(async (trx) => {
       const existingRow = await trx('template as t')
@@ -291,38 +292,16 @@ function createStandardTemplatesService({ db }) {
         return { ok: false, error: { type: 'no_document_type', message: 'No hay tipo documental disponible para la plantilla.' } }
       }
 
-      const kindCheck = assertOnlyUniversalClauseRefs(content_json)
-      if (!kindCheck.ok) {
-        return {
-          ok: false,
-          error: {
-            type: 'invalid_clauses',
-            code: kindCheck.code,
-            message: kindCheck.message,
-          },
-        }
-      }
-      const embeddedCheck = await assertUniversalClauseIds(trx, collectEmbeddedClauseIdsFromDoc(content_json))
-      if (!embeddedCheck.ok) {
-        return {
-          ok: false,
-          error: {
-            type: 'invalid_clauses',
-            code: embeddedCheck.code,
-            message: embeddedCheck.message,
-          },
-        }
-      }
-
       const contentChanged = stableJsonStringify(content_json) !== stableJsonStringify(existingRow.content_json)
       const codeTrimmed = String(code).trim()
 
       const patch = {
         name: name.trim(),
         code: codeTrimmed,
+        supplier_type,
         description: description === null || description === undefined ? null : String(description).trim() || null,
         content_json,
-        status: ['draft', 'active', 'inactive'].includes(status) ? status : 'draft',
+        status: normalizeTemplateStatus(status),
         document_type_id,
         updated_by: actorUserProfileId,
         updated_at: new Date(),
@@ -362,7 +341,6 @@ function createStandardTemplatesService({ db }) {
     listStandardTemplates,
     getStandardTemplateById,
     updateStandardTemplate,
-    collectEmbeddedClauseIdsFromDoc,
   }
 }
 

@@ -3,8 +3,6 @@
  * (entradas de menú y acciones READ), alineado con 002_navigation_authorization_seed. Idempotente.
  */
 const CODES = [
-  'NAV_ITEM_CONTRATOS_CLAUSULAS_UNIVERSALES',
-  'NAV_ACTION_CONTRATOS_CLAUSULAS_UNIVERSALES_READ',
   'NAV_ITEM_CONTRATOS_PLANTILLAS',
   'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ'
 ]

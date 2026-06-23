@@ -7,20 +7,10 @@ function repRut(ctx, n) {
   return formatRut(body, dv)
 }
 
-function formatBranchBlock(b) {
-  const lines = []
-  if (b.name) lines.push(b.name)
-  const loc = [b.address, b.commune, b.city, b.region].filter((x) => x && String(x).trim()).join(', ')
-  if (loc) lines.push(loc)
-  const contact = [b.email, b.phone].filter((x) => x && String(x).trim()).join(' · ')
-  if (contact) lines.push(contact)
-  return lines.join('\n')
-}
-
 /**
  * Resolves embedded company variable placeholders for preview / export helpers.
  * @param {string} variableId
- * @param {Record<string, unknown>} companyContext - company row + optional `branches` array
+ * @param {Record<string, unknown>} companyContext - company row
  * @returns {string}
  */
 export function resolveCompanyVariablePreview(variableId, companyContext = {}) {
@@ -48,16 +38,6 @@ export function resolveCompanyVariablePreview(variableId, companyContext = {}) {
       return String(ctx.name_legal_representative_2 ?? '').trim()
     case 'company_legal_rep2_rut':
       return repRut(ctx, 2)
-    case 'company_branches': {
-      const branches = Array.isArray(ctx.branches) ? ctx.branches : []
-      if (branches.length === 0) return ''
-      return branches
-        .slice()
-        .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
-        .map((b) => formatBranchBlock(b))
-        .filter(Boolean)
-        .join('\n\n')
-    }
     default:
       return ''
   }

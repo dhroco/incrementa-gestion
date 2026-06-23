@@ -1,42 +1,17 @@
 #!/usr/bin/env node
 /**
- * Elimina un usuario de aplicación (perfil interno soportado) y datos relacionados en Postgres/Supabase.
- *
- * Cubre:
- * - **Administrador de plataforma** (`ADMINISTRADOR_PLATAFORMA`): solo `user_profile` + Auth (sin `accountant` ni `company_internal_user`).
- * - **Usuario empresa administrador** (`USUARIO_EMPRESA_ADMINISTRADOR`): `user_profile` + `company_internal_user` (CASCADE al borrar `user_profile`).
- * - **Contador** (`CONTADOR`): `user_profile` + `accountant` + `accountant_company` (misma mecánica que `delete-accountant-user.js`).
- *
- * Esquema relevante (migraciones del repo):
- * - `user_profile.user_id` → `auth.users.id`
- * - `accountant.id` / `company_internal_user.id` → `user_profile.id` (ON DELETE CASCADE)
- * - `accountant_company` → `accountant` (ON DELETE CASCADE)
- * - `clause.created_by|updated_by|last_edited_by` → `user_profile.id` (ON DELETE SET NULL)
- *
- * Antes de borrar `auth.users` se limpian tablas típicas del esquema `auth` que referencian al usuario
- * (`lib/deleteAuthUserDependents.js`).
+ * Elimina un usuario de aplicación con perfil ADMINISTRADOR_PLATAFORMA (Postgres + Keycloak).
  *
  * Uso (desde el directorio `backend`):
  *   node scripts/delete-app-user.js --email=admin@ejemplo.cl --dry-run
- *   CONFIRM_DELETE_APP_USER=YES node scripts/delete-app-user.js --user-id=<uuid-auth>
- *
- * Identificación (exactamente una opción):
- *   --email=...              correo en auth.users (normalizado como en la app)
- *   --user-id=...            UUID de auth.users (Supabase)
- *   --user-profile-id=...  UUID de public.user_profile.id
- *
- * Seguridad: sin `--dry-run`, exige `CONFIRM_DELETE_APP_USER=YES` en el entorno.
- *
- * Nota: Para contadores también existe `scripts/delete-accountant-user.js` (solo CONTADOR + `CONFIRM_DELETE_ACCOUNTANT`).
- *        Este script es el equivalente general para los perfiles de aplicación listados arriba.
+ *   CONFIRM_DELETE_APP_USER=YES node scripts/delete-app-user.js --user-id=<uuid-keycloak>
  */
 
 const { db } = require('../db/knex')
 const { normalizeAuthEmail } = require('../lib/normalizeAuthEmail')
-const { deleteAuthDependentsForUsers } = require('../lib/deleteAuthUserDependents')
+const { getKeycloakAdminClient } = require('../lib/keycloakAdminClient')
 
-/** Perfiles que este script puede eliminar (datos de negocio en tablas públicas conocidas). */
-const ALLOWED_PROFILE_CODES = new Set(['ADMINISTRADOR_PLATAFORMA', 'USUARIO_EMPRESA_ADMINISTRADOR', 'CONTADOR'])
+const ALLOWED_PROFILE_CODES = new Set(['ADMINISTRADOR_PLATAFORMA'])
 
 function parseArgs(argv) {
   const out = { dryRun: false, email: null, userId: null, userProfileId: null }
@@ -63,62 +38,33 @@ function isUuid(s) {
   )
 }
 
-/**
- * @param {import('knex').Knex} knex
- * @param {string} authUserId
- */
-async function loadAppUserContext(knex, authUserId) {
+async function loadAppUserContext(knex, keycloakUserId) {
   const row = await knex('user_profile as up')
     .join('profile as p', 'p.id', 'up.profile_id')
-    .leftJoin('auth.users as au', 'au.id', 'up.user_id')
     .select(
       'up.id as user_profile_id',
-      'up.user_id as auth_user_id',
+      'up.user_id as keycloak_user_id',
       'p.code as profile_code',
-      'p.label as profile_label',
-      'au.email as email'
+      'p.label as profile_label'
     )
-    .where('up.user_id', authUserId)
+    .where('up.user_id', keycloakUserId)
     .first()
 
   if (!row) {
-    return { ok: false, code: 'NO_PROFILE', message: 'No existe user_profile para ese usuario de Auth.' }
+    return { ok: false, code: 'NO_PROFILE', message: 'No existe user_profile para ese usuario de Keycloak.' }
   }
 
   if (!ALLOWED_PROFILE_CODES.has(row.profile_code)) {
     return {
       ok: false,
       code: 'PROFILE_NOT_ALLOWED',
-      message: `El perfil es "${row.profile_code}". Este script solo admite: ${[...ALLOWED_PROFILE_CODES].join(', ')}.`,
+      message: `El perfil es "${row.profile_code}". Este script solo admite: ${[...ALLOWED_PROFILE_CODES].join(', ')}.`
     }
   }
 
-  const userProfileId = row.user_profile_id
-
-  const acCount = await knex('accountant_company').where({ accountant_id: userProfileId }).count('* as c').first()
-  const hasAccountantRow = await knex('accountant').select('id').where({ id: userProfileId }).first()
-  const hasCompanyInternal = await knex('company_internal_user').select('id', 'company_id').where({ id: userProfileId }).first()
-
-  const clauseRefs = await knex('clause')
-    .where(function () {
-      this.where('created_by', userProfileId)
-        .orWhere('updated_by', userProfileId)
-        .orWhere('last_edited_by', userProfileId)
-    })
-    .count('* as c')
-    .first()
-
   return {
     ok: true,
-    data: {
-      ...row,
-      accountant_company_rows: Number(acCount?.c ?? 0),
-      has_accountant_row: Boolean(hasAccountantRow),
-      company_internal_user: hasCompanyInternal
-        ? { company_id: hasCompanyInternal.company_id }
-        : null,
-      clause_refs: Number(clauseRefs?.c ?? 0),
-    },
+    data: row
   }
 }
 
@@ -127,7 +73,7 @@ async function main() {
   const modes = [args.email, args.userId, args.userProfileId].filter(Boolean)
   if (modes.length !== 1) {
     console.error(
-      'Indica exactamente uno de: --email=... | --user-id=<uuid-auth> | --user-profile-id=<uuid-user_profile>'
+      'Indica exactamente uno de: --email=... | --user-id=<uuid-keycloak> | --user-profile-id=<uuid-user_profile>'
     )
     process.exit(1)
   }
@@ -141,7 +87,15 @@ async function main() {
     process.exit(1)
   }
 
-  let authUserId = args.userId
+  const kc = getKeycloakAdminClient()
+  if (!kc) {
+    console.error(
+      'Keycloak Admin no configurado (KEYCLOAK_ADMIN_URL, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_REALM).'
+    )
+    process.exit(1)
+  }
+
+  let keycloakUserId = args.userId
 
   if (args.email) {
     const norm = normalizeAuthEmail(args.email)
@@ -149,22 +103,22 @@ async function main() {
       console.error('Email inválido o vacío.')
       process.exit(1)
     }
-    const u = await db.withSchema('auth').from('users').select('id').whereRaw('lower(trim(email)) = ?', [norm]).first()
-    if (!u?.id) {
-      console.error(`No hay usuario en auth.users con correo: ${norm}`)
+    const found = await kc.findUserIdByEmail(norm)
+    if (!found?.id) {
+      console.error(`No hay usuario en Keycloak con correo: ${norm}`)
       process.exit(1)
     }
-    authUserId = u.id
+    keycloakUserId = found.id
   } else if (args.userProfileId) {
     const up = await db('user_profile').select('user_id').where({ id: args.userProfileId }).first()
     if (!up?.user_id) {
       console.error('No existe user_profile con ese --user-profile-id.')
       process.exit(1)
     }
-    authUserId = up.user_id
+    keycloakUserId = up.user_id
   }
 
-  const ctx = await loadAppUserContext(db, authUserId)
+  const ctx = await loadAppUserContext(db, keycloakUserId)
   if (!ctx.ok) {
     console.error(ctx.message)
     process.exit(1)
@@ -173,16 +127,8 @@ async function main() {
   const d = ctx.data
   console.log('Objetivo:')
   console.log(`  perfil             = ${d.profile_code} (${d.profile_label ?? ''})`)
-  console.log(`  auth.users.id      = ${d.auth_user_id}`)
+  console.log(`  Keycloak user id   = ${d.keycloak_user_id}`)
   console.log(`  user_profile.id    = ${d.user_profile_id}`)
-  console.log(`  email              = ${d.email ?? '(n/a)'}`)
-  console.log(`  fila accountant    = ${d.has_accountant_row ? 'sí' : 'no'}`)
-  console.log(`  accountant_company filas = ${d.accountant_company_rows}`)
-  console.log(
-    `  company_internal_user = ${d.company_internal_user ? `sí (company_id=${d.company_internal_user.company_id})` : 'no'}`
-  )
-  console.log(`  cláusulas con autoría hacia este perfil = ${d.clause_refs} (quedarán en NULL por FK)`)
-
   if (args.dryRun) {
     console.log('\n[--dry-run] No se ejecutaron borrados.')
     process.exit(0)
@@ -194,20 +140,15 @@ async function main() {
   }
 
   await db.transaction(async (trx) => {
-    await deleteAuthDependentsForUsers(trx, [authUserId])
-
-    const delUp = await trx('user_profile').where({ user_id: authUserId }).del()
+    const delUp = await trx('user_profile').where({ user_id: keycloakUserId }).del()
     if (delUp !== 1) {
       throw new Error(`Se esperaba borrar 1 user_profile, filas eliminadas: ${delUp}`)
     }
-
-    const delAuth = await trx.withSchema('auth').from('users').where({ id: authUserId }).del()
-    if (delAuth !== 1) {
-      throw new Error(`Se esperaba borrar 1 auth.users, filas eliminadas: ${delAuth}`)
-    }
   })
 
-  console.log('\nListo: usuario de aplicación eliminado (user_profile en cascada + auth.users y dependencias auth.*).')
+  await kc.deleteUser(keycloakUserId)
+
+  console.log('\nListo: usuario de aplicación eliminado (user_profile en cascada + usuario en Keycloak).')
   process.exit(0)
 }
 

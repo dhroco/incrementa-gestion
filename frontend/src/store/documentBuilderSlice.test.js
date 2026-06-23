@@ -1,20 +1,24 @@
 import { describe, it, expect } from 'vitest'
-import { documentBuilderSlice, setWorkersSelected, toggleWorkerId, setTemplateSelected } from './documentBuilderSlice'
+import {
+  documentBuilderSlice,
+  setSelectedSupplierId,
+  setSelectedClientId,
+  setTemplateSelected
+} from './documentBuilderSlice'
 
 describe('documentBuilderSlice', () => {
-  it('toggles worker ids', () => {
-    let state = documentBuilderSlice.reducer(undefined, { type: '@@INIT' })
-    state = documentBuilderSlice.reducer(state, toggleWorkerId('a'))
-    state = documentBuilderSlice.reducer(state, toggleWorkerId('b'))
-    state = documentBuilderSlice.reducer(state, toggleWorkerId('a'))
-    expect(state.workersSelected).toEqual(['b'])
+  it('setSelectedSupplierId stores supplier id', () => {
+    let state = documentBuilderSlice.reducer(undefined, setSelectedSupplierId('s1'))
+    expect(state.selectedSupplierId).toBe('s1')
+    state = documentBuilderSlice.reducer(state, setSelectedSupplierId(null))
+    expect(state.selectedSupplierId).toBeNull()
   })
 
-  it('setWorkersSelected replaces list', () => {
-    let state = documentBuilderSlice.reducer(undefined, setWorkersSelected(['x', 'y']))
-    expect(state.workersSelected).toEqual(['x', 'y'])
-    state = documentBuilderSlice.reducer(state, setWorkersSelected([]))
-    expect(state.workersSelected).toEqual([])
+  it('setSelectedClientId stores client id', () => {
+    let state = documentBuilderSlice.reducer(undefined, setSelectedClientId('c1'))
+    expect(state.selectedClientId).toBe('c1')
+    state = documentBuilderSlice.reducer(state, setSelectedClientId(null))
+    expect(state.selectedClientId).toBeNull()
   })
 
   it('setTemplateSelected stores kind and id', () => {

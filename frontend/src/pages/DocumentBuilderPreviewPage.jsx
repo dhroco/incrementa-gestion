@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { PageShell } from '../components/PageShell'
-import { selectSession } from '../store/authSlice'
-import { useEmployeeCompanyScope } from './useEmployeeCompanyScope'
+import { PlatformAdminCompanySelect } from '../components/PlatformAdminCompanySelect'
+import { usePlatformAdminCompaniesLoader } from './usePlatformAdminCompaniesLoader'
+import { usePlatformAdminCompanyScope } from './usePlatformAdminCompanyScope'
 import { fetchStandardTemplateById } from '../api/standardTemplatesApi'
-import { fetchCompanyTemplateById } from '../api/companyTemplatesApi'
 import RichTextEditor from '../components/RichTextEditor'
 import { materializeTemplateDocClient } from '../utils/materializeTemplateDocClient'
 import './DocumentBuilderPreviewPage.css'
@@ -31,10 +31,10 @@ function normalizeContentJson(raw) {
 }
 
 export function DocumentBuilderPreviewPage() {
-  const session = useSelector(selectSession)
   const templateSelected = useSelector((s) => s.documentBuilder.templateSelected)
-  const accessToken = session?.access_token ?? null
-  const { companyId, blocked, message: scopeMessage } = useEmployeeCompanyScope()
+  const companyLoader = usePlatformAdminCompaniesLoader()
+  const { companyId, blocked, needsCompanySelection, message: scopeMessage } =
+    usePlatformAdminCompanyScope()
 
   const breadcrumb = useMemo(
     () => [
@@ -55,10 +55,6 @@ export function DocumentBuilderPreviewPage() {
       setError(null)
       setDoc(EMPTY_DOC)
       setTitle('Ver preview')
-      if (!accessToken) {
-        setError('No se pudo cargar el preview (falta sesión).')
-        return
-      }
       if (blocked) {
         setError(scopeMessage ?? 'Sin empresa en contexto.')
         return
@@ -70,10 +66,7 @@ export function DocumentBuilderPreviewPage() {
 
       setLoading(true)
       const id = String(templateSelected.id)
-      const isCompany = templateSelected.kind === 'company'
-      const res = isCompany
-        ? await fetchCompanyTemplateById(id, { accessToken, companyId })
-        : await fetchStandardTemplateById(id, { accessToken })
+      const res = await fetchStandardTemplateById(id, {})
 
       if (!active) return
 
@@ -89,10 +82,7 @@ export function DocumentBuilderPreviewPage() {
 
       const raw = normalizeContentJson(entity?.content_json)
       try {
-        const merged = await materializeTemplateDocClient(raw, {
-          accessToken,
-          companyId: isCompany ? companyId : null,
-        })
+        const merged = await materializeTemplateDocClient(raw)
         if (!active) return
         setDoc(merged && typeof merged === 'object' ? merged : raw)
       } catch (e) {
@@ -107,7 +97,12 @@ export function DocumentBuilderPreviewPage() {
     return () => {
       active = false
     }
-  }, [accessToken, blocked, companyId, scopeMessage, templateSelected])
+  }, [])
+
+  const companyToolbar =
+    companyLoader.isPlatformAdmin && needsCompanySelection ? (
+      <PlatformAdminCompanySelect loading={companyLoader.loading} error={companyLoader.error} />
+    ) : null
 
   return (
     <PageShell
@@ -115,6 +110,7 @@ export function DocumentBuilderPreviewPage() {
       breadcrumb={breadcrumb}
       className="document-builder-preview-page"
       hideHeader
+      localToolbar={companyToolbar}
     >
       {error ? <div className="clause-error document-builder-preview-banner">{error}</div> : null}
 

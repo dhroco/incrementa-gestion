@@ -6,7 +6,7 @@ async function main() {
   try {
     const profiles = await knex('profile')
       .select('code')
-      .whereIn('code', ['ADMINISTRADOR_PLATAFORMA', 'USUARIO_EMPRESA_ADMINISTRADOR', 'CONTADOR'])
+      .whereIn('code', ['ADMINISTRADOR_PLATAFORMA'])
       .orderBy('code')
 
     const rootMenus = await knex('navigation_node')
@@ -25,7 +25,7 @@ async function main() {
     const grantCounts = await knex('profile as p')
       .join('profile_navigation_grant as g', 'g.profile_id', 'p.id')
       .join('navigation_node as n', 'n.id', 'g.navigation_node_id')
-      .whereIn('p.code', ['ADMINISTRADOR_PLATAFORMA', 'USUARIO_EMPRESA_ADMINISTRADOR', 'CONTADOR'])
+      .whereIn('p.code', ['ADMINISTRADOR_PLATAFORMA'])
       .andWhere((qb) => qb.where('n.code', 'like', 'NAV_MENU_%').orWhere('n.code', 'like', 'NAV_ITEM_%'))
       .groupBy('p.code')
       .select('p.code')

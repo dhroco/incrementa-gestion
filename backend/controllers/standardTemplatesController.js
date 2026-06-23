@@ -15,6 +15,25 @@ function normalizeRequiredName(value) {
   return trimmed.length === 0 ? null : trimmed
 }
 
+const VALID_SUPPLIER_TYPES = new Set(['persona_natural', 'empresa'])
+
+function parseSupplierTypeFromBody(body) {
+  const raw = body?.supplier_type
+  if (typeof raw !== 'string') return { ok: false }
+  const trimmed = raw.trim()
+  if (!VALID_SUPPLIER_TYPES.has(trimmed)) return { ok: false }
+  return { ok: true, value: trimmed }
+}
+
+function parseSupplierTypeQuery(query) {
+  const raw = query?.supplier_type
+  if (raw === undefined || raw === null || raw === '') return { ok: true, value: undefined }
+  if (typeof raw !== 'string') return { ok: false }
+  const trimmed = raw.trim()
+  if (!VALID_SUPPLIER_TYPES.has(trimmed)) return { ok: false }
+  return { ok: true, value: trimmed }
+}
+
 function createStandardTemplatesController({ standardTemplatesService, getUserProfileIdByUserId }) {
   async function requireActorUserProfileId(req, res) {
     const userId = req.auth?.userId
@@ -40,7 +59,18 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
 
   async function getList(req, res) {
     const q = typeof req.query?.q === 'string' ? req.query.q : undefined
-    const result = await standardTemplatesService.listStandardTemplates({ search: q })
+    const supplierTypeParsed = parseSupplierTypeQuery(req.query)
+    if (!supplierTypeParsed.ok) {
+      return sendError(res, {
+        status: 400,
+        code: 'TEMPLATE_INVALID_SUPPLIER_TYPE',
+        message: 'El tipo de proveedor debe ser persona_natural o empresa.',
+      })
+    }
+    const result = await standardTemplatesService.listStandardTemplates({
+      search: q,
+      supplier_type: supplierTypeParsed.value,
+    })
     if (!result.ok) {
       return sendError(res, { status: 500, code: 'TEMPLATE_LIST_FAILED', message: 'No se pudo obtener el listado de plantillas.' })
     }
@@ -84,6 +114,15 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
       })
     }
 
+    const supplierTypeParsed = parseSupplierTypeFromBody(req.body)
+    if (!supplierTypeParsed.ok) {
+      return sendError(res, {
+        status: 400,
+        code: 'TEMPLATE_INVALID_SUPPLIER_TYPE',
+        message: 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
+      })
+    }
+
     const contentCheck = validateTemplateContentJson(content_json, { required: true })
     if (!contentCheck.ok) {
       return sendError(res, {
@@ -99,6 +138,7 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
     const result = await standardTemplatesService.createStandardTemplate({
       name,
       code,
+      supplier_type: supplierTypeParsed.value,
       description: description ?? null,
       content_json,
       status,
@@ -107,13 +147,6 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
     })
 
     if (!result.ok) {
-      if (result.error?.type === 'invalid_clauses') {
-        return sendError(res, {
-          status: 400,
-          code: result.error.code ?? 'TEMPLATE_INVALID_EMBEDDED_CLAUSE',
-          message: result.error.message ?? 'Cláusula incrustada inválida.',
-        })
-      }
       if (result.error?.type === 'no_document_type') {
         return sendError(res, {
           status: 400,
@@ -126,6 +159,13 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
           status: 409,
           code: result.error.code ?? 'TEMPLATE_CODE_NOT_UNIQUE',
           message: result.error.message ?? 'Ya existe una plantilla estándar con ese código.',
+        })
+      }
+      if (result.error?.type === 'invalid_supplier_type') {
+        return sendError(res, {
+          status: 400,
+          code: 'TEMPLATE_INVALID_SUPPLIER_TYPE',
+          message: result.error.message ?? 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
         })
       }
       return sendError(res, { status: 500, code: 'TEMPLATE_CREATE_FAILED', message: 'No se pudo crear la plantilla.' })
@@ -193,6 +233,15 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
       })
     }
 
+    const supplierTypeParsed = parseSupplierTypeFromBody(req.body)
+    if (!supplierTypeParsed.ok) {
+      return sendError(res, {
+        status: 400,
+        code: 'TEMPLATE_INVALID_SUPPLIER_TYPE',
+        message: 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
+      })
+    }
+
     const contentCheck = validateTemplateContentJson(content_json, { required: true })
     if (!contentCheck.ok) {
       return sendError(res, {
@@ -208,6 +257,7 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
     const result = await standardTemplatesService.updateStandardTemplate(id, {
       name,
       code,
+      supplier_type: supplierTypeParsed.value,
       description: description ?? null,
       content_json,
       status,
@@ -218,13 +268,6 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
     if (!result.ok) {
       if (result.notFound) {
         return sendError(res, { status: 404, code: 'TEMPLATE_NOT_FOUND', message: 'Plantilla no encontrada.' })
-      }
-      if (result.error?.type === 'invalid_clauses') {
-        return sendError(res, {
-          status: 400,
-          code: result.error.code ?? 'TEMPLATE_INVALID_EMBEDDED_CLAUSE',
-          message: result.error.message ?? 'Cláusula incrustada inválida.',
-        })
       }
       if (result.error?.type === 'no_document_type') {
         return sendError(res, {
@@ -238,6 +281,13 @@ function createStandardTemplatesController({ standardTemplatesService, getUserPr
           status: 409,
           code: result.error.code ?? 'TEMPLATE_CODE_NOT_UNIQUE',
           message: result.error.message ?? 'Ya existe una plantilla estándar con ese código.',
+        })
+      }
+      if (result.error?.type === 'invalid_supplier_type') {
+        return sendError(res, {
+          status: 400,
+          code: 'TEMPLATE_INVALID_SUPPLIER_TYPE',
+          message: result.error.message ?? 'El tipo de proveedor es obligatorio y debe ser persona_natural o empresa.',
         })
       }
       return sendError(res, { status: 500, code: 'TEMPLATE_UPDATE_FAILED', message: 'No se pudo actualizar la plantilla.' })

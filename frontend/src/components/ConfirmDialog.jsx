@@ -103,12 +103,12 @@ export function ConfirmDialog({
         </div>
         {message ? <div className="gc-modal__body">{message}</div> : null}
         <div className="gc-modal__footer">
-          <button type="button" className="clause-nav-button" onClick={() => onCancel?.()}>
+          <button type="button" className="btn" onClick={() => onCancel?.()}>
             {cancelText}
           </button>
           <button
             type="button"
-            className={`clause-nav-button clause-nav-button--primary${destructive ? ' clause-nav-button--danger' : ''}`}
+            className={`btn${destructive ? ' btn--danger' : ''}`}
             onClick={() => onConfirm?.()}
           >
             {confirmText}

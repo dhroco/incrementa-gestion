@@ -1,0 +1,47 @@
+{
+  "realm": "incrementa",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN_GLOBAL",
+        "description": "Administrador global (mapear a ADMINISTRADOR_PLATAFORMA en BD en integración futura)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "incrementa-backend",
+      "name": "incrementa-backend",
+      "description": "Backend API — confidential, Direct Access Grants para ROPC en desarrollo local",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-incrementa-backend-secret",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:5173"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@incrementa.la",
+      "email": "admin@incrementa.la",
+      "firstName": "Admin",
+      "lastName": "Incrementa",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": ["ADMIN_GLOBAL"]
+    }
+  ]
+}

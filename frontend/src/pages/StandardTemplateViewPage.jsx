@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useAbility } from '@casl/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import RichTextEditor from '../components/RichTextEditor'
 import { PageShell } from '../components/PageShell'
 import { ClauseTemplateMetadataPanel } from '../components/ClauseTemplateMetadataPanel'
-import { fetchUniversalClausesList } from '../api/clausesApi'
 import { fetchStandardTemplateById } from '../api/standardTemplatesApi'
-import { selectEnrichedNavigation, selectSession } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
+import { AbilityContext } from '../lib/ability'
 import { auditPersonLabel, formatAuditDateTime } from '../utils/auditMetadataDisplay'
-import { mapClauseStatusToSpanish } from '../utils/clauseStatus'
-import './ClauseForm.css'
+import { mapTemplateStatusToSpanish } from '../utils/templateStatus'
+import { SupplierTypeChip } from '../components/SupplierTypeChip'
+import '../styles/shared-form.css'
 
 const LIST_PATH = '/app/gestion-contratos/templates-estandar'
 
@@ -33,42 +32,21 @@ function normalizeContentJson(raw) {
 export function StandardTemplateViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const accessToken = session?.access_token ?? null
+  const ability = useAbility(AbilityContext)
 
-  const canEdit = useMemo(
-    () => buildGrantedCodeSetFromSession(navigation).has('NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_EDIT'),
-    [navigation]
-  )
+  const canEdit = ability.can('update', 'Template')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [entity, setEntity] = useState(null)
-  const [clauseOptions, setClauseOptions] = useState([])
-
-  useEffect(() => {
-    let active = true
-    async function loadClauses() {
-      if (!accessToken) return
-      const res = await fetchUniversalClausesList({ accessToken })
-      if (!active || !res.ok) return
-      const list = res.data?.items
-      setClauseOptions(Array.isArray(list) ? list : [])
-    }
-    loadClauses()
-    return () => {
-      active = false
-    }
-  }, [accessToken])
 
   useEffect(() => {
     let active = true
     async function run() {
-      if (!id || !accessToken) return
+      if (!id) return
       setLoading(true)
       setError(null)
-      const res = await fetchStandardTemplateById(id, { accessToken })
+      const res = await fetchStandardTemplateById(id, {})
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -82,7 +60,7 @@ export function StandardTemplateViewPage() {
     return () => {
       active = false
     }
-  }, [id, accessToken])
+  }, [id])
 
   const authorLabel = useMemo(
     () => auditPersonLabel(entity?.created_by_name, entity?.created_by),
@@ -100,8 +78,8 @@ export function StandardTemplateViewPage() {
 
   const breadcrumb = useMemo(
     () => [
-      { label: 'Templates estándar', to: LIST_PATH },
-      { label: 'Ver' }
+      { label: 'Plantillas', to: LIST_PATH },
+      { label: 'Ver' },
     ],
     []
   )
@@ -109,7 +87,7 @@ export function StandardTemplateViewPage() {
   const subActions = useMemo(
     () =>
       entity && canEdit ? (
-        <button type="button" className="clause-button" onClick={() => navigate('edit', { relative: 'path' })}>
+        <button type="button" className="btn" onClick={() => navigate('edit', { relative: 'path' })}>
           Editar
         </button>
       ) : null,
@@ -117,7 +95,7 @@ export function StandardTemplateViewPage() {
   )
 
   return (
-    <PageShell breadcrumb={breadcrumb} actions={subActions} hideHeader className="clause-universal-view-page">
+    <PageShell breadcrumb={breadcrumb} actions={subActions} hideHeader>
       <div className="ph-card clause-card">
         <div className="clause-form">
           {error ? <div className="clause-error">{error}</div> : null}
@@ -131,7 +109,7 @@ export function StandardTemplateViewPage() {
                 primaryLabel={entity.name ?? ''}
                 entityKind="template"
               >
-                <div className="clause-form-row clause-form-row--audit-three">
+                <div className="clause-form-row clause-form-row--audit-four">
                   <div className="clause-form-col">
                     <div className="clause-label">Autor</div>
                     <input readOnly tabIndex={-1} className="clause-input clause-input--readonly" value={authorLabel} />
@@ -143,6 +121,15 @@ export function StandardTemplateViewPage() {
                   <div className="clause-form-col">
                     <div className="clause-label">Fecha último cambio</div>
                     <input readOnly tabIndex={-1} className="clause-input clause-input--readonly" value={updatedAtLabel} />
+                  </div>
+                  <div className="clause-form-col">
+                    <div className="clause-label">Estado</div>
+                    <input
+                      readOnly
+                      tabIndex={-1}
+                      className="clause-input clause-input--readonly"
+                      value={mapTemplateStatusToSpanish(entity.status)}
+                    />
                   </div>
                 </div>
 
@@ -158,13 +145,8 @@ export function StandardTemplateViewPage() {
                 </div>
 
                 <div className="clause-form-row">
-                  <div className="clause-label">Estado</div>
-                  <input
-                    readOnly
-                    tabIndex={-1}
-                    className="clause-input clause-input--readonly"
-                    value={mapClauseStatusToSpanish(entity.status)}
-                  />
+                  <div className="clause-label">Tipo de proveedor</div>
+                  <SupplierTypeChip supplierType={entity.supplier_type} />
                 </div>
 
                 <div className="clause-form-row">
@@ -182,13 +164,9 @@ export function StandardTemplateViewPage() {
               <div className="clause-form-row clause-form-row--editor">
                 <div className="clause-label">Contenido</div>
                 <RichTextEditor
-                  key={`${entity.id}-${clauseOptions.length}`}
                   readOnly
                   variant="document"
                   content={normalizeContentJson(entity.content_json)}
-                  enableEmbeddedUniversalClauses
-                  embeddedUniversalClausesOptions={clauseOptions}
-                  accessToken={accessToken}
                 />
               </div>
             </>

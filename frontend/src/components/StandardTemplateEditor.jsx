@@ -1,30 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import RichTextEditor from './RichTextEditor'
+import TemplateCopyFromCatalog from './RichTextEditor/TemplateCopyFromCatalog'
+import { ConfirmDialog } from './ConfirmDialog'
 import { PageShell } from './PageShell'
 import { ClauseTemplateMetadataPanel } from './ClauseTemplateMetadataPanel'
 import { createStandardTemplate, fetchStandardTemplateById, updateStandardTemplate } from '../api/standardTemplatesApi'
-import {
-  createCompanyTemplate,
-  fetchCompanyTemplateById,
-  updateCompanyTemplate,
-} from '../api/companyTemplatesApi'
-import { fetchUniversalClausesList, fetchCompanyClausesList } from '../api/clausesApi'
-import { validateClauseContentJsonClient } from '../utils/clauseContentJson'
-import { selectEnrichedProfile, selectEnrichedNavigation } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
+import { validateTemplateContentJsonClient } from '../utils/templateContentJson'
+import { selectEnrichedProfile } from '../store/authSlice'
 import { auditPersonLabel, formatAuditDateTime } from '../utils/auditMetadataDisplay'
-import { mapClauseStatusToSpanish } from '../utils/clauseStatus'
-import '../pages/ClauseForm.css'
+import { mapTemplateStatusToSpanish } from '../utils/templateStatus'
+import { SupplierTypeChip } from './SupplierTypeChip'
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard'
+import { formDirtySnapshot, isFormDirty } from '../utils/formDirtySnapshot'
+import '../styles/shared-form.css'
 
-const LIST_PATH_STANDARD = '/app/gestion-contratos/templates-estandar'
-const LIST_PATH_COMPANY = '/app/gestion-contratos/templates-por-empresa'
+const LIST_PATH = '/app/gestion-contratos/templates-estandar'
 
 const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph', content: [] }] }
 
+const VALID_SUPPLIER_TYPES = ['persona_natural', 'empresa']
+
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
+}
+
+function isValidSupplierType(v) {
+  return VALID_SUPPLIER_TYPES.includes(v)
 }
 
 function normalizeContentJson(raw) {
@@ -41,35 +44,49 @@ function normalizeContentJson(raw) {
   return EMPTY_DOC
 }
 
+function cloneContentJson(doc) {
+  return normalizeContentJson(JSON.parse(JSON.stringify(doc ?? EMPTY_DOC)))
+}
+
+function isEmptyEditorDoc(doc) {
+  const normalized = normalizeContentJson(doc)
+  if (!Array.isArray(normalized.content) || normalized.content.length === 0) return true
+  if (normalized.content.length !== 1) return false
+  const first = normalized.content[0]
+  if (!first || first.type !== 'paragraph') return false
+  return !Array.isArray(first.content) || first.content.length === 0
+}
+
+function buildFormFields({ name, code, description, status, supplierType, contentJson }) {
+  return {
+    name: (name ?? '').trim(),
+    code: (code ?? '').trim(),
+    description: (description ?? '').trim(),
+    status: status ?? 'inactive',
+    supplierType: supplierType ?? 'persona_natural',
+    contentJson: contentJson ?? EMPTY_DOC,
+  }
+}
+
 /**
- * @param {{ accessToken: string | null, mode: 'create' | 'edit', templateId?: string, scope?: 'standard' | 'company', companyId?: string | null }} props
+ * @param {{ accessToken: string | null, mode: 'create' | 'edit', templateId?: string }} props
  */
-export function StandardTemplateEditor({
-  accessToken,
-  mode,
-  templateId,
-  scope = 'standard',
-  companyId = null,
-}) {
+export function StandardTemplateEditor({ mode, templateId }) {
   const navigate = useNavigate()
   const profile = useSelector(selectEnrichedProfile)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const grantedCodeSet = useMemo(() => buildGrantedCodeSetFromSession(navigation), [navigation])
-  /** Alineado con GET /api/clauses/universal (exige este código en el backend). */
-  const canListUniversalClauses = grantedCodeSet.has('NAV_ACTION_CONTRATOS_CLAUSULAS_UNIVERSALES_READ')
-  /** Alineado con GET /api/clauses/company. */
-  const canListCompanyClauses = grantedCodeSet.has('NAV_ACTION_CONTRATOS_CLAUSULAS_POR_EMPRESA_READ')
-
-  const listPath = scope === 'company' ? LIST_PATH_COMPANY : LIST_PATH_STANDARD
-  const listLabel = scope === 'company' ? 'Templates por empresa' : 'Templates estándar'
 
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
-  const [status, setStatus] = useState('draft')
+  const [status, setStatus] = useState('inactive')
+  const [supplierType, setSupplierType] = useState('persona_natural')
   const [contentJson, setContentJson] = useState(null)
-  const [clauseOptions, setClauseOptions] = useState([])
-  const [companyClauseOptions, setCompanyClauseOptions] = useState([])
+  const [contentVersion, setContentVersion] = useState(0)
+  const [isCopyFromOpen, setIsCopyFromOpen] = useState(false)
+  const [copyFromLoading, setCopyFromLoading] = useState(false)
+  const [copyFromError, setCopyFromError] = useState(null)
+  const [copyFromConfirmOpen, setCopyFromConfirmOpen] = useState(false)
+  const [pendingCopyTemplate, setPendingCopyTemplate] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(mode === 'edit')
   const [loadError, setLoadError] = useState(null)
@@ -86,63 +103,39 @@ export function StandardTemplateEditor({
   const defaultAuthorLabel = auditPersonLabel(profile?.label, null)
   const defaultUpdatedAtLabel = formatAuditDateTime(new Date())
 
-  const companyScopeMissing = scope === 'company' && !isNonEmptyString(companyId)
+  /** Evita recargar desde el servidor al refrescar el token OIDC (SessionKeepAlive). */
+  const loadedTemplateIdRef = useRef(null)
+  const [savedSnapshot, setSavedSnapshot] = useState(null)
+
+  const currentFormFields = useMemo(
+    () => buildFormFields({ name, code, description, status, supplierType, contentJson }),
+    [name, code, description, status, supplierType, contentJson]
+  )
+
+  const isDirty = useMemo(
+    () => isFormDirty(savedSnapshot, currentFormFields),
+    [savedSnapshot, currentFormFields]
+  )
 
   useEffect(() => {
-    let active = true
-    async function loadClauses() {
-      if (!accessToken || !canListUniversalClauses) {
-        if (active) setClauseOptions([])
-        return
-      }
-      const res = await fetchUniversalClausesList({ accessToken })
-      if (!active || !res.ok) return
-      const list = res.data?.items
-      setClauseOptions(Array.isArray(list) ? list : [])
+    if (mode === 'create' && savedSnapshot == null && !loading) {
+      setSavedSnapshot(formDirtySnapshot(currentFormFields))
     }
-    loadClauses()
-    return () => {
-      active = false
-    }
-  }, [accessToken, canListUniversalClauses])
+  }, [mode, loading, savedSnapshot, currentFormFields])
 
   useEffect(() => {
-    let active = true
-    async function loadCompanyClauses() {
-      if (!accessToken || !canListCompanyClauses || scope !== 'company' || !isNonEmptyString(companyId)) {
-        setCompanyClauseOptions([])
-        return
-      }
-      const res = await fetchCompanyClausesList({ accessToken, companyId: companyId.trim() })
-      if (!active || !res.ok) return
-      const list = res.data?.items
-      setCompanyClauseOptions(Array.isArray(list) ? list : [])
-    }
-    loadCompanyClauses()
-    return () => {
-      active = false
-    }
-  }, [accessToken, canListCompanyClauses, scope, companyId])
-
-  useEffect(() => {
-    if (mode !== 'edit' || !templateId || !accessToken) {
+    if (mode !== 'edit' || !templateId) {
       return
     }
-    if (companyScopeMissing) {
-      const t = window.setTimeout(() => {
-        setLoading(false)
-        setLoadError('Seleccione una empresa para cargar la plantilla.')
-      }, 0)
-      return () => window.clearTimeout(t)
+    if (loadedTemplateIdRef.current === templateId) {
+      return
     }
+
     let active = true
     async function loadTemplate() {
       setLoading(true)
       setLoadError(null)
-      const res =
-        scope === 'company'
-          ? await fetchCompanyTemplateById(templateId, { accessToken, companyId: companyId.trim() })
-          : await fetchStandardTemplateById(templateId, { accessToken })
+      const res = await fetchStandardTemplateById(templateId, {})
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -154,11 +147,22 @@ export function StandardTemplateEditor({
         setLoadError('Respuesta inválida del servidor.')
         return
       }
-      setName(typeof t.name === 'string' ? t.name : '')
-      setCode(typeof t.code === 'string' ? t.code : '')
-      setDescription(typeof t.description === 'string' ? t.description : '')
-      setStatus(['draft', 'active', 'inactive'].includes(t.status) ? t.status : 'draft')
-      setContentJson(normalizeContentJson(t.content_json))
+      loadedTemplateIdRef.current = templateId
+      const loadedFields = buildFormFields({
+        name: typeof t.name === 'string' ? t.name : '',
+        code: typeof t.code === 'string' ? t.code : '',
+        description: typeof t.description === 'string' ? t.description : '',
+        status: ['active', 'inactive'].includes(t.status) ? t.status : 'inactive',
+        supplierType: isValidSupplierType(t.supplier_type) ? t.supplier_type : 'persona_natural',
+        contentJson: normalizeContentJson(t.content_json),
+      })
+      setSavedSnapshot(formDirtySnapshot(loadedFields))
+      setName(loadedFields.name)
+      setCode(loadedFields.code)
+      setDescription(loadedFields.description)
+      setStatus(loadedFields.status)
+      setSupplierType(loadedFields.supplierType)
+      setContentJson(loadedFields.contentJson)
       setAuditMeta({
         created_by: t.created_by ?? null,
         created_by_name: t.created_by_name ?? null,
@@ -171,7 +175,7 @@ export function StandardTemplateEditor({
     return () => {
       active = false
     }
-  }, [mode, templateId, accessToken, scope, companyId, companyScopeMissing])
+  }, [mode, templateId])
 
   const authorReadOnly = useMemo(() => {
     if (mode === 'edit') return auditPersonLabel(auditMeta.created_by_name, auditMeta.created_by)
@@ -192,107 +196,194 @@ export function StandardTemplateEditor({
     () =>
       isNonEmptyString(name) &&
       isNonEmptyString(code) &&
-      !!accessToken &&
+      isValidSupplierType(supplierType) &&
       !loading &&
-      !loadError &&
-      !(scope === 'company' && !isNonEmptyString(companyId)),
-    [name, code, accessToken, loading, loadError, scope, companyId]
+      !loadError,
+    [name, code, supplierType, loading, loadError]
   )
 
-  const onSubmit = useCallback(async () => {
-    if (!canSubmit) return
-    const contentCheck = validateClauseContentJsonClient(contentJson)
-    if (!contentCheck.ok) {
-      setError(contentCheck.message)
+  const showForm = !loading && !loadError
+
+  const saveForm = useCallback(
+    async ({ navigateAfter = false } = {}) => {
+      if (!canSubmit) return false
+      const contentCheck = validateTemplateContentJsonClient(contentJson)
+      if (!contentCheck.ok) {
+        setError(contentCheck.message)
+        setSuccess(null)
+        return false
+      }
+      setSubmitting(true)
+      setError(null)
       setSuccess(null)
-      return
-    }
-    setSubmitting(true)
-    setError(null)
-    setSuccess(null)
 
-    const payload = {
-      name: name.trim(),
-      code: code.trim(),
-      description: description.trim().length ? description.trim() : null,
-      content_json: contentJson,
-      status: mode === 'create' ? 'draft' : status,
-    }
+      const payload = {
+        name: name.trim(),
+        code: code.trim(),
+        description: description.trim().length ? description.trim() : null,
+        content_json: contentJson,
+        status,
+        supplier_type: supplierType,
+      }
 
-    const res =
-      scope === 'company'
-        ? mode === 'edit' && templateId
-          ? await updateCompanyTemplate(templateId, payload, { accessToken, companyId: companyId.trim() })
-          : await createCompanyTemplate(payload, { accessToken, companyId: companyId.trim() })
-        : mode === 'edit' && templateId
-          ? await updateStandardTemplate(templateId, payload, { accessToken })
-          : await createStandardTemplate(payload, { accessToken })
+      const res =
+        mode === 'edit' && templateId
+          ? await updateStandardTemplate(templateId, payload, {})
+          : await createStandardTemplate(payload, {})
 
-    setSubmitting(false)
-    if (!res.ok) {
-      setError(res.message ?? 'No se pudo guardar la plantilla.')
-      return
-    }
-    if (mode === 'edit' && res.data && typeof res.data === 'object') {
-      const t = res.data
-      setAuditMeta({
-        created_by: t.created_by ?? null,
-        created_by_name: t.created_by_name ?? null,
-        last_edited_by: t.last_edited_by ?? null,
-        last_edited_by_name: t.last_edited_by_name ?? null,
-        updated_at: t.updated_at ?? null,
-      })
-    }
-    setSuccess(mode === 'edit' ? 'La plantilla se actualizó correctamente.' : 'La plantilla se creó correctamente.')
-    window.setTimeout(() => {
-      navigate(listPath)
-    }, 900)
-  }, [
-    accessToken,
-    canSubmit,
-    companyId,
-    contentJson,
-    description,
-    mode,
-    name,
-    code,
-    navigate,
-    listPath,
-    scope,
-    status,
-    templateId,
-  ])
+      setSubmitting(false)
+      if (!res.ok) {
+        setError(res.message ?? 'No se pudo guardar la plantilla.')
+        return false
+      }
+      if (mode === 'edit' && res.data && typeof res.data === 'object') {
+        const t = res.data
+        setAuditMeta({
+          created_by: t.created_by ?? null,
+          created_by_name: t.created_by_name ?? null,
+          last_edited_by: t.last_edited_by ?? null,
+          last_edited_by_name: t.last_edited_by_name ?? null,
+          updated_at: t.updated_at ?? null,
+        })
+      }
+      setSavedSnapshot(formDirtySnapshot(currentFormFields))
+      if (navigateAfter) {
+        setSuccess(mode === 'edit' ? 'La plantilla se actualizó correctamente.' : 'La plantilla se creó correctamente.')
+        window.setTimeout(() => {
+          navigate(LIST_PATH)
+        }, 900)
+      }
+      return true
+    },
+    [
+      canSubmit,
+      contentJson,
+      currentFormFields,
+      description,
+      mode,
+      name,
+      code,
+      navigate,
+      status,
+      supplierType,
+      templateId,
+    ]
+  )
+
+  const onSubmit = useCallback(() => {
+    void saveForm({ navigateAfter: true })
+  }, [saveForm])
+
+  const { dialog: unsavedChangesDialog } = useUnsavedChangesGuard({
+    isDirty: isDirty && showForm,
+    onSave: () => saveForm({ navigateAfter: false }),
+    enabled: showForm,
+    title: 'Cambios sin guardar',
+    message: 'Tiene cambios sin guardar en esta plantilla. ¿Desea guardarlos antes de salir?',
+  })
+
+  const applyCopiedContent = useCallback((nextContent) => {
+    const cloned = cloneContentJson(nextContent)
+    setContentJson(cloned)
+    setContentVersion((version) => version + 1)
+    setCopyFromError(null)
+  }, [])
+
+  const loadTemplateContentForCopy = useCallback(
+    async (template) => {
+      if (!template?.id) return
+      setCopyFromLoading(true)
+      setCopyFromError(null)
+      const res = await fetchStandardTemplateById(template.id, {})
+      setCopyFromLoading(false)
+      if (!res.ok) {
+        setCopyFromError(res.message ?? 'No se pudo cargar el contenido de la plantilla.')
+        return
+      }
+      const source = res.data
+      if (!source || typeof source !== 'object') {
+        setCopyFromError('Respuesta inválida del servidor.')
+        return
+      }
+      applyCopiedContent(normalizeContentJson(source.content_json))
+    },
+    [applyCopiedContent]
+  )
+
+  const handleCopyFromSelect = useCallback(
+    (template) => {
+      if (!template?.id) return
+      if (!isEmptyEditorDoc(contentJson)) {
+        setPendingCopyTemplate(template)
+        setCopyFromConfirmOpen(true)
+        return
+      }
+      void loadTemplateContentForCopy(template)
+    },
+    [contentJson, loadTemplateContentForCopy]
+  )
+
+  const handleCopyFromConfirm = useCallback(() => {
+    const template = pendingCopyTemplate
+    setCopyFromConfirmOpen(false)
+    setPendingCopyTemplate(null)
+    if (!template) return
+    void loadTemplateContentForCopy(template)
+  }, [loadTemplateContentForCopy, pendingCopyTemplate])
+
+  const handleCopyFromCancel = useCallback(() => {
+    setCopyFromConfirmOpen(false)
+    setPendingCopyTemplate(null)
+  }, [])
 
   const breadcrumb = useMemo(
     () => [
-      { label: listLabel, to: listPath },
-      { label: mode === 'edit' ? 'Editar' : 'Nuevo template' },
+      { label: 'Plantillas', to: LIST_PATH },
+      { label: mode === 'edit' ? 'Editar' : 'Nueva plantilla' },
     ],
-    [listLabel, listPath, mode]
+    [mode]
   )
 
   const subActions = useMemo(
     () => (
-      <button type="button" className="clause-button" onClick={onSubmit} disabled={!canSubmit || submitting}>
+      <button type="button" className="btn" onClick={onSubmit} disabled={!canSubmit || submitting}>
         {submitting ? 'Guardando…' : 'Guardar'}
       </button>
     ),
     [canSubmit, onSubmit, submitting]
   )
 
-  const showForm = !loading && !loadError && !companyScopeMissing
-
   return (
     <PageShell breadcrumb={breadcrumb} actions={subActions} hideHeader>
+      {unsavedChangesDialog}
+      <ConfirmDialog
+        open={copyFromConfirmOpen}
+        title="Reemplazar contenido"
+        message={
+          pendingCopyTemplate
+            ? `El editor ya tiene contenido. ¿Desea reemplazarlo con el de "${pendingCopyTemplate.code || pendingCopyTemplate.name || 'la plantilla seleccionada'}"?`
+            : 'El editor ya tiene contenido. ¿Desea reemplazarlo?'
+        }
+        confirmText="Reemplazar"
+        cancelText="Cancelar"
+        destructive
+        onConfirm={handleCopyFromConfirm}
+        onCancel={handleCopyFromCancel}
+      />
+      <TemplateCopyFromCatalog
+        isOpen={isCopyFromOpen}
+        onClose={() => setIsCopyFromOpen(false)}
+        onTemplateSelect={handleCopyFromSelect}
+        excludeTemplateId={mode === 'edit' ? templateId : null}
+      />
       <div className="ph-card clause-card">
         <div className="clause-form">
-          {companyScopeMissing ? (
-            <div className="clause-error">Seleccione una empresa en el subencabezado para continuar.</div>
-          ) : null}
           {loading ? <div className="clause-list-loading">Cargando…</div> : null}
           {loadError ? <div className="clause-error">{loadError}</div> : null}
           {success ? <div className="clause-success">{success}</div> : null}
           {error ? <div className="clause-error">{error}</div> : null}
+          {copyFromError ? <div className="clause-error">{copyFromError}</div> : null}
+          {copyFromLoading ? <div className="clause-list-loading">Copiando contenido…</div> : null}
 
           {showForm ? (
             <>
@@ -302,7 +393,7 @@ export function StandardTemplateEditor({
                 primaryLabel={name}
                 entityKind="template"
               >
-                <div className={mode === 'create' ? 'clause-form-row clause-form-row--audit-four' : 'clause-form-row clause-form-row--audit-three'}>
+                <div className="clause-form-row clause-form-row--audit-four">
                   <div className="clause-form-col">
                     <div className="clause-label">Autor</div>
                     <input readOnly tabIndex={-1} className="clause-input clause-input--readonly" value={authorReadOnly} />
@@ -315,17 +406,22 @@ export function StandardTemplateEditor({
                     <div className="clause-label">Fecha último cambio</div>
                     <input readOnly tabIndex={-1} className="clause-input clause-input--readonly" value={updatedAtReadOnly} />
                   </div>
-                  {mode === 'create' ? (
-                    <div className="clause-form-col">
-                      <div className="clause-label">Estado</div>
+                  <div className="clause-form-col">
+                    <div className="clause-label">Estado</div>
+                    {mode === 'create' ? (
                       <input
                         readOnly
                         tabIndex={-1}
                         className="clause-input clause-input--readonly"
-                        value={mapClauseStatusToSpanish('draft')}
+                        value={mapTemplateStatusToSpanish('inactive')}
                       />
-                    </div>
-                  ) : null}
+                    ) : (
+                      <select className="clause-input" value={status} onChange={(e) => setStatus(e.target.value)}>
+                        <option value="active">Activo</option>
+                        <option value="inactive">Inactivo</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
 
                 <div className="clause-form-row clause-form-row--two-col">
@@ -344,21 +440,36 @@ export function StandardTemplateEditor({
                       className="clause-input"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      placeholder={scope === 'company' ? 'Ej: PLANTILLA-EMP-A001' : 'Ej: PLANTILLA-A001'}
+                      placeholder="Ej: PLANTILLA-A001"
                     />
                   </div>
                 </div>
 
-                {mode === 'edit' ? (
-                  <div className="clause-form-row">
-                    <div className="clause-label">Estado</div>
-                    <select className="clause-input" value={status} onChange={(e) => setStatus(e.target.value)}>
-                      <option value="draft">Borrador</option>
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
-                  </div>
-                ) : null}
+                <div className="clause-form-row">
+                  <div className="clause-label">Tipo de proveedor</div>
+                </div>
+                <div className="clause-form-row clause-form-row--inline">
+                  <label className="clause-form-label-inline">
+                    <input
+                      type="radio"
+                      name="supplier_type"
+                      value="persona_natural"
+                      checked={supplierType === 'persona_natural'}
+                      onChange={() => setSupplierType('persona_natural')}
+                    />
+                    <SupplierTypeChip supplierType="persona_natural" />
+                  </label>
+                  <label className="clause-form-label-inline">
+                    <input
+                      type="radio"
+                      name="supplier_type"
+                      value="empresa"
+                      checked={supplierType === 'empresa'}
+                      onChange={() => setSupplierType('empresa')}
+                    />
+                    <SupplierTypeChip supplierType="empresa" />
+                  </label>
+                </div>
 
                 <div className="clause-form-row">
                   <div className="clause-label">Descripción</div>
@@ -377,14 +488,9 @@ export function StandardTemplateEditor({
                 <RichTextEditor
                   variant="document"
                   content={contentJson ?? EMPTY_DOC}
+                  contentVersion={contentVersion}
                   onChange={(json) => setContentJson(json)}
-                  enableEmbeddedUniversalClauses={canListUniversalClauses}
-                  embeddedUniversalClausesOptions={clauseOptions}
-                  enableEmbeddedCompanyClauses={scope === 'company' && canListCompanyClauses}
-                  embeddedCompanyClausesOptions={companyClauseOptions}
-                  embeddedClauseCompanyId={scope === 'company' && isNonEmptyString(companyId) ? companyId.trim() : null}
-                  accessToken={accessToken}
-                  clauseCatalogMode={scope === 'company' ? 'unified' : 'split'}
+                  onCopyFromButtonClick={() => setIsCopyFromOpen(true)}
                 />
               </div>
             </>

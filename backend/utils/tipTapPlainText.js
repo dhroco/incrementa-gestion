@@ -4,12 +4,10 @@ function isPlainObject(value) {
 
 /**
  * Render TipTap-like JSON to plain text with `{{variableId}}` tokens for variables.
- * Recursively expands `embeddedUniversalClause` using `loadClauseText(clauseId, clauseKind, companyId)`.
+ * Legacy `embeddedUniversalClause` nodes are omitted (no resolution).
  * @param {unknown} doc
- * @param {(ref: { clauseId: string, clauseKind: string, companyId: string | null }) => Promise<string>} loadClauseText
- * @param {string} companyId
  */
-async function tipTapDocToPlainTextAsync(doc, loadClauseText, companyId) {
+async function tipTapDocToPlainTextAsync(doc) {
   if (!isPlainObject(doc)) return ''
 
   async function walkNode(node) {
@@ -27,16 +25,7 @@ async function tipTapDocToPlainTextAsync(doc, loadClauseText, companyId) {
       return vid ? `{{${vid}}}` : ''
     }
     if (t === 'embeddedUniversalClause') {
-      const clauseId = typeof node.attrs?.clauseId === 'string' ? node.attrs.clauseId.trim() : ''
-      if (!clauseId) return ''
-      const kindRaw = typeof node.attrs?.clauseKind === 'string' ? node.attrs.clauseKind : 'universal'
-      const clauseKind = kindRaw === 'company' ? 'company' : 'universal'
-      const refCompanyId =
-        typeof node.attrs?.companyId === 'string' && node.attrs.companyId.trim().length > 0
-          ? node.attrs.companyId.trim()
-          : null
-      const text = await loadClauseText({ clauseId, clauseKind, companyId: refCompanyId ?? companyId })
-      return text
+      return ''
     }
 
     const parts = []

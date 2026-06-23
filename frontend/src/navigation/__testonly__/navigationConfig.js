@@ -4,9 +4,7 @@
  * Runtime navigation and allowed paths MUST come from GET /api/me/session (`navigation` payload),
  * not from a locally hardcoded configuration.
  *
- * El árbol `canonicalNavStructure` es un stub simplificado (p. ej. dos perfiles en `PROFILE_CODES`);
- * no replica la política completa de BD ni el tercer perfil operativo. Solo sirve para tests unitarios
- * que validan filtros por código de perfil.
+ * Stub simplificado con un único perfil operativo (`ADMINISTRADOR_PLATAFORMA`).
  */
 
 /** @typedef {{ type: 'link', path: string, label: string, moduleTitle: string, profiles: string[] }} NavLinkNode */
@@ -15,13 +13,10 @@
 /** @typedef {NavLinkNode | NavGroupNode} NavNode */
 
 export const PROFILE_CODES = {
-  ADMINISTRADOR_PLATAFORMA: 'ADMINISTRADOR_PLATAFORMA',
-  USUARIO_EMPRESA_ADMINISTRADOR: 'USUARIO_EMPRESA_ADMINISTRADOR'
+  ADMINISTRADOR_PLATAFORMA: 'ADMINISTRADOR_PLATAFORMA'
 }
 
 const P = PROFILE_CODES
-
-const BOTH = [P.ADMINISTRADOR_PLATAFORMA, P.USUARIO_EMPRESA_ADMINISTRADOR]
 const ADMIN_ONLY = [P.ADMINISTRADOR_PLATAFORMA]
 
 /**
@@ -34,28 +29,28 @@ export const canonicalNavStructure = [
     path: '/app/dashboard',
     label: 'Dashboard',
     moduleTitle: 'Dashboard',
-    profiles: BOTH
+    profiles: ADMIN_ONLY
   },
   {
     type: 'link',
     path: '/app/contratos',
     label: 'Contratos',
     moduleTitle: 'Contratos',
-    profiles: BOTH
+    profiles: ADMIN_ONLY
   },
   {
     type: 'link',
     path: '/app/proveedores',
     label: 'Proveedores',
     moduleTitle: 'Proveedores',
-    profiles: BOTH
+    profiles: ADMIN_ONLY
   },
   {
     type: 'link',
     path: '/app/configuracion',
     label: 'Configuración',
     moduleTitle: 'Configuración',
-    profiles: BOTH
+    profiles: ADMIN_ONLY
   },
   {
     type: 'group',
@@ -83,8 +78,8 @@ export const canonicalNavStructure = [
  * @type {{ path: string, moduleTitle: string, profiles: string[] }[]}
  */
 export const crossCuttingPrivateRoutes = [
-  { path: '/app/mi-perfil', moduleTitle: 'Mi perfil', profiles: BOTH },
-  { path: '/app/notificaciones', moduleTitle: 'Notificaciones', profiles: BOTH }
+  { path: '/app/mi-perfil', moduleTitle: 'Mi perfil', profiles: ADMIN_ONLY },
+  { path: '/app/notificaciones', moduleTitle: 'Notificaciones', profiles: ADMIN_ONLY }
 ]
 
 /**
@@ -185,4 +180,3 @@ export function getModuleTitleForPath(pathname, profileCode) {
   if (fallbackExtra) return fallbackExtra.moduleTitle
   return 'Módulo'
 }
-

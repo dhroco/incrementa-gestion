@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useAbility } from '@casl/react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { ListSearchField } from '../components/ListSearchField'
 import { fetchPlatformUsersList } from '../api/platformUsersPlatformApi'
-import { selectEnrichedNavigation, selectSession } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
-import './ClauseForm.css'
+import { AbilityContext } from '../lib/ability'
+import '../styles/shared-form.css'
 
 function formatEstado(isActive) {
   return isActive === false ? 'Inactivo' : 'Activo'
@@ -14,14 +13,14 @@ function formatEstado(isActive) {
 
 export function PlatformUsersListPage() {
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const accessToken = session?.access_token ?? null
+  const location = useLocation()
+  const createdMessage =
+    typeof location.state?.createdMessage === 'string' ? location.state.createdMessage : null
+  const ability = useAbility(AbilityContext)
 
-  const grantedCodes = useMemo(() => buildGrantedCodeSetFromSession(navigation), [navigation])
-  const canCreate = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_USUARIOS_PLATAFORMA_CREATE')
-  const canRead = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_USUARIOS_PLATAFORMA_READ')
-  const canEdit = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_USUARIOS_PLATAFORMA_EDIT')
+  const canCreate = ability.can('create', 'PlatformUser')
+  const canRead = ability.can('read', 'PlatformUser')
+  const canEdit = ability.can('update', 'PlatformUser')
 
   const [q, setQ] = useState('')
   const [items, setItems] = useState([])
@@ -31,14 +30,9 @@ export function PlatformUsersListPage() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!accessToken) {
-        setLoading(false)
-        setItems([])
-        return
-      }
       setLoading(true)
       setError(null)
-      const res = await fetchPlatformUsersList({ q, accessToken })
+      const res = await fetchPlatformUsersList({ q })
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -53,20 +47,20 @@ export function PlatformUsersListPage() {
     return () => {
       active = false
     }
-  }, [q, accessToken])
+  }, [q])
 
   const listToolbar = useMemo(
     () => (
       <>
         <ListSearchField
           id="platform-users-search"
-          placeholder="Buscar por correo, nombre, teléfono o empresa…"
-          ariaLabel="Buscar usuarios plataforma"
+          placeholder="Buscar por correo o nombre…"
+          ariaLabel="Buscar usuarios"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         {canCreate ? (
-          <button type="button" className="clause-button" onClick={() => navigate('nuevo')}>
+          <button type="button" className="btn" onClick={() => navigate('nuevo')}>
             Nuevo usuario
           </button>
         ) : null}
@@ -82,6 +76,7 @@ export function PlatformUsersListPage() {
       className="clause-universal-list-page clause-platform-users-list"
     >
       <div className="clause-list-card">
+        {createdMessage ? <div className="clause-success">{createdMessage}</div> : null}
         {error ? <div className="clause-error">{error}</div> : null}
 
         {loading ? (
@@ -93,8 +88,7 @@ export function PlatformUsersListPage() {
                 <tr>
                   <th>Nombre</th>
                   <th>Correo</th>
-                  <th>Teléfono</th>
-                  <th>Perfil</th>
+                  <th>Rol</th>
                   <th>Estado</th>
                   <th>Empresa</th>
                   <th className="clause-list-col-actions">Acciones</th>
@@ -103,8 +97,8 @@ export function PlatformUsersListPage() {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="clause-list-empty">
-                      {q.trim() ? 'No hay usuarios que coincidan con la búsqueda.' : 'No hay usuarios plataforma registrados.'}
+                    <td colSpan={6} className="clause-list-empty">
+                      {q.trim() ? 'No hay usuarios que coincidan con la búsqueda.' : 'No hay usuarios registrados.'}
                     </td>
                   </tr>
                 ) : (
@@ -112,7 +106,6 @@ export function PlatformUsersListPage() {
                     <tr key={row.id}>
                       <td>{row.full_name ?? '—'}</td>
                       <td>{row.email ?? '—'}</td>
-                      <td>{row.phone && String(row.phone).trim() ? row.phone : '—'}</td>
                       <td>{row.profile_label ?? row.profile_code ?? '—'}</td>
                       <td>{formatEstado(row.is_active)}</td>
                       <td>{row.company?.business_name ?? '—'}</td>

@@ -116,6 +116,31 @@
   font-style: italic;
 }
 
+.editor-content :global(.ProseMirror span[data-uppercase="true"]) {
+  text-transform: uppercase;
+}
+
+.variable-node[data-uppercase="true"] {
+  text-transform: uppercase;
+}
+
+.variable-node--bold {
+  font-weight: 700;
+}
+
+.variable-node--italic {
+  font-style: italic;
+}
+
+.variable-node--underline {
+  text-decoration: underline;
+}
+
+.variable-node--selected {
+  outline: 1px solid #657a8a;
+  outline-offset: 1px;
+}
+
 /* Gap cursor entre bloques (prosemirror-gapcursor): por defecto línea negra */
 .editor-content :global(.ProseMirror-gapcursor::after) {
   border-top-color: #657a8a;
@@ -145,7 +170,7 @@
   border-color: #D0D0D0;
 }
 
-.variable-node[data-group="trabajador"] {
+.variable-node[data-group="proveedor"] {
   background: #E8F4FD;
   border-color: #B3D9F2;
   color: #0366D6;
@@ -163,7 +188,7 @@
   color: #E65100;
 }
 
-.variable-node[data-group="trabajador"]:hover {
+.variable-node[data-group="proveedor"]:hover {
   background: #D1E9FB;
   border-color: #93C5F0;
 }
@@ -321,7 +346,7 @@
   text-transform: uppercase;
 }
 
-.variable-group-badge:global(.trabajador) {
+.variable-group-badge:global(.proveedor) {
   background: #E8F4FD;
   color: #0366D6;
 }
@@ -471,17 +496,52 @@
   margin: 0 4px;
 }
 
-.toolbar-document-variable {
-  margin-left: 4px;
-  padding: 0 12px;
+.toolbar-document-variable,
+.toolbar-document-copy-from {
+  padding: 2px 10px;
+  height: 28px;
+  min-width: 0;
   border: 1px solid #657a8a;
+  border-radius: 9999px;
   background: #fff;
   color: #657a8a;
   font-weight: 600;
 }
 
-.toolbar-document-variable:hover {
+.toolbar-document-variable:hover,
+.toolbar-document-copy-from:hover {
   background: rgba(101, 122, 138, 0.08);
+}
+
+.template-copy-item {
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #e3e6e8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  background: #fff;
+  font: inherit;
+}
+
+.template-copy-item:hover {
+  background: #f7f7f7;
+  border-color: #657a8a;
+}
+
+.template-copy-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.template-copy-item-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #657a8a;
 }
 
 .toolbar-document-bold {
@@ -495,6 +555,12 @@
 .toolbar-document-underline {
   text-decoration: underline;
   font-weight: 700;
+}
+
+.toolbar-document-uppercase {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .toolbar-document-align-icon {
@@ -585,7 +651,6 @@
 
 .document-zoom-stage {
   width: max-content;
-  transform-origin: top center;
   margin: 0 auto;
 }
 
@@ -626,223 +691,3 @@
   font-family: var(--font-family-clause-editor);
 }
 
-.embedded-clause-wrapper {
-  margin: 8px 0;
-}
-
-.embedded-clause-block {
-  border: 1px solid #E3E6E8;
-  background: #F0F1F2;
-  border-radius: 4px;
-  padding: 8px 10px;
-  /* Tamaño de cuerpo/títulos del contenido: ver .embedded-clause-preview-editor (alinea con el documento) */
-  color: #000000;
-  /* El bloque solo crece con su contenido (sin estirar altura vacía) */
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Metadato: no competir visualmente con el cuerpo de la cláusula (negro #000) */
-.embedded-clause-block__heading {
-  font-size: 11px;
-  font-weight: 600;
-  color: #657a8a;
-  margin: 0 0 6px 0;
-  line-height: 1.35;
-  letter-spacing: 0.02em;
-}
-
-.embedded-clause-block__missing {
-  font-size: 12px;
-  color: #657a8a;
-  margin: 0 0 6px 0;
-  line-height: 1.4;
-}
-
-/* Contenedor del texto de la cláusula: sin caja blanca; mismo fondo gris que .embedded-clause-block */
-.embedded-clause-preview-wrap {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  overflow: visible;
-}
-
-.embedded-clause-preview-editor {
-  padding: 0;
-  margin: 0;
-  min-height: 0;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
-.embedded-clause-preview-editor :global(.ProseMirror) {
-  outline: none;
-  min-height: 0 !important;
-  height: auto;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror p) {
-  margin: 0;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror p + p) {
-  margin-top: 6px;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror > *:first-child) {
-  margin-top: 0;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror > *:last-child) {
-  margin-bottom: 0;
-}
-
-/* Tipografía del cuerpo incrustado = misma escala que el editor principal (variante default, sin “document”) */
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror) {
-  font-size: 14px;
-  line-height: 1.6;
-  font-family: var(--font-family-clause-editor);
-}
-
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h1) {
-  font-size: 24px;
-  font-weight: 500;
-  margin: 16px 0 8px 0;
-}
-
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h2) {
-  font-size: 20px;
-  font-weight: 500;
-  margin: 14px 0 6px 0;
-}
-
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror h3) {
-  font-size: 18px;
-  font-weight: 500;
-  margin: 12px 0 4px 0;
-}
-
-.rich-text-editor:not(.rich-text-editor--document) .embedded-clause-preview-editor :global(.ProseMirror p) {
-  margin: 8px 0;
-}
-
-/* Variante documento (templates estándar, cláusulas en “hoja”): mismos valores que .rich-text-editor--document .editor-content */
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root),
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror) {
-  font-size: 14px;
-  line-height: 1.6;
-  font-family: var(--font-family-clause-editor);
-}
-
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h1) {
-  font-size: 20px;
-  font-weight: 500;
-  margin: 0 0 12px 0;
-}
-
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h2) {
-  font-size: 18px;
-  font-weight: 500;
-  margin: 16px 0 8px 0;
-}
-
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror h3) {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 14px 0 6px 0;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror h1 strong),
-.embedded-clause-preview-editor :global(.ProseMirror h1 b),
-.embedded-clause-preview-editor :global(.ProseMirror h2 strong),
-.embedded-clause-preview-editor :global(.ProseMirror h2 b),
-.embedded-clause-preview-editor :global(.ProseMirror h3 strong),
-.embedded-clause-preview-editor :global(.ProseMirror h3 b) {
-  font-weight: 700;
-}
-
-.rich-text-editor--document .embedded-clause-preview-editor :global(.ProseMirror p) {
-  margin: 8px 0;
-}
-
-.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root ul),
-.embedded-clause-preview-editor :global(.ProseMirror.embedded-clause-pm-root ol) {
-  margin: 0;
-  padding-left: 1.25em;
-}
-
-.embedded-clause-block__action {
-  display: block;
-  font-size: 12px;
-  padding: 0;
-  margin-top: 6px;
-  border: none;
-  background: none;
-  color: #194166;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.embedded-clause-block__action:hover {
-  opacity: 0.9;
-}
-
-.embedded-clause-catalog-body {
-  padding: 12px 16px 16px;
-}
-
-.embedded-clause-catalog-label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: #000000;
-}
-
-.embedded-clause-select {
-  width: 100%;
-  font-size: 13px;
-  padding: 6px 8px;
-  border: 1px solid #E3E6E8;
-  border-radius: 4px;
-  margin-bottom: 12px;
-}
-
-.embedded-clause-catalog-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.embedded-clause-tabs {
-  display: flex;
-  gap: 0;
-  padding: 0 8px;
-  border-bottom: 1px solid #E3E6E8;
-  background: #fafbfc;
-}
-
-.embedded-clause-tab {
-  flex: 1;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  background: transparent;
-  color: #4a5b66;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.embedded-clause-tab:hover {
-  color: #031B30;
-  background: #f0f2f3;
-}
-
-.embedded-clause-tab--active {
-  color: #031B30;
-  border-bottom-color: #657A8A;
-  background: #fff;
-}

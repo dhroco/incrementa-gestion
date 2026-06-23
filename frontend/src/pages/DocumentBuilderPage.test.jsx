@@ -8,35 +8,47 @@ import { flushSync } from 'react-dom'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { configureStore } from '@reduxjs/toolkit'
-import { DocumentBuilderPage } from './DocumentBuilderPage'
+import { DocumentBuilderPage, buildDuplicateDraftMessage, draftStatusLabel } from './DocumentBuilderPage'
+import { fetchDocumentBuilderTemplates } from '../api/documentBuilderApi'
 import { ShellProvider } from '../layout/ShellProvider'
 import { authReducer } from '../store/authSlice'
 import { documentBuilderReducer } from '../store/documentBuilderSlice'
 import { sessionCompanyReducer } from '../store/sessionCompanySlice'
+import { AbilityContext, ability } from '../lib/ability'
 
-vi.mock('../api/employeesApi', () => ({
-  fetchEmployeesList: vi.fn(async () => ({
+vi.mock('../api/clientsApi', () => ({
+  fetchClientsList: vi.fn(async () => ({ ok: true, data: { items: [] } }))
+}))
+
+vi.mock('../api/suppliersApi', () => ({
+  fetchSuppliersList: vi.fn(async () => ({
     ok: true,
-    data: { items: [{ id: 'e1', full_name: 'Juan Pérez', rut: '1-9' }] },
-  })),
+    data: {
+      items: [
+        {
+          id: 's1',
+          supplier_type: 'persona_natural',
+          display_name: 'Juan Pérez',
+          rut: '1-9'
+        }
+      ]
+    }
+  }))
 }))
 
 vi.mock('../api/documentBuilderApi', () => ({
   fetchDocumentBuilderTemplates: vi.fn(async () => ({
     ok: true,
     data: {
-      items: [
-        { kind: 'standard', id: 's1', name: 'STD A' },
-        { kind: 'company', id: 'c1', name: 'EMP A' },
-      ],
-    },
+      items: [{ kind: 'standard', id: 's1', name: 'STD A' }]
+    }
   })),
   postDocumentBuilderGenerate: vi.fn(async () => ({ ok: false, status: 500, message: 'no-op' })),
-  downloadDocumentBuilderPdf: vi.fn(async () => new Blob([])),
+  downloadDocumentBuilderPdf: vi.fn(async () => new Blob([]))
 }))
 
-vi.mock('./useEmployeeCompanyScope', () => ({
-  useEmployeeCompanyScope: () => ({ companyId: 'co1', blocked: false, message: null }),
+vi.mock('./usePlatformAdminCompanyScope', () => ({
+  usePlatformAdminCompanyScope: () => ({ companyId: 'co1', blocked: false, message: null })
 }))
 
 function makeStore() {
@@ -44,31 +56,34 @@ function makeStore() {
     reducer: {
       auth: authReducer,
       documentBuilder: documentBuilderReducer,
-      sessionCompany: sessionCompanyReducer,
+      sessionCompany: sessionCompanyReducer
     },
     preloadedState: {
       auth: {
         initialized: true,
         globalMessage: null,
-        session: { access_token: 't', user: { id: 'u1' } },
         user: { id: 'u1' },
         enrichedCompany: { id: 'co1', business_name: 'Empresa X' },
-        enrichedNavigation: { tree: [], routes: [], grantedCodes: ['NAV_ITEM_CONTRATOS_CONSTRUCTOR_DOCUMENTO'] },
-        enrichmentStatus: 'succeeded',
+        enrichmentStatus: 'succeeded'
       },
       sessionCompany: { assignedCompanies: [], selectedCompanyId: null },
       documentBuilder: {
-        workersSelected: [],
+        selectedSupplierId: null,
+        selectedClientId: null,
         templateSelected: null,
         generatedDocuments: [],
-        missingFields: {},
-      },
-    },
+        missingFields: {}
+      }
+    }
   })
 }
 
 describe('DocumentBuilderPage (template selection UX)', () => {
-  it('renders templates separated in two sections and shows selected template field', async () => {
+  it('renders standard templates section and shows selected template field', async () => {
+    ability.update([
+      { action: 'use', subject: 'DocumentBuilder' },
+      { action: 'read', subject: 'Supplier' }
+    ])
     const store = makeStore()
     const el = document.createElement('div')
     document.body.appendChild(el)
@@ -78,34 +93,52 @@ describe('DocumentBuilderPage (template selection UX)', () => {
       flushSync(() => {
         root.render(
           <Provider store={store}>
-            <MemoryRouter initialEntries={['/app/gestion-contratos/constructor-documento']}>
-              <ShellProvider>
-                <DocumentBuilderPage />
-              </ShellProvider>
-            </MemoryRouter>
+            <AbilityContext.Provider value={ability}>
+              <MemoryRouter initialEntries={['/app/gestion-contratos/constructor-documento']}>
+                <ShellProvider>
+                  <DocumentBuilderPage />
+                </ShellProvider>
+              </MemoryRouter>
+            </AbilityContext.Provider>
           </Provider>
         )
       })
     })
 
-    // Select one employee to unlock stage 2 (radio list).
-    const checkboxes = el.querySelectorAll('input[type="checkbox"]')
-    // 0 = "Seleccionar todos", 1 = first employee row
-    const firstEmployeeCheckbox = checkboxes?.[1]
-    expect(firstEmployeeCheckbox).toBeTruthy()
+    const supplierRadio = el.querySelector('input[type="radio"][name="supplier"]')
+    expect(supplierRadio).toBeTruthy()
     await act(async () => {
-      firstEmployeeCheckbox.click()
+      supplierRadio.click()
       await new Promise((r) => setTimeout(r, 0))
     })
 
     const html = el.innerHTML
     expect(html).toContain('Templates estándar')
-    expect(html).toContain('Templates por empresa')
+    expect(html).not.toContain('Templates por empresa')
     expect(html).toContain('Plantilla seleccionada')
     expect(html).toContain('Ver preview')
+
+    expect(fetchDocumentBuilderTemplates).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: 'co1',
+        supplierType: 'persona_natural'
+      })
+    )
 
     root.unmount()
     document.body.removeChild(el)
   })
-})
 
+  it('builds duplicate draft confirmation message with translated status', () => {
+    expect(draftStatusLabel('draft')).toBe('Borrador')
+    expect(draftStatusLabel('pending_signature')).toBe('Pendiente de firma')
+    const msg = buildDuplicateDraftMessage({
+      file_name: 'contrato_prev.pdf',
+      created_at: '2026-05-15T15:00:00.000Z',
+      status: 'draft'
+    })
+    expect(msg).toContain('contrato_prev.pdf')
+    expect(msg).toContain('Borrador')
+    expect(msg).toContain('¿Deseas reemplazarlo?')
+  })
+})

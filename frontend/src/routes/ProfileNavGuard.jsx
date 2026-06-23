@@ -1,24 +1,27 @@
+import { Navigate, Outlet } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { selectEnrichedNavigation, selectEnrichmentStatus } from '../store/authSlice'
-import { decidePrivateNavigation } from './profileNavGuardDecision'
+import {
+  selectEnrichedIsActive,
+  selectEnrichmentStatus
+} from '../store/authSlice'
 
 /**
- * Enforces private navigation using effective backend-provided authorization.
+ * Enforces authenticated shell access after session enrichment.
  */
 export function ProfileNavGuard() {
-  const location = useLocation()
-  const navigation = useSelector(selectEnrichedNavigation)
   const enrichmentStatus = useSelector(selectEnrichmentStatus)
-  const routes = navigation?.routes
-  const decision = decidePrivateNavigation({
-    pathname: location.pathname,
-    enrichmentStatus,
-    routes
-  })
+  const enrichedIsActive = useSelector(selectEnrichedIsActive)
 
-  if (decision.type === 'redirect') {
-    return <Navigate to={decision.to} replace state={{ from: location }} />
+  if (enrichmentStatus === 'loading' || enrichmentStatus === 'idle') {
+    return <div style={{ fontSize: '13px', padding: '16px', color: '#000' }}>Cargando…</div>
+  }
+
+  if (enrichedIsActive === false) {
+    return <Navigate to="/app/acceso-denegado" replace />
+  }
+
+  if (enrichmentStatus !== 'succeeded' && enrichmentStatus !== 'empty_navigation') {
+    return <Outlet />
   }
 
   return <Outlet />

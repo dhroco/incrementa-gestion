@@ -12,6 +12,8 @@ import { DocumentBuilderPreviewPage } from './DocumentBuilderPreviewPage'
 import { ShellProvider } from '../layout/ShellProvider'
 import { authReducer } from '../store/authSlice'
 import { documentBuilderReducer } from '../store/documentBuilderSlice'
+import { sessionCompanyReducer } from '../store/sessionCompanySlice'
+import { AbilityContext, ability } from '../lib/ability'
 
 vi.mock('../api/standardTemplatesApi', () => ({
   fetchStandardTemplateById: vi.fn(async () => ({
@@ -24,23 +26,8 @@ vi.mock('../api/standardTemplatesApi', () => ({
   })),
 }))
 
-vi.mock('../api/companyTemplatesApi', () => ({
-  fetchCompanyTemplateById: vi.fn(async () => ({
-    ok: true,
-    data: {
-      id: 'c1',
-      name: 'EMP A',
-      content_json: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hola' }] }] },
-    },
-  })),
-}))
-
-vi.mock('../api/clauseResolveReadBatcher', () => ({
-  resolveClauseContentReadBatched: vi.fn(async () => ({ ok: true, content_json: { type: 'doc', content: [] } })),
-}))
-
-vi.mock('./useEmployeeCompanyScope', () => ({
-  useEmployeeCompanyScope: () => ({ companyId: 'co1', blocked: false, message: null }),
+vi.mock('./usePlatformAdminCompanyScope', () => ({
+  usePlatformAdminCompanyScope: () => ({ companyId: 'co1', blocked: false, message: null })
 }))
 
 function makeStore() {
@@ -48,28 +35,31 @@ function makeStore() {
     reducer: {
       auth: authReducer,
       documentBuilder: documentBuilderReducer,
+      sessionCompany: sessionCompanyReducer
     },
     preloadedState: {
       auth: {
         initialized: true,
         globalMessage: null,
-        session: { access_token: 't', user: { id: 'u1' }, company: { id: 'co1', business_name: 'Empresa X' } },
+        session: { accessToken: 't', user: { id: 'u1' }, company: { id: 'co1', business_name: 'Empresa X' } },
         user: { id: 'u1' },
-        enrichedNavigation: { tree: [], routes: [], grantedCodes: ['NAV_ITEM_CONTRATOS_CONSTRUCTOR_DOCUMENTO'] },
         enrichmentStatus: 'succeeded',
       },
+      sessionCompany: { assignedCompanies: [], selectedCompanyId: null },
       documentBuilder: {
-        workersSelected: ['e1'],
+        selectedSupplierId: 's1',
+        selectedClientId: null,
         templateSelected: { kind: 'standard', id: 's1' },
         generatedDocuments: [],
-        missingFields: {},
-      },
+        missingFields: {}
+      }
     },
   })
 }
 
 describe('DocumentBuilderPreviewPage', () => {
   it('renders preview screen title and breadcrumb labels', async () => {
+    ability.update([{ action: 'use', subject: 'DocumentBuilder' }])
     const store = makeStore()
     const el = document.createElement('div')
     document.body.appendChild(el)
@@ -79,11 +69,13 @@ describe('DocumentBuilderPreviewPage', () => {
       flushSync(() => {
         root.render(
           <Provider store={store}>
-            <MemoryRouter initialEntries={['/app/gestion-contratos/constructor-documento/preview']}>
-              <ShellProvider>
-                <DocumentBuilderPreviewPage />
-              </ShellProvider>
-            </MemoryRouter>
+            <AbilityContext.Provider value={ability}>
+              <MemoryRouter initialEntries={['/app/gestion-contratos/constructor-documento/preview']}>
+                <ShellProvider>
+                  <DocumentBuilderPreviewPage />
+                </ShellProvider>
+              </MemoryRouter>
+            </AbilityContext.Provider>
           </Provider>
         )
       })

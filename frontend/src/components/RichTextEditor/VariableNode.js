@@ -11,6 +11,8 @@ export const VariableNode = Node.create({
 
   atom: true,
 
+  marks: '_',
+
   addAttributes() {
     return {
       variableId: {
@@ -21,6 +23,27 @@ export const VariableNode = Node.create({
       },
       group: {
         default: '',
+      },
+      uppercase: {
+        default: false,
+        parseHTML: (element) => element.getAttribute('data-uppercase') === 'true',
+        renderHTML: (attributes) =>
+          attributes.uppercase ? { 'data-uppercase': 'true' } : {},
+      },
+      bold: {
+        default: false,
+        parseHTML: (element) => element.getAttribute('data-bold') === 'true',
+        renderHTML: (attributes) => (attributes.bold ? { 'data-bold': 'true' } : {}),
+      },
+      italic: {
+        default: false,
+        parseHTML: (element) => element.getAttribute('data-italic') === 'true',
+        renderHTML: (attributes) => (attributes.italic ? { 'data-italic': 'true' } : {}),
+      },
+      underline: {
+        default: false,
+        parseHTML: (element) => element.getAttribute('data-underline') === 'true',
+        renderHTML: (attributes) => (attributes.underline ? { 'data-underline': 'true' } : {}),
       },
     };
   },

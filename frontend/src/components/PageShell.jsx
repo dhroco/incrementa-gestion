@@ -4,8 +4,8 @@ import { useSubHeaderBreadcrumb } from '../layout/useSubHeaderBreadcrumb'
 import { useSubHeaderTitle } from '../layout/useSubHeaderTitle'
 import { useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
-import { getModuleTitleFromAuthorizationRoutes } from '../navigation/authorizationSelectors'
-import { selectEnrichedNavigation, selectEnrichmentStatus } from '../store/authSlice'
+import { getModuleTitleFromMenuConfig } from '../navigation/menuConfig'
+import { selectEnrichmentStatus } from '../store/authSlice'
 import { fixSpanishMojibake } from '../utils/fixMojibake'
 
 function isNonEmptyString(v) {
@@ -34,15 +34,13 @@ export function PageShell({
   useSubHeaderActions(actions ?? null)
 
   const { pathname } = useLocation()
-  const navigation = useSelector(selectEnrichedNavigation)
   const enrichmentStatus = useSelector(selectEnrichmentStatus)
-  const routes = navigation?.routes
 
-  const titleFromRoutes =
-    enrichmentStatus === 'succeeded' && routes?.length ? getModuleTitleFromAuthorizationRoutes(pathname, routes) : null
+  const titleFromMenu =
+    enrichmentStatus === 'succeeded' ? getModuleTitleFromMenuConfig(pathname) : null
 
   const safeTitle = fixSpanishMojibake(
-    isNonEmptyString(title) ? title : isNonEmptyString(titleFromRoutes) ? titleFromRoutes : 'Módulo'
+    isNonEmptyString(title) ? title : isNonEmptyString(titleFromMenu) ? titleFromMenu : 'Módulo'
   )
   const safeSubtitle = isNonEmptyString(subtitle) ? fixSpanishMojibake(subtitle) : null
 
@@ -59,4 +57,3 @@ export function PageShell({
     </div>
   )
 }
-

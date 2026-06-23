@@ -3,6 +3,13 @@ const platformUsersAdminService = require('../services/platformUsersAdminService
 
 function createPlatformUsersController({ platformUsersService = platformUsersAdminService } = {}) {
   return {
+    getRoleOptions: async (req, res) => {
+      const userId = req?.auth?.userId
+      const result = await platformUsersService.listAssignableRolesForAdmin({ userId })
+      if (!result.ok) return sendError(res, { status: result.status, code: result.code, message: result.message })
+      return sendOk(res, result.data)
+    },
+
     getList: async (req, res) => {
       const userId = req?.auth?.userId
       const q = req?.query?.q ?? ''

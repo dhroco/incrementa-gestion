@@ -13,13 +13,11 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [
-          'auth/sessionUpdated',
-          'auth/signInWithPassword/fulfilled',
           'auth/fetchEnrichedSession/pending',
           'auth/fetchEnrichedSession/fulfilled',
           'auth/fetchEnrichedSession/rejected'
         ],
-        ignoredPaths: ['auth.session', 'auth.user']
+        ignoredPaths: ['auth.user']
       }
     })
 })

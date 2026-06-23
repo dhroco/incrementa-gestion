@@ -4,11 +4,20 @@ import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import { VariableNode } from './VariableNode'
-import { EmbeddedUniversalClauseNode } from './EmbeddedUniversalClauseNode'
+import { UppercaseMark } from './UppercaseMark'
+import {
+  toggleBoldFormatting,
+  isBoldFormattingActive,
+  toggleItalicFormatting,
+  isItalicFormattingActive,
+  toggleUnderlineFormatting,
+  isUnderlineFormattingActive,
+  toggleUppercaseFormatting,
+  isUppercaseFormattingActive,
+} from './inlineFormatting'
 import VariableCatalog from './VariableCatalog'
-import EmbeddedClauseCatalog from './EmbeddedClauseCatalog'
-import EmbeddedClauseCatalogTabbed from './EmbeddedClauseCatalogTabbed'
 import 'prosemirror-gapcursor/style/gapcursor.css'
+import { blocksFromSanitizedPaste } from '../../utils/sanitizePastedPlainText'
 import styles from './styles.module.css'
 
 function AlignIcon({ kind }) {
@@ -45,21 +54,10 @@ const RichTextEditor = ({
   variant = 'default',
   readOnly = false,
   documentTitle = null,
-  enableEmbeddedUniversalClauses = false,
-  embeddedUniversalClausesOptions = [],
-  enableEmbeddedCompanyClauses = false,
-  embeddedCompanyClausesOptions = [],
-  /** Empresa ancla para atributos `companyId` en nodos de cláusula por empresa */
-  embeddedClauseCompanyId = null,
-  /** Requerido para cargar el contenido completo de la cláusula al insertar el bloque incrustado */
-  accessToken = null,
-  /** `unified`: un botón y modal con pestañas (p. ej. templates por empresa). */
-  clauseCatalogMode = 'split',
+  contentVersion = 0,
+  onCopyFromButtonClick = null,
 }) => {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false)
-  const [isClauseCatalogOpen, setIsClauseCatalogOpen] = useState(false)
-  const [isCompanyClauseCatalogOpen, setIsCompanyClauseCatalogOpen] = useState(false)
-  const [isUnifiedClauseCatalogOpen, setIsUnifiedClauseCatalogOpen] = useState(false)
   const [zoom, setZoom] = useState(1)
 
   const zoomState = useMemo(() => {
@@ -76,8 +74,8 @@ const RichTextEditor = ({
     }
   }, [zoom])
 
-  const extensions = useMemo(() => {
-    const base = [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         dropcursor: {
           color: '#657A8A',
@@ -86,28 +84,16 @@ const RichTextEditor = ({
         heading: {
           levels: [1, 2, 3],
         },
-        pasteRules: [
-          {
-            find: /style="[^"]*"/g,
-            replace: '',
-          },
-          {
-            find: /class="[^"]*"/g,
-            replace: '',
-          },
-        ],
       }),
       Underline,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
+      UppercaseMark,
       VariableNode,
-    ]
-    if (enableEmbeddedUniversalClauses || enableEmbeddedCompanyClauses) {
-      base.push(EmbeddedUniversalClauseNode.configure({ accessToken }))
-    }
-    return base
-  }, [enableEmbeddedUniversalClauses, enableEmbeddedCompanyClauses, accessToken])
+    ],
+    []
+  )
 
   const editorRef = useRef(null)
   const editor = useEditor(
@@ -121,32 +107,41 @@ const RichTextEditor = ({
           onChange(ed.getJSON())
         }
       },
-      // Tiptap Editor options: onPaste(clipboardEvent, slice) — not { event, editor }.
-      onPaste: (event) => {
-        if (readOnly) return
-        if (!event || typeof event.preventDefault !== 'function') return
-        event.preventDefault()
-        if (!event.clipboardData) return
-        const text = event.clipboardData.getData('text/plain')
-        const ed = editorRef.current
-        if (!text || !ed) return
-        ed.chain().focus().insertContent(text).run()
+      // handlePaste must return true after insertContent, or ProseMirror also runs its default paste (duplicate).
+      editorProps: {
+        handlePaste: (_view, event) => {
+          if (readOnly) return false
+          if (!event?.clipboardData) return false
+          const text = event.clipboardData.getData('text/plain')
+          const ed = editorRef.current
+          if (!text || !ed) return false
+          const blocks = blocksFromSanitizedPaste(text)
+          if (!blocks.length) return false
+          ed.chain().focus().insertContent(blocks).run()
+          return true
+        },
       },
     },
-    [readOnly, enableEmbeddedUniversalClauses, enableEmbeddedCompanyClauses]
+    [readOnly]
   )
 
   const lastAppliedContentKeyRef = useRef('')
+  const lastContentVersionRef = useRef(0)
   React.useEffect(() => {
-    if (!editor || !readOnly) return
+    if (!editor) return
+    const externalApply = contentVersion > lastContentVersionRef.current
+    if (!readOnly && !externalApply) return
     let nextKey = ''
     try {
       nextKey = typeof content === 'string' ? content : JSON.stringify(content ?? null)
     } catch {
       nextKey = String(content ?? '')
     }
-    if (nextKey === lastAppliedContentKeyRef.current) return
+    if (!externalApply && nextKey === lastAppliedContentKeyRef.current) return
     lastAppliedContentKeyRef.current = nextKey
+    if (externalApply) {
+      lastContentVersionRef.current = contentVersion
+    }
     // Defer to avoid flushSync warnings from devtools overriding updates.
     let cancelled = false
     const apply = () => {
@@ -161,7 +156,7 @@ const RichTextEditor = ({
     return () => {
       cancelled = true
     }
-  }, [editor, readOnly, content])
+  }, [editor, readOnly, content, contentVersion])
 
   React.useEffect(() => {
     editorRef.current = editor ?? null
@@ -181,41 +176,6 @@ const RichTextEditor = ({
     editor.chain().focus().insertVariable(variable).run()
   }
 
-  const handleEmbeddedClauseSelect = async (row) => {
-    if (readOnly || !editor || !row?.id) return
-    editor
-      .chain()
-      .focus()
-      .insertEmbeddedUniversalClause({
-        clauseId: row.id,
-        code: row.code ?? '',
-        titleClause: row.title_clause ?? '',
-        clauseKind: 'universal',
-        companyId: null,
-      })
-      .run()
-  }
-
-  const handleEmbeddedCompanyClauseSelect = async (row) => {
-    if (readOnly || !editor || !row?.id) return
-    const cid =
-      typeof embeddedClauseCompanyId === 'string' && embeddedClauseCompanyId.trim().length > 0
-        ? embeddedClauseCompanyId.trim()
-        : null
-    if (!cid) return
-    editor
-      .chain()
-      .focus()
-      .insertEmbeddedUniversalClause({
-        clauseId: row.id,
-        code: row.code ?? '',
-        titleClause: row.title_clause ?? '',
-        clauseKind: 'company',
-        companyId: cid,
-      })
-      .run()
-  }
-
   React.useEffect(() => {
     if (readOnly) {
       window.currentEditor = null
@@ -230,16 +190,6 @@ const RichTextEditor = ({
   if (!editor) {
     return null
   }
-
-  const hasCompanyClauseCompanyId =
-    typeof embeddedClauseCompanyId === 'string' && embeddedClauseCompanyId.trim().length > 0
-  const canUseCompanyClauses = enableEmbeddedCompanyClauses && hasCompanyClauseCompanyId
-  const canUseUniversalClauses = enableEmbeddedUniversalClauses
-  const useUnifiedClauseCatalog = !readOnly && clauseCatalogMode === 'unified'
-  const showUnifiedClauseButton = useUnifiedClauseCatalog && (canUseCompanyClauses || canUseUniversalClauses)
-  const onUnifiedClauseButtonClick = showUnifiedClauseButton ? () => setIsUnifiedClauseCatalogOpen(true) : null
-  const onSplitUniversalClause = canUseUniversalClauses && !useUnifiedClauseCatalog ? () => setIsClauseCatalogOpen(true) : null
-  const onSplitCompanyClause = canUseCompanyClauses && !useUnifiedClauseCatalog ? () => setIsCompanyClauseCatalogOpen(true) : null
 
   const rootClass = [
     variant === 'document' ? `${styles['rich-text-editor']} ${styles['rich-text-editor--document']}` : styles['rich-text-editor'],
@@ -256,16 +206,18 @@ const RichTextEditor = ({
         readOnly={readOnly}
         documentTitle={documentTitle}
         onVariableButtonClick={() => setIsCatalogOpen(true)}
-        onUnifiedClauseButtonClick={onUnifiedClauseButtonClick}
-        onClauseButtonClick={onSplitUniversalClause}
-        onCompanyClauseButtonClick={onSplitCompanyClause}
+        onCopyFromButtonClick={onCopyFromButtonClick}
         zoomState={zoomState}
       />
     ) : null
   const body =
     variant === 'document' ? (
       <div className={styles['document-zoom-viewport']}>
-        <div className={styles['document-zoom-stage']} style={{ transform: `scale(${zoomState.value})` }}>
+        <div
+          className={styles['document-zoom-stage']}
+          /* `zoom` evita `transform: scale` sobre el ancestro de ProseMirror (rompe readDOMChange / posiciones negativas). */
+          style={{ zoom: zoomState.value }}
+        >
           <div className={styles['document-page']}>
             <EditorContent editor={editor} className={styles['editor-content']} />
           </div>
@@ -289,59 +241,17 @@ const RichTextEditor = ({
         </>
       )}
       {!readOnly ? (
-        <>
-          <VariableCatalog
-            isOpen={isCatalogOpen}
-            onClose={() => setIsCatalogOpen(false)}
-            onVariableSelect={handleVariableSelect}
-          />
-          {useUnifiedClauseCatalog && (canUseCompanyClauses || canUseUniversalClauses) ? (
-            <EmbeddedClauseCatalogTabbed
-              isOpen={isUnifiedClauseCatalogOpen}
-              onClose={() => setIsUnifiedClauseCatalogOpen(false)}
-              showCompanyTab={canUseCompanyClauses}
-              showUniversalTab={canUseUniversalClauses}
-              companyOptions={embeddedCompanyClausesOptions}
-              universalOptions={embeddedUniversalClausesOptions}
-              onSelectCompany={handleEmbeddedCompanyClauseSelect}
-              onSelectUniversal={handleEmbeddedClauseSelect}
-            />
-          ) : null}
-          {!useUnifiedClauseCatalog && enableEmbeddedUniversalClauses ? (
-            <EmbeddedClauseCatalog
-              isOpen={isClauseCatalogOpen}
-              onClose={() => setIsClauseCatalogOpen(false)}
-              options={embeddedUniversalClausesOptions}
-              onSelect={handleEmbeddedClauseSelect}
-            />
-          ) : null}
-          {!useUnifiedClauseCatalog && enableEmbeddedCompanyClauses && hasCompanyClauseCompanyId ? (
-            <EmbeddedClauseCatalog
-              isOpen={isCompanyClauseCatalogOpen}
-              onClose={() => setIsCompanyClauseCatalogOpen(false)}
-              options={embeddedCompanyClausesOptions}
-              onSelect={handleEmbeddedCompanyClauseSelect}
-              catalogTitle="Insertar cláusula por empresa"
-              emptyMessage="No hay cláusulas por empresa disponibles para esta empresa."
-            />
-          ) : null}
-        </>
+        <VariableCatalog
+          isOpen={isCatalogOpen}
+          onClose={() => setIsCatalogOpen(false)}
+          onVariableSelect={handleVariableSelect}
+        />
       ) : null}
     </div>
   )
 }
 
-const Toolbar = ({
-  editor,
-  variant,
-  readOnly,
-  documentTitle,
-  onVariableButtonClick,
-  onUnifiedClauseButtonClick,
-  onClauseButtonClick,
-  onCompanyClauseButtonClick,
-  zoomState,
-}) => {
+const Toolbar = ({ editor, variant, readOnly, documentTitle, onVariableButtonClick, onCopyFromButtonClick, zoomState }) => {
   if (!editor) {
     return null
   }
@@ -417,23 +327,29 @@ const Toolbar = ({
           <span className={styles['toolbar-document-divider']} aria-hidden />
           {b(
             <span className={styles['toolbar-document-bold']}>B</span>,
-            editor.isActive('bold'),
-            () => editor.chain().focus().toggleBold().run(),
+            isBoldFormattingActive(editor),
+            () => toggleBoldFormatting(editor),
             'Negrita'
           )}
           {b(
             <span className={styles['toolbar-document-italic']}>I</span>,
-            editor.isActive('italic'),
-            () => editor.chain().focus().toggleItalic().run(),
+            isItalicFormattingActive(editor),
+            () => toggleItalicFormatting(editor),
             'Cursiva'
           )}
           {b(
             <span className={styles['toolbar-document-underline']}>U</span>,
-            editor.isActive('underline'),
-            () => editor.chain().focus().toggleUnderline().run(),
+            isUnderlineFormattingActive(editor),
+            () => toggleUnderlineFormatting(editor),
             'Subrayado'
           )}
           {b('S', editor.isActive('strike'), () => editor.chain().focus().toggleStrike().run(), 'Tachado')}
+          {b(
+            <span className={styles['toolbar-document-uppercase']}>AA</span>,
+            isUppercaseFormattingActive(editor),
+            () => toggleUppercaseFormatting(editor),
+            'Mayúsculas'
+          )}
           <span className={styles['toolbar-document-divider']} aria-hidden />
           {(() => {
             const isLeft =
@@ -527,6 +443,17 @@ const Toolbar = ({
 
           <span className={styles['toolbar-document-divider']} aria-hidden />
 
+          {onCopyFromButtonClick ? (
+            <button
+              type="button"
+              title="Copiar contenido desde otra plantilla"
+              onClick={onCopyFromButtonClick}
+              className={`${styles['toolbar-document-button']} ${styles['toolbar-document-copy-from']}`}
+            >
+              Copiar desde
+            </button>
+          ) : null}
+
           <button
             type="button"
             title="Insertar variables"
@@ -535,36 +462,6 @@ const Toolbar = ({
           >
             Variables
           </button>
-          {onUnifiedClauseButtonClick ? (
-            <button
-              type="button"
-              title="Insertar cláusula (por empresa o universales)"
-              onClick={onUnifiedClauseButtonClick}
-              className={`${styles['toolbar-document-button']} ${styles['toolbar-document-variable']}`}
-            >
-              Cláusula
-            </button>
-          ) : null}
-          {!onUnifiedClauseButtonClick && onClauseButtonClick ? (
-            <button
-              type="button"
-              title="Insertar cláusula universal"
-              onClick={onClauseButtonClick}
-              className={`${styles['toolbar-document-button']} ${styles['toolbar-document-variable']}`}
-            >
-              {onCompanyClauseButtonClick ? 'Cláusula U.' : 'Cláusula'}
-            </button>
-          ) : null}
-          {!onUnifiedClauseButtonClick && onCompanyClauseButtonClick ? (
-            <button
-              type="button"
-              title="Insertar cláusula por empresa"
-              onClick={onCompanyClauseButtonClick}
-              className={`${styles['toolbar-document-button']} ${styles['toolbar-document-variable']}`}
-            >
-              Cláusula empresa
-            </button>
-          ) : null}
         </div>
       </div>
     )
@@ -595,25 +492,33 @@ const Toolbar = ({
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`${styles['toolbar-button']} ${editor.isActive('bold') ? styles['toolbar-button-active'] : ''}`}
+        onClick={() => toggleBoldFormatting(editor)}
+        className={`${styles['toolbar-button']} ${isBoldFormattingActive(editor) ? styles['toolbar-button-active'] : ''}`}
       >
         B
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`${styles['toolbar-button']} ${editor.isActive('italic') ? styles['toolbar-button-active'] : ''}`}
+        onClick={() => toggleItalicFormatting(editor)}
+        className={`${styles['toolbar-button']} ${isItalicFormattingActive(editor) ? styles['toolbar-button-active'] : ''}`}
       >
         I
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`${styles['toolbar-button']} ${editor.isActive('underline') ? styles['toolbar-button-active'] : ''}`}
+        onClick={() => toggleUnderlineFormatting(editor)}
+        className={`${styles['toolbar-button']} ${isUnderlineFormattingActive(editor) ? styles['toolbar-button-active'] : ''}`}
         title="Subrayado"
       >
         U
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleUppercaseFormatting(editor)}
+        className={`${styles['toolbar-button']} ${isUppercaseFormattingActive(editor) ? styles['toolbar-button-active'] : ''}`}
+        title="Mayúsculas"
+      >
+        AA
       </button>
       <button
         type="button"
@@ -638,36 +543,6 @@ const Toolbar = ({
       >
         VAR
       </button>
-      {onUnifiedClauseButtonClick ? (
-        <button
-          type="button"
-          onClick={onUnifiedClauseButtonClick}
-          className={`${styles['toolbar-button']} ${styles['variable-button']}`}
-          title="Insertar cláusula (por empresa o universales)"
-        >
-          CLA
-        </button>
-      ) : null}
-      {!onUnifiedClauseButtonClick && onClauseButtonClick ? (
-        <button
-          type="button"
-          onClick={onClauseButtonClick}
-          className={`${styles['toolbar-button']} ${styles['variable-button']}`}
-          title="Insertar cláusula universal"
-        >
-          {onCompanyClauseButtonClick ? 'CLA-U' : 'CLA'}
-        </button>
-      ) : null}
-      {!onUnifiedClauseButtonClick && onCompanyClauseButtonClick ? (
-        <button
-          type="button"
-          onClick={onCompanyClauseButtonClick}
-          className={`${styles['toolbar-button']} ${styles['variable-button']}`}
-          title="Insertar cláusula por empresa"
-        >
-          CLA-E
-        </button>
-      ) : null}
     </div>
   )
 }

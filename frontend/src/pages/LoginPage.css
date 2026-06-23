@@ -1,10 +1,20 @@
 .login-page {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--color-work-area);
+  background: var(--color-main-headerbar);
+}
+
+.login-page__logo {
+  position: absolute;
+  top: var(--spacing-main-header);
+  left: calc(var(--spacing-main-header) * 2);
+  height: 60px;
+  width: auto;
+  display: block;
 }
 
 .login-page__card {
@@ -12,12 +22,14 @@
   max-width: 420px;
   background: var(--color-cards);
   border: 1px solid var(--color-border-card);
+  border-radius: var(--border-radius-card);
   padding: var(--spacing-card);
 }
 
 .login-page__title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-bold);
+  font-size: 18px;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.9px;
   color: var(--color-text-dark);
   margin: 0 0 8px;
 }
@@ -71,7 +83,7 @@
   margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--color-border-sub-header);
-  background: var(--color-work-area);
+  background: #F0F1F2;
 }
 
 .login-page__message {
@@ -80,7 +92,7 @@
   margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--color-border-sub-header);
-  background: var(--color-work-area);
+  background: #F0F1F2;
 }
 
 .login-page__actions {

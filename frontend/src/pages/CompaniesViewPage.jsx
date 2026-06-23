@@ -1,28 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAbility } from '@casl/react'
 import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { BranchTableEditor, FormSection, mapApiBranchToRow } from '../components/CompanyFormSections'
+import { FormSection } from '../components/CompanyFormSections'
 import { fetchCompanyDetail } from '../api/companiesApi'
-import { selectEnrichedCompany, selectEnrichedNavigation, selectEnrichedProfile, selectSession } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
+import { selectEnrichedCompany, selectEnrichedProfile } from '../store/authSlice'
+import { AbilityContext } from '../lib/ability'
 import { formatRut } from '../utils/rut'
-import './ClauseForm.css'
+import '../styles/shared-form.css'
 
 export function CompaniesViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
+  const ability = useAbility(AbilityContext)
   const profile = useSelector(selectEnrichedProfile)
   const enrichedCompany = useSelector(selectEnrichedCompany)
-  const accessToken = session?.access_token ?? null
 
-  const grantedCodes = useMemo(() => buildGrantedCodeSetFromSession(navigation), [navigation])
-  const canEditAsPlatform = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_EMPRESAS_EDIT')
-  const canEditOwnCompany =
-    profile?.code === 'USUARIO_EMPRESA_ADMINISTRADOR' && enrichedCompany?.id && id === enrichedCompany.id
-  const canEdit = canEditAsPlatform || canEditOwnCompany
+  const canEdit = ability.can('update', 'Company')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,10 +26,10 @@ export function CompaniesViewPage() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!id || !accessToken) return
+      if (!id) return
       setLoading(true)
       setError(null)
-      const res = await fetchCompanyDetail(id, { accessToken })
+      const res = await fetchCompanyDetail(id, {})
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -48,17 +43,12 @@ export function CompaniesViewPage() {
     return () => {
       active = false
     }
-  }, [id, accessToken])
+  }, [id])
 
   const listPath = '/app/admin-global/empresas'
   const rutDisplay = entity ? formatRut(entity.rut_body, entity.rut_dv) : '—'
   const rutLegal1 = entity ? formatRut(entity.rut_body_legal_representative_1, entity.rut_dv_legal_representative_1) : ''
   const rutLegal2 = entity ? formatRut(entity.rut_body_legal_representative_2, entity.rut_dv_legal_representative_2) : ''
-  const accountants = entity == null ? [] : Array.isArray(entity.accountants) ? entity.accountants : []
-  const branchRows = useMemo(() => {
-    if (!entity || !Array.isArray(entity.branches)) return []
-    return entity.branches.map(mapApiBranchToRow)
-  }, [entity])
 
   const breadcrumb = useMemo(
     () => [
@@ -71,7 +61,7 @@ export function CompaniesViewPage() {
   const subActions = useMemo(
     () =>
       entity && canEdit ? (
-        <button type="button" className="clause-button" onClick={() => navigate('edit')}>
+        <button type="button" className="btn" onClick={() => navigate('edit')}>
           Editar
         </button>
       ) : null,
@@ -99,6 +89,10 @@ export function CompaniesViewPage() {
               </div>
 
               <div className="company-form-level2">
+                <div className="clause-form-col">
+                  <div className="clause-label">Nombre comercial</div>
+                  <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={entity.short_name ?? ''} />
+                </div>
                 <div className="clause-form-col">
                   <div className="clause-label">Giro</div>
                   <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={entity.business_activity ?? ''} />
@@ -174,31 +168,6 @@ export function CompaniesViewPage() {
                 </div>
               </div>
 
-              <div className="company-form-branches-block clause-form-section clause-form-section--separated">
-                <hr className="company-form-section-rule" aria-hidden="true" />
-                <BranchTableEditor rows={branchRows} readOnly />
-              </div>
-
-              <hr className="company-form-section-rule" aria-hidden="true" />
-              <div className="clause-form-row">
-                <div className="clause-label">Contadores asociados</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {accountants.length === 0 ? (
-                    <span className="clause-muted">Ningún contador asociado.</span>
-                  ) : (
-                    accountants.map((ac) => (
-                      <label
-                        key={ac.id}
-                        className="clause-company-assign-row--readonly"
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
-                      >
-                        <input type="checkbox" checked disabled tabIndex={-1} />
-                        <span>{ac.full_name?.trim() ? `${ac.full_name} (${ac.email ?? ac.id})` : ac.email ?? ac.id}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
             </>
           ) : null}
         </div>

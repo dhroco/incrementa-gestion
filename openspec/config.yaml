@@ -3,68 +3,73 @@ schema: spec-driven
 # Project context
 context: |
   # Incrementa-Gestion
-  
+
   ## Descripción
   Sistema de gestión de templates de contratos, con proyección a incorporar
   otras componentes de gestión en el futuro.
-  
+
   ## Tech Stack
-  
+
   **Frontend**
   - Vite + React
   - Redux para manejo de estado
-  - Syne (Google Fonts) como fuente exclusiva del sistema; pesos 400, 600, 700, 800
+  - Nunito Sans como fuente exclusiva del sistema; archivos TTF locales en
+    `frontend/src/assets/fonts/`, declarada vía @font-face en `global.css`;
+    pesos disponibles: 400, 500, 600, 700, 800 (regular, medium, semibold, bold, extrabold)
+  - Lora (Google Fonts) usada ÚNICAMENTE dentro del editor de cláusulas Tiptap
+    (variable --font-family-clause-editor); no usar en ningún otro contexto
   - React Router para navegación
   - CSS personalizado siguiendo guías de diseño corporativo
-  
+
   **Backend**
   - Node.js + Express (REST API)
-  
+
   **Base de datos**
   - PostgreSQL en GCP
   - Knex.js para migraciones y gestión de versiones de BD
-  
+
   ## Autenticación y Seguridad
-  
+
   **Autenticación de usuarios (frontend)**
-  - Login simulado en esta etapa (pendiente integración con SSO de incrementa.la)
-  - En el futuro: autenticación unificada con el ecosistema incrementa.la
-  
+  - Keycloak 26 como proveedor OIDC
+  - El perfil/alcance del usuario se resuelve automáticamente tras el login
+
   **Validación en API (backend)**
-  - Cada endpoint protegido valida una de dos credenciales:
-    - **JWT**: a definir según integración futura con incrementa.la
-    - **API Key**: header `x-api-key`, validado con clave en config
+  - Cada endpoint protegido valida JWT emitido por Keycloak
   - Rutas públicas se declaran explícitamente; el resto requiere autenticación por defecto
-  
+
   ## Entornos
-  
+
   Tres ambientes: `local`, `dev`, `prod`
   Selección mediante variable única: `ENVIRONMENT`
-  
+
   **Configuración por archivos (no .env):**
   - Frontend: `config.js` exporta objeto con configuración por ambiente
   - Backend: `config.js` exporta objeto con configuración por ambiente
-  
+
   ## Infraestructura
-  
+
   - `dev` y `prod` desplegados en GCP
   - IaC a definir
-  
+
   ## Workflow de desarrollo
-  
+
   - Frontend y backend con hot reload en desarrollo
   - Ambos servicios corren simultáneamente en sesiones de consola separadas
-  
+
   ## Locale - Chile
-  
+
   - País: Chile
   - Timezone: `America/Santiago`
   - Idioma: `es-CL`
   - Formato numérico: `XXX.XXX,X` (separador de miles: punto, decimal: coma)
   - Formato de fecha: `YYYY-MM-DD` (ISO 8601)
-  
+  - Formato RUT: `XX.XXX.XXX-X` (separador de miles: punto, guión antes del dígito verificador).
+    Implementación canónica en `frontend/src/utils/rut.js`; campos editables con
+    `frontend/src/components/RutInput.jsx`. Ver `locale.rut_format` y reglas en `design`.
+
   ## Convenciones de Base de Datos (naming)
-  
+
   - Nombres de tablas en **inglés** y en **singular** por defecto
   - Nombres de columnas/campos en **inglés** (snake_case)
   - Excepciones (plural) solo cuando exista una razón clara y documentada
@@ -77,181 +82,228 @@ rules:
     - Especificar validaciones tanto en frontend como backend
     - Considerar locale chileno en formatos de fecha y números
     - Incluir manejo de errores en español (es-CL)
-  
+
   tasks:
     - Dividir tareas en chunks máximo de 2 horas
     - Incluir tests unitarios para lógica de negocio crítica
     - Considerar configuración por ambiente en cada feature
     - Validar autenticación y autorización en endpoints protegidos
-  
+
   design:
     - "Seguir estrictamente las guías de diseño corporativo ERP"
     - "Implementar responsive design (mobile-first)"
     - "Usar timezone America/Santiago para fechas"
     - "Aplicar formato numérico chileno en displays de montos"
+    - "Aplicar formato RUT chileno (XX.XXX.XXX-X) en toda visualización y campos de entrada; usar `formatRut`/`formatRutDisplay` para mostrar y `RutInput` o `formatRutInput` al editar (onBlur). Ver `locale.rut_format` en este archivo"
     - "Las reglas visuales y de UI definidas en este archivo (`config.yaml`) son la fuente oficial para implementar el frontend; no reinterpretar estilos ni inventar variantes fuera de estas definiciones"
-    
+
     # OBJETIVO VISUAL GENERAL
     - "Transmitir imagen corporativa, sobria, ordenada, compacta y de alta densidad de información"
     - "Estética tipo ERP moderno: profesional, serio, limpio, consistente y productivo"
     - "NO lúdico, decorativo ni \"marketing-style\""
     - "Priorizar claridad, jerarquía visual, alineación, compactación y repetibilidad"
-    
+
     # TIPOGRAFÍA
-    - "Fuente exclusiva: Syne (Google Fonts); no usar Inter, Roboto ni otras fuentes como principal"
-    - "Pesos permitidos: 400 (cuerpo), 600 (subtítulos/labels), 700 (títulos/encabezados), 800 (destacados/hero)"
+    - "Fuente exclusiva del sistema: Nunito Sans (archivos TTF locales en frontend/src/assets/fonts/); NO usar Google Fonts CDN para Nunito Sans"
+    - "Nunito Sans declarada vía @font-face en frontend/src/styles/global.css; variable CSS: --font-family-base"
+    - "Pesos permitidos de Nunito Sans: 400 (cuerpo/normal), 500 (medium), 600 (semibold/labels), 700 (bold/títulos principales), 800 (extrabold/títulos primer nivel jerarquía)"
+    - "Fuente exclusiva del EDITOR DE CLÁUSULAS (Tiptap): Lora (Google Fonts); variable CSS: --font-family-clause-editor; NO usar en ningún otro contexto"
+    - "NO usar Inter, Syne, Roboto ni ninguna otra fuente como principal del sistema"
+    - "CRÍTICO: todos los elementos de formulario (<button>, <input>, <select>, <textarea>) deben heredar la fuente con `font-family: inherit` en el reset global; los navegadores no heredan automáticamente"
     - "Tamaño base: 13px para casi todo el sistema"
-    - "Títulos: 13px bold (peso 700)"
+    - "Títulos primer nivel (ph-title, crumb-label): 13px extrabold (peso 800)"
+    - "Títulos secundarios: 13px bold (peso 700)"
     - "Valores numéricos destacados en cards: 18px"
     - "NO usar tamaños grandes innecesarios"
-    
+
     # PALETA DE COLORES EXACTA
-    - "Main Headerbar: #031B30"
-    - "Sidebar: #194166"
-    - "Área de trabajo: #F0F1F2"
-    - "Sub-header: #F0F1F2"
-    - "Color de selección menú/botones: #F62C84"
+    - "Main Headerbar: #000000 (negro)"
+    - "Sidebar: #FFFFFF (blanco), borde derecho: 1px solid #E3E6E8"
+    - "Sidebar submenú expandido: #FAFAFA"
+    - "Sidebar hover ítem: rgba(0,0,0,0.05)"
+    - "Sidebar ítem de menú primer nivel (no submenú): font-weight 700 (bold)"
+    - "Sidebar ítem activo: background #EBEDF0 + box-shadow inset 3px 0 0 #657A8A + color #031B30 + font-weight 700"
+    - "Sidebar texto: #1a1a1a; texto subdued (perfil usuario): #5a6370"
+    - "Área de trabajo: #FFFFFF (blanco)"
+    - "Sub-header: #FFFFFF (blanco)"
     - "Cards y superficies internas: #FFFFFF"
-    - "Texto oscuro: #000000"
-    - "Ícono \"GCC\": fondo #FFF0C0, texto #000000"
+    - "Texto oscuro: #000000 / #1a1a1a"
+    - "Texto blanco (header): #FFFFFF"
     - "Borde cards: #E3E6E8"
     - "Borde sub-header: #DADDE1"
     - "Borde botón hamburguesa: #D0D5D9"
     - "Líneas tabla: #E5E7E9"
-    
+    - "Color hipertexto/links de navegación: #F62D84 (variable --color-selection); aplica a todos los links y botones de estilo link en el área de trabajo"
+    - "Color acento sidebar activo: #657A8A (hardcodeado en box-shadow inset del ítem activo; independiente de --color-selection)"
+
+    # LOGO E IDENTIDAD
+    - "Logo del sistema: archivo `frontend/src/assets/images/logo_incrementa.png` (PNG con fondo transparente)"
+    - "El logo incluye el ícono de Incrementa + la palabra 'incrementa'; altura de display: 30px, ancho automático"
+    - "Separador entre logo y título del sistema: línea vertical, 1px, color rgba(255,255,255,0.35), altura 20px"
+    - "Título del sistema en el header: 'Sistema de Gestión' (G mayúscula), 13px bold blanco"
+    - "Título del tab del browser: 'Sistema de Gestión'"
+    - "Favicon: SVG con la 'i' de Incrementa (círculo + arco con gradiente cyan #14C8F0 → púrpura #6425D0 → rosa #FF1F6E)"
+    - "NO usar el ícono anterior 'GCC' con fondo amarillo #FFF0C0"
+
     # REGLAS GENERALES
-    - "NO usar sombras en el sistema, salvo la excepción explícita del dropdown de usuario (sombra ligera)"
-    - "NO usar gradientes"
+    - "NO usar sombras en el sistema, salvo excepciones explícitas: (1) dropdown de usuario: box-shadow 0 4px 12px rgba(0,0,0,0.12); (2) botón presionado: sombra inset; (3) sidebar: box-shadow 4px 0 12px rgba(0,0,0,0.08) lateral derecha con z-index 1; (4) sub-header: box-shadow 0 4px 12px rgba(0,0,0,0.06) inferior con z-index 1"
+    - "NO usar gradientes (excepto el gradiente del favicon SVG)"
     - "NO usar efectos brillantes"
     - "NO usar colores adicionales innecesarios"
     - "Apoyarse en contraste, borde sutil, espaciado y alineación"
     - "Densidad visual compacta, estilo herramienta profesional"
     - "Coherencia con layout base en todos los componentes"
-    
+
     # ESTRUCTURA LAYOUT
     - "Aplicación ocupa toda la altura: min-height: 100vh"
     - "Layout bajo header: height: calc(100vh - 44px)"
-    - "Componentes: Main Headerbar (44px) + Sidebar (250px colapsable) + Área trabajo + Sub-header (48px) + Contenido"
-    
+    - "Componentes: Main Headerbar (44px) + Sidebar (250px colapsable) + Sub-header (48px) + Contenido"
+
     # MAIN HEADERBAR
-    - "Altura: 44px, fondo: #031B30, texto: blanco"
+    - "Altura: 44px, fondo: #000000, texto: blanco"
     - "Padding horizontal: 20px"
-    - "Layout: flex horizontal; align-items center; justify-content space-between (izquierda: identidad; derecha: acciones)"
-    - "Izquierda: ícono de incrementa.la (28x28px, placeholder hasta integración; pendiente) + título del sistema \"Incrementa Gestión\" (13px bold)"
-    - "Gap ícono-título: 12px"
-    - "Derecha: enlace \"Notificaciones\" + avatar usuario (32x32px circular) como único trigger del menú de usuario; NO mostrar nombre fijo junto al avatar"
-    - "Menú desplegable al activar avatar: ítems \"Mi perfil\" y \"Salir\""
-    - "Dropdown de usuario: única excepción donde se permite sombra ligera (box-shadow sutil); resto del sistema sin sombras"
+    - "Layout: flex horizontal; align-items center; justify-content space-between"
+    - "Izquierda: logo Incrementa (logo_incrementa.png, 30px alto) + separador vertical + título 'Sistema de Gestión' (18px, font-weight 800 extrabold, letter-spacing -0.9px, color blanco)"
+    - "Gap entre logo, separador y título: controlado por gap del contenedor identity (12px)"
+    - "Derecha: enlace 'Notificaciones' + avatar usuario (32x32px circular) como trigger del menú de usuario"
+    - "Dropdown de usuario: única excepción donde se permite sombra (box-shadow: 0 4px 12px rgba(0,0,0,0.12)); border-radius: 8px"
     - "Gap elementos derecha: 14px"
-    
+
     # SIDEBAR
-    - "Ancho expandido: 250px, fondo: #194166, texto: blanco"
+    - "Ancho expandido: 250px, fondo: #FFFFFF, texto: #1a1a1a, borde derecho: 1px solid #E3E6E8"
+    - "Sombra lateral derecha: box-shadow 4px 0 12px rgba(0,0,0,0.08), z-index: 1 (para que la sombra quede sobre el contenido)"
     - "Comportamiento colapsable (expandir/colapsar)"
-    - "Esquina superior derecha: botón de cierre \"X\""
-    - "Bloque de información de usuario dentro del sidebar (debajo del área superior)"
-    - "Separador visual entre bloque de usuario y menú principal"
-    - "Menú principal debajo del separador; soporte para grupos desplegables (submenús) con expandir/contraer por grupo"
-    - "Estado activo del ítem de menú visible (#F62C84)"
-    - "Padding-top: 10px (ajustar según bloque usuario si aplica)"
-    - "Transición suave: width/min-width/opacity 0.25s ease"
-    - "Menú: items con padding 10px 16px, gap ícono-texto 10px; grupos anidan subítems con indentación clara"
-    - "Hover: rgba(255,255,255,0.06)"
-    - "Activo: #F62C84"
-    - "Íconos: 16x16px, stroke blanco, lineales, stroke-width 1.8"
+    - "Botón de colapso: color #5a6370 (gris oscuro), fondo transparente"
+    - "Bloque de información de usuario: nombre en #1a1a1a bold, perfil en #5a6370"
+    - "Separador entre bloque usuario y menú: rgba(0,0,0,0.08)"
+    - "Ítem de menú primer nivel: texto #1a1a1a, font-weight 700 (bold), fondo transparente"
+    - "Ítem hover: background rgba(0,0,0,0.05)"
+    - "Ítem activo: background #EBEDF0 + box-shadow inset 3px 0 0 #657A8A + color #031B30 + font-weight 700"
+    - "Submenú expandido: fondo #FAFAFA, padding 2px 0"
+    - "Subítem: font-weight 400 (normal), padding-left 22px"
+    - "Íconos: 16x16px, heredan color del texto (#1a1a1a)"
+    - "Transición: width/min-width/opacity 0.25s ease"
     - "Al colapsar: width 0, min-width 0, opacity 0, pointer-events none"
-    
+
     # BOTÓN HAMBURGUESA
-    - "Visible en el área principal cuando el sidebar está colapsado (p. ej. en sub-header junto al título del módulo)"
     - "30x30px, borde 1px solid #D0D5D9, fondo blanco"
     - "Border-radius: 4px, hover: fondo #F7F7F7"
-    - "Ícono stroke #194166, tamaño ~16px"
-    - "Al pulsar: expandir sidebar (eliminar estado colapsado)"
-    
-    # COMPORTAMIENTO SIDEBAR (reglas de interacción)
-    - "Sidebar puede expandirse y colapsarse"
-    - "Jerarquía de menú: grupos y submenús; cada grupo puede expandirse/contraerse independientemente"
-    - "Ítem activo de navegación claramente distinguible"
-    - "Botón X: agrega clase 'sidebar-collapsed' a contenedor '.app' (o equivalente)"
-    - "Botón hamburguesa: elimina clase 'sidebar-collapsed'"
-    
+    - "Ícono: color #5a6370 (tres líneas horizontales)"
+    - "Al pulsar: expandir sidebar"
+
     # SUB-HEADER ÁREA TRABAJO
-    - "Altura: 48px, fondo: #F0F1F2"
+    - "Altura: 48px, fondo: #FFFFFF"
     - "Borde inferior: 1px solid #DADDE1"
+    - "Sombra inferior: box-shadow 0 4px 12px rgba(0,0,0,0.06), z-index: 1"
     - "Padding horizontal: 20px"
     - "Layout: flex, align-items center, justify-content space-between"
     - "Izquierda: botón hamburguesa (si sidebar colapsado) + título módulo (13px bold negro)"
     - "Derecha: botones acción (gap 8px)"
-    
+
     # PANTALLA DE LOGIN (UI)
     - "NO debe existir selector manual de perfil o rol en la pantalla de login"
-    - "El perfil/alcance del usuario se resuelve automáticamente tras el login según la lógica de negocio y backend; cualquier referencia a selección manual de perfil en login es inválida para la UI"
-    
+    - "El perfil/alcance del usuario se resuelve automáticamente tras el login"
+
     # BOTONES
-    - "Fondo: #F62C84, texto: blanco, sin borde"
-    - "Border-radius: 4px, font-size: 13px, padding: 4px 10px"
-    - "Hover: opacity 0.92"
-    - "NO sombras, gradientes o relieves (salvo excepción del dropdown de usuario)"
-    
-    # CONTENEDOR CONTENIDO
-    - "Padding: 16px, layout vertical, gap: 10px"
-    - "Estilo compacto, poco aire visual, tipo ERP"
-    
-    # CARDS
-    - "Fondo: blanco, borde: 1px solid #E3E6E8"
-    - "Sin sombra, padding: 12px"
-    - "Esquinas rectas o redondeo mínimo"
-    - "Grid 3 columnas (responsive: 1 columna <900px)"
-    - "Gap: 10px"
-    - "Título card: 13px bold negro, margin-bottom 6px"
-    - "Valor principal: 18px negro"
-    
+    - "Estilo universal para todos los botones de acción del sistema"
+    - "IMPLEMENTACIÓN: usar SIEMPRE la clase CSS `.btn` definida en frontend/src/styles/global.css; NO usar `.clause-button` ni ninguna otra clase de botón ad-hoc"
+    - "Los botones deben tener ancho automático: `width: fit-content` está declarado en `.btn`; funciona correctamente dentro de contenedores flex-column sin estirarse; NUNCA agregar width 100% ni width fijo a un botón"
+    - "Fondo: #FFFFFF, texto: #1a1a1a, borde: 1px solid #C8CDD2"
+    - "Border-radius: 9999px (extremos completamente redondos, forma píldora)"
+    - "Font-size: 13px, font-weight: 600, font-family: heredada (Nunito Sans)"
+    - "Padding típico: 6px 16px"
+    - "Hover: background #F5F6F7"
+    - "Presionado (active): background #D9DBE0 + box-shadow inset 0 3px 8px rgba(0,0,0,0.2) + transform translateY(1px); efecto debe ser muy visible"
+    - "Transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease"
+    - "Disabled: opacity 0.5, cursor not-allowed"
+    - "Variante danger: fondo #FFFFFF, texto #b42318, borde #b42318; hover: background #FEF2F2; active: background #FECACA"
+    - "NO usar botones de fondo de color sólido (rosa, azul, etc.)"
+    - "NO usar border-radius pequeño en botones"
+    - "Botones de UI estructural (hamburguesa, toggle sidebar, menú usuario) son excepciones y tienen sus propias reglas"
+
+    # CARDS Y CONTENEDORES
+    - "Fondo: #FFFFFF, borde: 1px solid #E3E6E8"
+    - "Border-radius: 8px (token --border-radius-card)"
+    - "Sin sombra (salvo excepción dropdown usuario)"
+    - "Padding: 12px"
+    - "Grid 3 columnas (responsive: 1 columna <900px), gap: 10px"
+    - "Título card: 13px bold negro"
+    - "Valor principal destacado: 18px"
+
     # FORMULARIO — CAMPOS NO EDITABLES (solo lectura / metadatos)
     - "Colores obligatorios definidos en la clave raíz `ui_tokens.form_field_readonly` de este archivo; en CSS implementar solo vía variables en `frontend/src/styles/variables.css` (no duplicar hex en componentes)"
-    
+
     # TABLAS
-    - "Contenedor: fondo blanco, borde 1px solid #E3E6E8, padding 12px"
+    - "Contenedor: fondo blanco, borde 1px solid #E3E6E8, border-radius 8px"
     - "Tabla: width 100%, border-collapse collapse"
-    - "Celdas: padding 6px, borde inferior 1px solid #E5E7E9"
-    - "Texto: negro 13px, headers: 13px bold"
+    - "Celdas: padding 10px 12px, borde inferior 1px solid #E3E6E8"
+    - "Header celdas: fondo #F7F7F7, font-weight 600"
+    - "Texto: negro 13px"
     - "NO rayado alternado ni colores decorativos"
-    
+
     # ESPACIADOS CONSISTENTES
     - "Main header: 20px horizontal"
-    - "Sub-header: 20px horizontal  "
+    - "Sub-header: 20px horizontal"
     - "Content: 16px"
     - "Card padding: 12px"
     - "Gap cards: 10px"
     - "Gap ícono-título header: 12px"
-    - "Gap ícono-texto menú: 10px"
+    - "Gap ícono-texto menú sidebar: 8px"
     - "Gap acciones sub-header: 8px"
-    
+
     # ESTADOS INTERACTIVOS
-    - "Menú normal: transparente, hover: rgba(255,255,255,0.06), activo: #F62C84"
+    - "Sidebar normal: transparente; hover: rgba(0,0,0,0.05); activo: #EBEDF0 + inset shadow izquierda #657A8A"
     - "Link notificaciones: normal sin subrayado, hover: subrayado"
-    - "Botones: normal #F62C84, hover: opacity 0.92"
-    
+    - "Botones: normal blanco con borde; hover: gris suave; presionado: gris oscuro + sombra inset"
+
     # RESPONSIVE <900px
     - "Cards: grid-template-columns 1fr"
-    - "Mantener identidad visual y estructura (sin depender de nombre de usuario en header; el avatar permanece como trigger)"
-    
+    - "Mantener identidad visual y estructura"
+
     # CRITERIOS CONSISTENCIA
     - "Reutilizar mismo headerbar, sidebar, sub-header en todas las vistas"
-    - "Misma tipografía, tamaños, pesos, densidad visual"
-    - "Cards blancas con borde sutil sin sombra"
-    - "Botones #F62C84"
-    - "Texto negro en área trabajo, blanco en header/sidebar"
+    - "Misma tipografía (Nunito Sans), tamaños, pesos, densidad visual"
+    - "Cards blancas con borde sutil (8px radius) sin sombra"
+    - "Botones blancos píldora con borde gris en todo el sistema"
+    - "Texto oscuro (#1a1a1a / #000000) en todas las áreas de trabajo"
+    - "Texto blanco únicamente en el Main Headerbar"
     - "Respetar paddings, gaps y estados definidos"
-    
+
     # PROHIBIDO
-    - "Otros azules, sombras (fuera de la excepción del dropdown de usuario), bordes gruesos"
-    - "Botones con estilos distintos al #F62C84 definido, tipografías distintas a Syne"
-    - "Cards con excesivo aire interno"
-    - "Íconos de otro grosor/color"
+    - "Fuentes distintas a Nunito Sans como fuente principal del sistema"
+    - "Cargar Nunito Sans desde Google Fonts CDN (debe ser local)"
+    - "Botones con fondo de color sólido (rosa, azul, etc.) o border-radius pequeño"
+    - "Sidebar con fondo de color (azul, oscuro, etc.)"
+    - "Área de trabajo o sub-header con fondo gris"
+    - "Cards sin border-radius o con border-radius distinto a 8px"
+    - "Sombras fuera de las excepciones declaradas (dropdown usuario, botón presionado, sidebar lateral, sub-header inferior)"
+    - "Gradientes en la UI (solo permitido en el favicon SVG)"
+    - "Íconos de otro grosor/color fuera de las guías"
     - "Jerarquías visuales fuera de guía"
-    - "Estilos \"dashboard marketing\""
+    - "Estilos tipo dashboard marketing"
     - "Selector manual de perfil en la pantalla de login"
+    - "Ícono GCC amarillo o cualquier referencia a branding anterior"
 
 # Tokens de UI (hex canónicos). El frontend las expone como variables CSS en `variables.css`.
+locale:
+  rut_format:
+    description: >
+      Formato estándar del RUT chileno en visualización y campos de entrada en todo el sistema.
+    pattern: "XX.XXX.XXX-X"
+    example: "12.345.678-9"
+    thousands_separator: "."
+    verifier_separator: "-"
+    input_placeholder: "12.345.678-9"
+    implementation:
+      utils: "frontend/src/utils/rut.js"
+      input_component: "frontend/src/components/RutInput.jsx"
+    rules:
+      - "Todo RUT mostrado al usuario debe usar separador de miles (punto) y guión antes del dígito verificador"
+      - "Visualización: usar formatRut(rutBody, rutDv) o formatRutDisplay(cadena)"
+      - "Campos editables: usar el componente RutInput, que formatea con formatRutInput al perder el foco (onBlur)"
+      - "NO mostrar ni persistir en UI un RUT sin formatear cuando el valor es parseable"
+      - "La validación de RUT (módulo 11) permanece en parseRut/parseOptionalRut; el formateo es independiente y no sustituye la validación"
+
 ui_tokens:
   form_field_readonly:
     description: >
@@ -260,3 +312,44 @@ ui_tokens:
     background: "#FAFAFA"
     text: "#727F9A"
     border: "#E3E6E8"
+
+  button:
+    description: >
+      Botones de acción universales del sistema. Forma píldora (border-radius 9999px).
+      El efecto de presionado debe ser visualmente muy notorio.
+    background: "#FFFFFF"
+    border: "#C8CDD2"
+    text: "#1a1a1a"
+    background_hover: "#F5F6F7"
+    background_active: "#D9DBE0"
+    border_radius: "9999px"
+    danger_text: "#b42318"
+    danger_border: "#b42318"
+    danger_background_hover: "#FEF2F2"
+    danger_background_active: "#FECACA"
+
+  card:
+    description: >
+      Contenedores tipo card o panel en el área de trabajo. Sin sombra, con borde sutil
+      y esquinas redondeadas 8px.
+    background: "#FFFFFF"
+    border: "#E3E6E8"
+    border_radius: "8px"
+    padding: "12px"
+
+  sidebar:
+    description: >
+      Sidebar de navegación. Fondo blanco, texto oscuro. Estados de hover y activo
+      diferenciados con fondos sutiles y acento lateral para el ítem activo.
+    background: "#FFFFFF"
+    background_submenu: "#FAFAFA"
+    border_right: "#E3E6E8"
+    text: "#1a1a1a"
+    text_subdued: "#5a6370"
+    hover_background: "rgba(0,0,0,0.05)"
+    active_background: "#EBEDF0"
+    active_accent_color: "#657A8A"
+    active_text: "#031B30"
+    font_weight_first_level: "700"
+    font_weight_submenu: "400"
+    shadow_right: "4px 0 12px rgba(0,0,0,0.08)"

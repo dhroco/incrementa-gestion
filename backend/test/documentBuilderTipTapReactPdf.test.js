@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { buildPdfBytesFromTipTapWithReactPdf } = require('../services/documentBuilderTipTapReactPdf')
+const { buildPdfBytesFromTipTapWithReactPdf, flattenInline, flatToCoalescedParts } = require('../services/documentBuilderTipTapReactPdf')
+const { applySubstitutionsToTipTapDoc } = require('../services/documentBuilderVariableContext')
 
 const minDoc = {
   type: 'doc',
@@ -58,4 +59,41 @@ test('paragraph with has-text-align-center class (no textAlign attr) still produ
   }
   const b = await buildPdfBytesFromTipTapWithReactPdf(doc)
   assert.equal(Buffer.from(b).slice(0, 4).toString('latin1'), '%PDF')
+})
+
+test('paragraph with uppercase mark still produces valid PDF', async () => {
+  const doc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'contrato', marks: [{ type: 'uppercase' }] }],
+      },
+    ],
+  }
+  const b = await buildPdfBytesFromTipTapWithReactPdf(doc)
+  assert.equal(Buffer.from(b).slice(0, 4).toString('latin1'), '%PDF')
+})
+
+test('resolved variable with bold and uppercase marks flatten for PDF', () => {
+  const templateDoc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'variable',
+            attrs: { variableId: 'proveedor_nombre', label: 'Nombre', group: 'proveedor' },
+            marks: [{ type: 'bold' }, { type: 'uppercase' }],
+          },
+        ],
+      },
+    ],
+  }
+  const resolved = applySubstitutionsToTipTapDoc(templateDoc, { proveedor_nombre: 'Ana Pérez' })
+  const parts = flatToCoalescedParts(flattenInline(resolved.content[0].content))
+  assert.equal(parts.length, 1)
+  assert.equal(parts[0].text, 'ANA PÉREZ')
+  assert.equal(parts[0].bold, true)
 })

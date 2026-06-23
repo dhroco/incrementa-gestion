@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { BranchTableEditor, FormSection } from '../components/CompanyFormSections'
-import { setCompanyAccountants, updateCompany } from '../api/companiesApi'
+import { FormSection } from '../components/CompanyFormSections'
+import { RutInput } from '../components/RutInput'
+import { updateCompany } from '../api/companiesApi'
 import {
-  branchesClientValidationOk,
   buildCompanyMutationPayload,
   isValidEmailField,
-  validateHeadquartersForCompanySubmit,
-  validateSignificantBranchesForSubmit
+  validateHeadquartersForCompanySubmit
 } from '../utils/companyFormPayload'
 import {
   isCompanyRutConflictResponse,
@@ -16,7 +15,7 @@ import {
   userMessageFromCompanySaveFailure
 } from '../utils/companyApiErrors'
 import { parseOptionalRut, parseRut } from '../utils/rut'
-import './ClauseForm.css'
+import '../styles/shared-form.css'
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
@@ -28,18 +27,14 @@ export function CompaniesEditForm() {
   const {
     companyId: id,
     listPath,
-    parentEditPath,
     loading,
     error: loadError,
     entity,
     allowedToEdit,
-    accessToken,
-    canAssign,
-    accountantsCatalog,
-    selectedAccountantIds,
-    setSelectedAccountantIds,
     businessName,
     setBusinessName,
+    shortName,
+    setShortName,
     rut,
     setRut,
     businessActivity,
@@ -63,8 +58,7 @@ export function CompaniesEditForm() {
     nameLegal2,
     setNameLegal2,
     rutLegal2,
-    setRutLegal2,
-    branches
+    setRutLegal2
   } = ctx
 
   const [submitting, setSubmitting] = useState(false)
@@ -76,30 +70,23 @@ export function CompaniesEditForm() {
   const rutLegal1Check = useMemo(() => parseOptionalRut(rutLegal1), [rutLegal1])
   const rutLegal2Check = useMemo(() => parseOptionalRut(rutLegal2), [rutLegal2])
 
-  const branchesClientOk = useMemo(() => branchesClientValidationOk(branches), [branches])
-
   const canSubmit = useMemo(() => {
-    return !!accessToken && !!entity && isNonEmptyString(businessName) && rutCheck.ok && emailOk && rutLegal1Check.ok && rutLegal2Check.ok && branchesClientOk
-  }, [accessToken, entity, businessName, rutCheck.ok, emailOk, rutLegal1Check.ok, rutLegal2Check.ok, branchesClientOk])
-
-  function toggleAccountant(idToToggle) {
-    setSelectedAccountantIds((prev) => {
-      const set = new Set(prev)
-      if (set.has(idToToggle)) set.delete(idToToggle)
-      else set.add(idToToggle)
-      return Array.from(set)
-    })
-  }
+    return (
+      !!entity &&
+      isNonEmptyString(businessName) &&
+      isNonEmptyString(shortName) &&
+      rutCheck.ok &&
+      emailOk &&
+      rutLegal1Check.ok &&
+      rutLegal2Check.ok
+    )
+  }, [entity, businessName, shortName, rutCheck.ok, emailOk, rutLegal1Check.ok, rutLegal2Check.ok])
 
   async function onSave() {
     if (!id || !canSubmit || !allowedToEdit) return
-    const branchVal = validateSignificantBranchesForSubmit(branches)
-    if (!branchVal.ok) {
-      setError(branchVal.message)
-      return
-    }
     const hq = validateHeadquartersForCompanySubmit({
       businessName,
+      shortName,
       rut,
       email,
       rutLegal1,
@@ -117,6 +104,7 @@ export function CompaniesEditForm() {
       id,
       buildCompanyMutationPayload({
         businessName,
+        shortName,
         rut,
         businessActivity,
         address,
@@ -128,10 +116,9 @@ export function CompaniesEditForm() {
         nameLegal1,
         rutLegal1,
         nameLegal2,
-        rutLegal2,
-        significantBranches: branchVal.significant
+        rutLegal2
       }),
-      { accessToken }
+      {}
     )
     if (!res.ok) {
       setSubmitting(false)
@@ -139,15 +126,6 @@ export function CompaniesEditForm() {
       setError(msg)
       setRutServerMessage(isCompanyRutConflictResponse(res) ? msg : null)
       return
-    }
-
-    if (canAssign) {
-      const setRes = await setCompanyAccountants(id, selectedAccountantIds, { accessToken })
-      if (!setRes.ok) {
-        setSubmitting(false)
-        setError(setRes.message)
-        return
-      }
     }
 
     setSubmitting(false)
@@ -165,7 +143,7 @@ export function CompaniesEditForm() {
   const subActions = (
     <button
       type="button"
-      className="clause-button"
+      className="btn"
       onClick={onSave}
       disabled={!canSubmit || submitting || !allowedToEdit}
     >
@@ -194,11 +172,11 @@ export function CompaniesEditForm() {
                 </div>
                 <div className="clause-form-col">
                   <div className="clause-label">RUT</div>
-                  <input
-                    className="clause-input"
+                  <RutInput
+                    optional={false}
                     value={rut}
-                    onChange={(e) => {
-                      setRut(e.target.value)
+                    onChange={(next) => {
+                      setRut(next)
                       setRutServerMessage(null)
                       setError((prev) => (prev && isCompanyRutDuplicateUserMessage(prev) ? null : prev))
                     }}
@@ -217,6 +195,12 @@ export function CompaniesEditForm() {
               </div>
 
               <div className="company-form-level2">
+                <div className="clause-form-col">
+                  <div className="clause-label">
+                    Nombre comercial <span style={{ color: 'red' }}>*</span>
+                  </div>
+                  <input className="clause-input" value={shortName} onChange={(e) => setShortName(e.target.value)} />
+                </div>
                 <div className="clause-form-col">
                   <div className="clause-label">Giro</div>
                   <input className="clause-input" value={businessActivity} onChange={(e) => setBusinessActivity(e.target.value)} />
@@ -265,7 +249,7 @@ export function CompaniesEditForm() {
                     </div>
                     <div className="clause-form-col">
                       <div className="clause-label">RUT</div>
-                      <input className="clause-input" value={rutLegal1} onChange={(e) => setRutLegal1(e.target.value)} />
+                      <RutInput value={rutLegal1} onChange={setRutLegal1} />
                       {!rutLegal1Check.ok && rutLegal1.trim().length ? (
                         <div style={{ fontSize: '12px', color: '#000', opacity: 0.8 }}>{rutLegal1Check.message}</div>
                       ) : null}
@@ -282,7 +266,7 @@ export function CompaniesEditForm() {
                     </div>
                     <div className="clause-form-col">
                       <div className="clause-label">RUT</div>
-                      <input className="clause-input" value={rutLegal2} onChange={(e) => setRutLegal2(e.target.value)} />
+                      <RutInput value={rutLegal2} onChange={setRutLegal2} />
                       {!rutLegal2Check.ok && rutLegal2.trim().length ? (
                         <div style={{ fontSize: '12px', color: '#000', opacity: 0.8 }}>{rutLegal2Check.message}</div>
                       ) : null}
@@ -290,36 +274,6 @@ export function CompaniesEditForm() {
                   </div>
                 </div>
               </div>
-
-              <div className="company-form-branches-block clause-form-section clause-form-section--separated">
-                <hr className="company-form-section-rule" aria-hidden="true" />
-                <BranchTableEditor rows={branches} readOnly={false} branchEditorBasePath={parentEditPath} />
-              </div>
-
-              {canAssign ? (
-                <>
-                  <hr className="company-form-section-rule" aria-hidden="true" />
-                  <div className="clause-form-row">
-                  <div className="clause-label">Contadores asociados</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {accountantsCatalog.length === 0 ? (
-                      <div style={{ fontSize: '13px', color: '#000' }}>No hay contadores para asociar.</div>
-                    ) : (
-                      accountantsCatalog.map((a) => (
-                        <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedAccountantIds.includes(a.id)}
-                            onChange={() => toggleAccountant(a.id)}
-                          />
-                          <span>{a.email ?? a.id}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-                </>
-              ) : null}
             </>
           ) : null}
         </div>

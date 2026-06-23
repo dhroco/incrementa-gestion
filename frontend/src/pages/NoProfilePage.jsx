@@ -1,19 +1,16 @@
+import { useIsAuthenticated } from '@azure/msal-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate } from 'react-router-dom'
-import {
-  selectEnrichmentStatus,
-  selectSession,
-  signOutThunk
-} from '../store/authSlice'
+import { selectEnrichmentStatus, signOutThunk } from '../store/authSlice'
 import { AuthLoadingScreen } from '../routes/AuthLoadingScreen'
 import './NoProfilePage.css'
 
 export function NoProfilePage() {
   const dispatch = useDispatch()
-  const session = useSelector(selectSession)
+  const isAuthenticated = useIsAuthenticated()
   const status = useSelector(selectEnrichmentStatus)
 
-  if (!session) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 

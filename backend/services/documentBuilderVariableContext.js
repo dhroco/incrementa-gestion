@@ -13,24 +13,36 @@ function companyRutDisplay(body, dv) {
 }
 
 /**
- * Build substitution map for one employee row + company row + optional branches summary.
- * @param {object} employee — mapRow shape from employeeService
- * @param {object} company — raw company row + optional branches_text
+ * Build substitution map for one supplier row + company row.
+ * @param {object} supplier — normalizeSupplier shape from supplierService
+ * @param {object} company — raw company row
+ * @param {object | null} client — normalizeClient shape from clientService, or null
  * @param {Record<string, string>} overrides
  * @returns {Record<string, string>}
  */
-function buildSubstitutionMap(employee, company, overrides = {}) {
-  const fullName = String(employee?.full_name || '').trim()
-  const parts = fullName.split(/\s+/u)
-  const firstName = parts[0] || ''
-  const lastNames = parts.length > 1 ? parts.slice(1).join(' ') : ''
+function buildSubstitutionMap(supplier, company, client = null, overrides = {}) {
+  const isEmpresa = supplier?.supplier_type === 'empresa'
+  const proveedorNombre = isEmpresa
+    ? String(supplier?.razon_social || '').trim()
+    : String(supplier?.full_name || '').trim()
+  const proveedorRut = isEmpresa
+    ? String(supplier?.rut_empresa_display || '').trim()
+    : String(supplier?.rut_display || '').trim()
+  const proveedorDireccion = isEmpresa
+    ? String(supplier?.direccion_empresa || '').trim()
+    : String(supplier?.address || '').trim()
 
   const base = {
-    worker_name: firstName,
-    worker_lastname: lastNames,
-    worker_rut: String(employee?.rut || '').trim(),
-    worker_position: String(employee?.position_name || '').trim(),
+    proveedor_nombre: proveedorNombre,
+    proveedor_rut: proveedorRut,
+    proveedor_direccion: proveedorDireccion,
+    proveedor_giro: isEmpresa ? String(supplier?.giro || '').trim() : '',
+    proveedor_rep_legal: isEmpresa ? String(supplier?.nombre_rep_legal || '').trim() : '',
+    proveedor_rep_legal_rut: isEmpresa ? String(supplier?.rut_rep_legal_display || '').trim() : '',
+    proveedor_red_social: '',
+    proveedor_cuenta_social: '',
     company_legal_name: String(company?.business_name || '').trim(),
+    company_nombre_comercial: String(company?.short_name || '').trim(),
     company_rut: companyRutDisplay(company?.rut_body, company?.rut_dv),
     company_email: String(company?.email || '').trim(),
     company_address: String(company?.address || '').trim(),
@@ -47,9 +59,16 @@ function buildSubstitutionMap(employee, company, overrides = {}) {
       company?.rut_body_legal_representative_2,
       company?.rut_dv_legal_representative_2
     ),
-    company_branches: String(company?.branches_text || '').trim() || '—',
-    contract_type: '—',
-    work_schedule: String(employee?.work_schedule_name || '').trim()
+    fecha_contrato: '',
+    lugar_contrato: '',
+    mes_ejecucion: '',
+    cantidad_reels: '',
+    precio_numero: '',
+    precio_texto: '',
+    client_name: client ? String(client.name || '').trim() : '',
+    client_brand: client ? String(client.brand || '').trim() : '',
+    client_brand_account: client ? String(client.brand_account || '').trim() : '',
+    client_product_campaign: ''
   }
 
   const out = { ...base }
@@ -97,23 +116,58 @@ function isPlainObject(value) {
  * @param {Record<string, string>} map
  * @returns {unknown}
  */
+function variableHasFormattingFlag(attrs, marks, type) {
+  if (attrs && attrs[type]) return true
+  return Array.isArray(marks) && marks.some((m) => m?.type === type)
+}
+
+function variableAttrsToMarks(attrs, marks = []) {
+  /** @type {Array<{ type: string }>} */
+  const out = []
+  const add = (type) => {
+    if (!out.some((m) => m.type === type)) out.push({ type })
+  }
+  if (variableHasFormattingFlag(attrs, marks, 'bold')) add('bold')
+  if (variableHasFormattingFlag(attrs, marks, 'italic')) add('italic')
+  if (variableHasFormattingFlag(attrs, marks, 'underline')) add('underline')
+  if (variableHasFormattingFlag(attrs, marks, 'uppercase')) add('uppercase')
+  return out
+}
+
+function variableShouldUppercase(attrs, marks) {
+  return variableHasFormattingFlag(attrs, marks, 'uppercase')
+}
+
 function applySubstitutionsToTipTapDoc(doc, map) {
   const root = JSON.parse(JSON.stringify(doc))
 
   function walk(node) {
     if (!isPlainObject(node)) return
     if (node.type === 'variable') {
-      const vid = typeof node.attrs?.variableId === 'string' ? String(node.attrs.variableId).trim() : ''
-      const val = vid && map[vid] != null ? String(map[vid]) : ''
-      const token = vid ? (val.length > 0 ? val : `{{${vid}}}`) : ''
+      const attrs = node.attrs && typeof node.attrs === 'object' ? node.attrs : {}
+      const nodeMarks = Array.isArray(node.marks) ? node.marks : []
+      const vid = typeof attrs.variableId === 'string' ? String(attrs.variableId).trim() : ''
+      let val = vid && map[vid] != null ? String(map[vid]) : ''
+      let token = vid ? (val.length > 0 ? val : `{{${vid}}}`) : ''
+      if (variableShouldUppercase(attrs, nodeMarks) && token) {
+        token = token.toUpperCase()
+      }
       node.type = 'text'
       node.text = token
+      const marks = variableAttrsToMarks(attrs, nodeMarks)
+      if (marks.length > 0) node.marks = marks
+      else delete node.marks
       delete node.attrs
-      delete node.marks
       return
     }
     if (node.type === 'text' && typeof node.text === 'string') {
       node.text = applySubstitutions(node.text, map)
+      if (Array.isArray(node.marks)) {
+        const hasUppercase = node.marks.some((m) => m?.type === 'uppercase')
+        if (hasUppercase) {
+          node.text = node.text.toUpperCase()
+        }
+      }
       return
     }
     if (Array.isArray(node.content)) {

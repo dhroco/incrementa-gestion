@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { BranchTableEditor, FormSection } from '../components/CompanyFormSections'
+import { FormSection } from '../components/CompanyFormSections'
+import { RutInput } from '../components/RutInput'
 import { createCompany } from '../api/companiesApi'
 import {
-  branchesClientValidationOk,
   buildCompanyMutationPayload,
   isValidEmailField,
-  validateHeadquartersForCompanySubmit,
-  validateSignificantBranchesForSubmit
+  validateHeadquartersForCompanySubmit
 } from '../utils/companyFormPayload'
 import {
   isCompanyRutConflictResponse,
@@ -16,7 +15,7 @@ import {
   userMessageFromCompanySaveFailure
 } from '../utils/companyApiErrors'
 import { parseOptionalRut, parseRut } from '../utils/rut'
-import './ClauseForm.css'
+import '../styles/shared-form.css'
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
@@ -27,10 +26,10 @@ export function CompaniesCreateForm() {
   const ctx = useOutletContext()
   const {
     listPath,
-    parentEditPath,
-    accessToken,
     businessName,
     setBusinessName,
+    shortName,
+    setShortName,
     rut,
     setRut,
     businessActivity,
@@ -54,8 +53,7 @@ export function CompaniesCreateForm() {
     nameLegal2,
     setNameLegal2,
     rutLegal2,
-    setRutLegal2,
-    branches
+    setRutLegal2
   } = ctx
 
   const [submitting, setSubmitting] = useState(false)
@@ -68,29 +66,22 @@ export function CompaniesCreateForm() {
   const rutLegal1Check = useMemo(() => parseOptionalRut(rutLegal1), [rutLegal1])
   const rutLegal2Check = useMemo(() => parseOptionalRut(rutLegal2), [rutLegal2])
 
-  const branchesClientOk = useMemo(() => branchesClientValidationOk(branches), [branches])
-
   const canSubmit = useMemo(() => {
     return (
-      !!accessToken &&
       isNonEmptyString(businessName) &&
+      isNonEmptyString(shortName) &&
       rutCheck.ok &&
       emailOk &&
       rutLegal1Check.ok &&
-      rutLegal2Check.ok &&
-      branchesClientOk
+      rutLegal2Check.ok
     )
-  }, [accessToken, businessName, rutCheck.ok, emailOk, rutLegal1Check.ok, rutLegal2Check.ok, branchesClientOk])
+  }, [businessName, shortName, rutCheck.ok, emailOk, rutLegal1Check.ok, rutLegal2Check.ok])
 
   async function onSubmit() {
     if (!canSubmit) return
-    const branchVal = validateSignificantBranchesForSubmit(branches)
-    if (!branchVal.ok) {
-      setError(branchVal.message)
-      return
-    }
     const hq = validateHeadquartersForCompanySubmit({
       businessName,
+      shortName,
       rut,
       email,
       rutLegal1,
@@ -107,6 +98,7 @@ export function CompaniesCreateForm() {
     const res = await createCompany(
       buildCompanyMutationPayload({
         businessName,
+        shortName,
         rut,
         businessActivity,
         address,
@@ -118,10 +110,9 @@ export function CompaniesCreateForm() {
         nameLegal1,
         rutLegal1,
         nameLegal2,
-        rutLegal2,
-        significantBranches: branchVal.significant
+        rutLegal2
       }),
-      { accessToken }
+      {}
     )
     setSubmitting(false)
     if (!res.ok) {
@@ -142,7 +133,7 @@ export function CompaniesCreateForm() {
   )
 
   const subActions = (
-    <button type="button" className="clause-button" onClick={onSubmit} disabled={!canSubmit || submitting}>
+    <button type="button" className="btn" onClick={onSubmit} disabled={!canSubmit || submitting}>
       {submitting ? 'Guardando…' : 'Guardar'}
     </button>
   )
@@ -160,11 +151,11 @@ export function CompaniesCreateForm() {
             </div>
             <div className="clause-form-col">
               <div className="clause-label">RUT</div>
-              <input
-                className="clause-input"
+              <RutInput
+                optional={false}
                 value={rut}
-                onChange={(e) => {
-                  setRut(e.target.value)
+                onChange={(next) => {
+                  setRut(next)
                   setRutServerMessage(null)
                   setError((prev) => (prev && isCompanyRutDuplicateUserMessage(prev) ? null : prev))
                 }}
@@ -183,6 +174,12 @@ export function CompaniesCreateForm() {
           </div>
 
           <div className="company-form-level2">
+            <div className="clause-form-col">
+              <div className="clause-label">
+                Nombre comercial <span style={{ color: 'red' }}>*</span>
+              </div>
+              <input className="clause-input" value={shortName} onChange={(e) => setShortName(e.target.value)} />
+            </div>
             <div className="clause-form-col">
               <div className="clause-label">Giro</div>
               <input className="clause-input" value={businessActivity} onChange={(e) => setBusinessActivity(e.target.value)} />
@@ -231,7 +228,7 @@ export function CompaniesCreateForm() {
                 </div>
                 <div className="clause-form-col">
                   <div className="clause-label">RUT</div>
-                  <input className="clause-input" value={rutLegal1} onChange={(e) => setRutLegal1(e.target.value)} />
+                  <RutInput value={rutLegal1} onChange={setRutLegal1} />
                   {!rutLegal1Check.ok && rutLegal1.trim().length ? (
                     <div style={{ fontSize: '12px', color: '#000', opacity: 0.8 }}>{rutLegal1Check.message}</div>
                   ) : null}
@@ -248,18 +245,13 @@ export function CompaniesCreateForm() {
                 </div>
                 <div className="clause-form-col">
                   <div className="clause-label">RUT</div>
-                  <input className="clause-input" value={rutLegal2} onChange={(e) => setRutLegal2(e.target.value)} />
+                  <RutInput value={rutLegal2} onChange={setRutLegal2} />
                   {!rutLegal2Check.ok && rutLegal2.trim().length ? (
                     <div style={{ fontSize: '12px', color: '#000', opacity: 0.8 }}>{rutLegal2Check.message}</div>
                   ) : null}
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="company-form-branches-block clause-form-section clause-form-section--separated">
-            <hr className="company-form-section-rule" aria-hidden="true" />
-            <BranchTableEditor rows={branches} readOnly={false} branchEditorBasePath={parentEditPath} />
           </div>
         </div>
       </div>

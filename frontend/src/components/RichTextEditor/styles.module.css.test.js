@@ -21,16 +21,5 @@ describe('RichTextEditor styles (heading bold differentiation)', () => {
     expect(css).toMatch(/\.editor-content\s+:global\(\.ProseMirror h3 strong\),[\s\S]*\{[\s\S]*font-weight:\s*700;/)
   })
 
-  it('applies the same differentiation for the embedded read-only preview', () => {
-    const css = readCss()
-
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h1\)\s*\{[\s\S]*font-weight:\s*500;/)
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h2\)\s*\{[\s\S]*font-weight:\s*500;/)
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h3\)\s*\{[\s\S]*font-weight:\s*500;/)
-
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h1 strong\),[\s\S]*\{[\s\S]*font-weight:\s*700;/)
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h2 strong\),[\s\S]*\{[\s\S]*font-weight:\s*700;/)
-    expect(css).toMatch(/\.embedded-clause-preview-editor\s+:global\(\.ProseMirror h3 strong\),[\s\S]*\{[\s\S]*font-weight:\s*700;/)
-  })
 })
 

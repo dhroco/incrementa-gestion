@@ -1,4 +1,5 @@
 // Environment configuration for backend
+
 const ENVIRONMENT = process.env.ENVIRONMENT || 'local';
 
 // Validate environment
@@ -11,21 +12,40 @@ const config = {
   local: {
     PORT: 3000,
     HOST: 'localhost',
-    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://localhost:5432/gestion_contratos_local',
-    SUPABASE_URL: process.env.SUPABASE_URL || '',
-    SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET || '',
-    /** Service role: solo servidor (p. ej. aprovisionar usuarios). Vacío en local si no se usa esa función. */
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:Incrementa2026!@35.199.66.217:5432/incrementa',
+    OIDC_ISSUER_URL:
+      process.env.OIDC_ISSUER_URL ||
+      'https://login.microsoftonline.com/60322b4a-13bf-4f19-89ae-efe4a54ffed6/v2.0',
+    OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'dc734f4a-5f25-4e88-b728-aab4715f2122',
+    OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID || 'dc734f4a-5f25-4e88-b728-aab4715f2122',
+    OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET || '',
+    KEYCLOAK_ADMIN_URL: process.env.KEYCLOAK_ADMIN_URL || 'http://localhost:8080',
+    KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || 'admin',
+    KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || '',
+    KEYCLOAK_REALM: process.env.KEYCLOAK_REALM || 'incrementa',
+    GCS_BUCKET: process.env.GCS_BUCKET || 'incrementa-contratos-dev',
+    GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
     LOG_LEVEL: 'debug',
     CORS_ORIGIN: 'http://localhost:5173'
   },
   dev: {
     PORT: 3000,
     HOST: '0.0.0.0',
-    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres.ulqtcnnivgkqxphmzlrh:Elizardo.123!@aws-1-us-east-1.pooler.supabase.com:5432/postgres',
-    SUPABASE_URL: process.env.SUPABASE_URL || 'https://ulqtcnnivgkqxphmzlrh.supabase.co',
-    SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET || '/wm+vX9phucE9vqzQP8wDB3KQn7NafKgJAPdsdBo38pHYjWyjQE5K40i2x9zDymqFmAD0i0STT4TB1l156yYWA==',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVscXRjbm5pdmdrcXhwaG16bHJoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTUxMTk0NiwiZXhwIjoyMDkxMDg3OTQ2fQ.SD75rdu_eM8L_wp3jFNhOyY3E0k3vwsJs4oDxULUPD4',
+    DATABASE_URL: process.env.DATABASE_URL,
+    OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || '',
+    OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'incrementa-backend',
+    OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID || 'incrementa-backend',
+    OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET || '',
+    KEYCLOAK_ADMIN_URL: process.env.KEYCLOAK_ADMIN_URL || '',
+    KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || 'admin',
+    KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || '',
+    KEYCLOAK_REALM: process.env.KEYCLOAK_REALM || 'incrementa',
+    GCS_BUCKET: process.env.GCS_BUCKET || 'incrementa-contratos-dev',
+    GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
     LOG_LEVEL: 'info',
     CORS_ORIGIN: 'https://dev.dlrt4e5spibmy.amplifyapp.com'
   },
@@ -33,9 +53,18 @@ const config = {
     PORT: process.env.PORT || 3000,
     HOST: '0.0.0.0',
     DATABASE_URL: process.env.DATABASE_URL,
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || '',
+    OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'incrementa-backend',
+    OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID || 'incrementa-backend',
+    OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET || '',
+    KEYCLOAK_ADMIN_URL: process.env.KEYCLOAK_ADMIN_URL || '',
+    KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || 'admin',
+    KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || '',
+    KEYCLOAK_REALM: process.env.KEYCLOAK_REALM || 'incrementa',
+    GCS_BUCKET: process.env.GCS_BUCKET || 'incrementa-contratos-dev',
+    GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'contratos@incrementa.la',
     LOG_LEVEL: 'error',
     CORS_ORIGIN: 'https://gestion-contratos.com'
   }

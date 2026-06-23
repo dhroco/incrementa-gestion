@@ -1,31 +1,78 @@
-// Catálogo fijo de variables embebibles para cláusulas
-// Agrupadas por origen de datos: Trabajador, Empresa, Contrato
+// Catálogo fijo de variables embebibles para templates
+// Agrupadas por origen de datos: Proveedor, Empresa, Contrato
 
 export const VARIABLE_GROUPS = {
-  trabajador: {
-    id: 'trabajador',
-    label: 'Trabajador',
-    description: 'Datos personales del trabajador',
+  proveedor: {
+    id: 'proveedor',
+    label: 'Proveedor',
+    description: 'Datos del proveedor (persona natural o empresa)',
     variables: [
       {
-        id: 'worker_name',
-        label: 'Nombre Trabajador',
-        description: 'Nombre completo del trabajador'
+        id: 'proveedor_nombre',
+        label: 'Nombre / Razón Social',
+        description: 'Nombre completo (persona) o razón social (empresa)'
       },
       {
-        id: 'worker_lastname',
-        label: 'Apellido Trabajador',
-        description: 'Apellido del trabajador'
+        id: 'proveedor_rut',
+        label: 'RUT Proveedor',
+        description: 'RUT del proveedor (persona o empresa)'
       },
       {
-        id: 'worker_rut',
-        label: 'RUT Trabajador',
-        description: 'RUT del trabajador'
+        id: 'proveedor_direccion',
+        label: 'Dirección',
+        description: 'Dirección del proveedor'
       },
       {
-        id: 'worker_position',
-        label: 'Cargo',
-        description: 'Cargo o puesto del trabajador'
+        id: 'proveedor_giro',
+        label: 'Giro',
+        description: 'Giro comercial (solo empresas)'
+      },
+      {
+        id: 'proveedor_rep_legal',
+        label: 'Representante Legal',
+        description: 'Nombre del representante legal (solo empresas)'
+      },
+      {
+        id: 'proveedor_rep_legal_rut',
+        label: 'RUT Representante Legal',
+        description: 'RUT del representante legal (solo empresas)'
+      },
+      {
+        id: 'proveedor_red_social',
+        label: 'Red Social',
+        description: 'Red social del proveedor para el contrato'
+      },
+      {
+        id: 'proveedor_cuenta_social',
+        label: 'Cuenta Red Social',
+        description: 'Handle o cuenta asociada a la red social del proveedor'
+      }
+    ]
+  },
+  client: {
+    id: 'client',
+    label: 'Cliente',
+    description: 'Marca o empresa para la que se ejecuta la campaña',
+    variables: [
+      {
+        id: 'client_name',
+        label: 'Nombre cliente',
+        description: 'Nombre del cliente'
+      },
+      {
+        id: 'client_brand',
+        label: 'Marca',
+        description: 'Marca asociada al cliente'
+      },
+      {
+        id: 'client_brand_account',
+        label: 'Cuenta marca',
+        description: 'Cuenta de red social o handle de la marca'
+      },
+      {
+        id: 'client_product_campaign',
+        label: 'Producto/Campaña',
+        description: 'Producto o campaña del cliente para este contrato'
       }
     ]
   },
@@ -38,6 +85,11 @@ export const VARIABLE_GROUPS = {
         id: 'company_legal_name',
         label: 'Razón Social',
         description: 'Nombre legal de la empresa'
+      },
+      {
+        id: 'company_nombre_comercial',
+        label: 'Nombre Comercial',
+        description: 'Nombre abreviado o comercial bajo el cual se identifica la empresa en el contrato'
       },
       {
         id: 'company_rut',
@@ -88,28 +140,43 @@ export const VARIABLE_GROUPS = {
         id: 'company_legal_rep2_rut',
         label: 'RUT Representante Legal 2',
         description: 'RUT del segundo representante legal'
-      },
-      {
-        id: 'company_branches',
-        label: 'Sucursal empresa',
-        description: 'Resumen de sucursales u oficinas (nombre, domicilio y contacto)'
       }
     ]
   },
   contrato: {
     id: 'contrato',
     label: 'Contrato',
-    description: 'Datos de la relación laboral',
+    description: 'Datos específicos del contrato comercial',
     variables: [
       {
-        id: 'contract_type',
-        label: 'Tipo de Contrato',
-        description: 'Tipo de contrato laboral'
+        id: 'fecha_contrato',
+        label: 'Fecha del contrato',
+        description: 'Fecha de firma o celebración del contrato'
       },
       {
-        id: 'work_schedule',
-        label: 'Jornada',
-        description: 'Jornada laboral (completa, parcial, etc.)'
+        id: 'lugar_contrato',
+        label: 'Lugar del contrato',
+        description: 'Ciudad o lugar donde se firma el contrato'
+      },
+      {
+        id: 'mes_ejecucion',
+        label: 'Mes de ejecución',
+        description: 'Mes en que se ejecuta la campaña o servicio'
+      },
+      {
+        id: 'cantidad_reels',
+        label: 'Cantidad de reels',
+        description: 'Número de reels acordados en el contrato'
+      },
+      {
+        id: 'precio_numero',
+        label: 'Precio',
+        description: 'Monto del contrato en cifras'
+      },
+      {
+        id: 'precio_texto',
+        label: 'Precio en texto',
+        description: 'Monto del contrato escrito en palabras'
       }
     ]
   }

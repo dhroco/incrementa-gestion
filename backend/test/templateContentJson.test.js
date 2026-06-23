@@ -1,35 +1,26 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { collectEmbeddedClauseIdsFromDoc, collectEmbeddedClauseRefsFromDoc } = require('../utils/templateContentJson')
+const { validateTemplateContentJson } = require('../utils/templateContentJson')
 
-test('collectEmbeddedClauseRefsFromDoc collects universal and company refs', () => {
-  const doc = {
-    type: 'doc',
-    content: [
-      {
-        type: 'embeddedUniversalClause',
-        attrs: { clauseId: 'u1', clauseKind: 'universal' },
-      },
-      {
-        type: 'embeddedUniversalClause',
-        attrs: { clauseId: 'c1', clauseKind: 'company', companyId: 'co1' },
-      },
-    ],
-  }
-  const refs = collectEmbeddedClauseRefsFromDoc(doc)
-  assert.equal(refs.length, 2)
-  assert.deepEqual(refs[0], { clauseId: 'u1', clauseKind: 'universal', companyId: null })
-  assert.deepEqual(refs[1], { clauseId: 'c1', clauseKind: 'company', companyId: 'co1' })
+test('validateTemplateContentJson accepts a non-empty doc', () => {
+  const doc = { type: 'doc', content: [{ type: 'paragraph', content: [] }] }
+  assert.deepEqual(validateTemplateContentJson(doc), { ok: true })
 })
 
-test('collectEmbeddedClauseIdsFromDoc only includes universal clause ids', () => {
-  const doc = {
-    type: 'doc',
-    content: [
-      { type: 'embeddedUniversalClause', attrs: { clauseId: 'u1', clauseKind: 'universal' } },
-      { type: 'embeddedUniversalClause', attrs: { clauseId: 'c1', clauseKind: 'company', companyId: 'co1' } },
-    ],
-  }
-  const ids = collectEmbeddedClauseIdsFromDoc(doc)
-  assert.deepEqual(ids, ['u1'])
+test('validateTemplateContentJson rejects missing doc when required', () => {
+  const result = validateTemplateContentJson(null, { required: true })
+  assert.equal(result.ok, false)
+  assert.equal(result.code, 'TEMPLATE_CONTENT_JSON_REQUIRED')
+})
+
+test('validateTemplateContentJson rejects empty content array', () => {
+  const result = validateTemplateContentJson({ type: 'doc', content: [] })
+  assert.equal(result.ok, false)
+  assert.equal(result.code, 'TEMPLATE_EMPTY_CONTENT')
+})
+
+test('validateTemplateContentJson rejects non-doc root', () => {
+  const result = validateTemplateContentJson({ type: 'paragraph', content: [] })
+  assert.equal(result.ok, false)
+  assert.equal(result.code, 'TEMPLATE_INVALID_CONTENT_JSON')
 })

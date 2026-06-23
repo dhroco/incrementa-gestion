@@ -3,7 +3,7 @@ import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
 
 /**
- * Panel colapsable para metadatos de cláusulas y plantillas estándar.
+ * Panel colapsable para metadatos de plantillas estándar.
  * Los `children` permanecen montados al contraer (solo se ocultan) para no perder estado de formulario ni del editor asociado fuera del panel.
  *
  * @param {{

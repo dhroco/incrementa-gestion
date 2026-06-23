@@ -2,100 +2,76 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const request = require('supertest')
 const { createApp } = require('../app')
+const { attachAbilityWithRules, packedRulesForProfile } = require('./testAbilityHelpers')
 
 function authStub(req, _res, next) {
   req.auth = { userId: 'user-1', email: 'user@example.com' }
   next()
 }
 
-async function sessionMetaStub(_userId, profileCode) {
-  return {
-    mustChangePassword: false,
-    accountantIsActive: profileCode === 'CONTADOR' ? true : null
-  }
-}
-
-test('GET /api/me/session includes company context for USUARIO_EMPRESA_ADMINISTRADOR', async () => {
-  const effectiveNavigationResolver = async () => ({
-    profile: { code: 'USUARIO_EMPRESA_ADMINISTRADOR', label: 'Usuario Empresa Administrador' },
-    rows: [],
-  })
-  const companyContextResolver = async () => ({ id: 'co1', business_name: 'Empresa Demo Uno SpA' })
+test('GET /api/me/session returns ADMINISTRADOR_PLATAFORMA with permissions', async () => {
+  const buildPackedRulesForUser = async () =>
+    packedRulesForProfile({ code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' })
 
   const app = createApp({
     requireAuth: authStub,
-    effectiveNavigationResolver,
-    companyContextResolver,
-    sessionMetaResolver: sessionMetaStub
+    attachAbilityMiddleware: attachAbilityWithRules(),
+    buildPackedRulesForUser,
+    sessionMetaResolver: async () => ({
+      userIsActive: true,
+      displayName: 'Admin User'
+    })
   })
-  const res = await request(app).get('/api/me/session').expect(200)
-
-  assert.equal(res.body?.profile?.code, 'USUARIO_EMPRESA_ADMINISTRADOR')
-  assert.deepEqual(res.body?.company, { id: 'co1', business_name: 'Empresa Demo Uno SpA' })
-})
-
-test('GET /api/me/session does not include company for other profiles', async () => {
-  const effectiveNavigationResolver = async () => ({
-    profile: { code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-    rows: [],
-  })
-
-  const app = createApp({ requireAuth: authStub, effectiveNavigationResolver, sessionMetaResolver: sessionMetaStub })
   const res = await request(app).get('/api/me/session').expect(200)
 
   assert.equal(res.body?.profile?.code, 'ADMINISTRADOR_PLATAFORMA')
   assert.equal('company' in res.body, false)
+  assert.equal('assignedCompanies' in res.body, false)
+  assert.equal('navigation' in res.body, false)
+  assert.ok(Array.isArray(res.body?.permissions))
 })
 
-test('GET /api/me/session includes mustChangePassword and isActive for CONTADOR', async () => {
-  const effectiveNavigationResolver = async () => ({
-    profile: { code: 'CONTADOR', label: 'Contador' },
-    rows: [{ id: 'n1', parent_id: null, code: 'NAV_X', label: 'X', route_path: '/app/dashboard', module_title: 'X', sort_order: 1, show_in_main_menu: true }]
-  })
+test('GET /api/me/session returns profile extras with signed avatar URL', async () => {
+  const buildPackedRulesForUser = async () =>
+    packedRulesForProfile({ code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' })
+
   const app = createApp({
     requireAuth: authStub,
-    effectiveNavigationResolver,
-    sessionMetaResolver: async () => ({ mustChangePassword: true, accountantIsActive: true }),
-    accountantAssignedCompaniesLoader: async () => []
+    attachAbilityMiddleware: attachAbilityWithRules(),
+    buildPackedRulesForUser,
+    sessionMetaResolver: async () => ({
+      userIsActive: true,
+      displayName: 'Admin User',
+      avatarGcsPath: 'avatars/profile-1/abc.jpg',
+      contactEmail: 'contacto@empresa.cl',
+      widgetPreferences: { suppliers: true, contracts: false, templates: true }
+    }),
+    gcsService: {
+      getSignedUrl: async ({ gcsPath, expiresInMinutes }) => {
+        assert.equal(gcsPath, 'avatars/profile-1/abc.jpg')
+        assert.equal(expiresInMinutes, 1440)
+        return 'https://signed.example/avatar.jpg'
+      }
+    }
   })
+
   const res = await request(app).get('/api/me/session').expect(200)
-  assert.equal(res.body?.mustChangePassword, true)
-  assert.equal(res.body?.isActive, true)
+  assert.equal(res.body.contact_email, 'contacto@empresa.cl')
+  assert.deepEqual(res.body.widget_preferences, { suppliers: true, contracts: false, templates: true })
+  assert.equal(res.body.avatar_url, 'https://signed.example/avatar.jpg')
+  assert.equal('avatar_gcs_path' in res.body, false)
 })
 
-test('GET /api/me/session includes assignedCompanies for CONTADOR when loader returns rows', async () => {
-  const effectiveNavigationResolver = async () => ({
-    profile: { code: 'CONTADOR', label: 'Contador' },
-    rows: []
-  })
-  const accountantAssignedCompaniesLoader = async () => [
-    { id: 'co1', business_name: 'Alpha SpA' },
-    { id: 'co2', business_name: 'Beta Ltda.' }
-  ]
-  const app = createApp({
-    requireAuth: authStub,
-    effectiveNavigationResolver,
-    sessionMetaResolver: sessionMetaStub,
-    accountantAssignedCompaniesLoader
-  })
-  const res = await request(app).get('/api/me/session').expect(200)
-  assert.equal(res.body?.profile?.code, 'CONTADOR')
-  assert.equal(Array.isArray(res.body?.assignedCompanies), true)
-  assert.equal(res.body?.assignedCompanies?.length, 2)
-  assert.equal(res.body?.assignedCompanies?.[0]?.id, 'co1')
-})
+test('GET /api/me/session returns 403 for inactive user', async () => {
+  const buildPackedRulesForUser = async () =>
+    packedRulesForProfile({ code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' })
 
-test('GET /api/me/session returns 403 for inactive CONTADOR', async () => {
-  const effectiveNavigationResolver = async () => ({
-    profile: { code: 'CONTADOR', label: 'Contador' },
-    rows: []
-  })
   const app = createApp({
     requireAuth: authStub,
-    effectiveNavigationResolver,
-    sessionMetaResolver: async () => ({ mustChangePassword: false, accountantIsActive: false })
+    attachAbilityMiddleware: attachAbilityWithRules(),
+    buildPackedRulesForUser,
+    sessionMetaResolver: async () => ({ userIsActive: false })
   })
   const res = await request(app).get('/api/me/session').expect(403)
-  assert.equal(res.body?.code, 'ACCOUNTANT_INACTIVE')
+  assert.equal(res.body?.code, 'USER_INACTIVE')
 })
-

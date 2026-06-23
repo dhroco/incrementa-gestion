@@ -50,6 +50,9 @@ bower_components/
 # Local scripts with secrets (do not commit)
 backend/SET_VARS_AMBIENTE_LOCAL.cmd
 
+# GCP credentials (never commit)
+backend/secrets/
+
 # Build outputs
 dist/
 build/
@@ -103,3 +106,6 @@ venv.bak/
 
 # Temporary infrastructure files
 infra/route53-changes.json
+
+# Datos de base de datos
+postgresql-credenciales.txt

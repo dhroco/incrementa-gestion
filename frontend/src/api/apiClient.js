@@ -1,9 +1,42 @@
 import appConfig from '../../config.js'
+import { InteractionRequiredAuthError } from '@azure/msal-browser'
+import { acquireApiAccessToken, getActiveMsalAccount } from '../auth/msalToken'
+import { API_SCOPE } from '../config/msalConfig'
+import { msalInstance } from '../auth/msalInstance'
 import { store } from '../store/store'
-import { invalidateSessionThunk } from '../store/authSlice'
+import { signOutThunk } from '../store/authSlice'
 
 function normalizeBaseUrl(baseUrl) {
   return String(baseUrl || '').replace(/\/$/, '')
+}
+
+async function resolveAccessToken(optionsAccessToken) {
+  if (optionsAccessToken) return optionsAccessToken
+  return acquireApiAccessToken()
+}
+
+async function handleUnauthorized() {
+  const account = getActiveMsalAccount()
+  if (!account) {
+    await store.dispatch(signOutThunk({ reason: 'unauthorized' }))
+    return
+  }
+
+  try {
+    const token = await acquireApiAccessToken()
+    if (!token) {
+      return
+    }
+  } catch (err) {
+    if (err instanceof InteractionRequiredAuthError) {
+      await msalInstance.acquireTokenRedirect({
+        scopes: [API_SCOPE],
+        account
+      })
+      return
+    }
+    await store.dispatch(signOutThunk({ reason: 'unauthorized' }))
+  }
 }
 
 export function mapHttpStatusToSpanish(status) {
@@ -28,13 +61,10 @@ export function classifyApiFailure(status) {
 /**
  * @param {string} path
  * @param {{ accessToken?: string | null, signal?: AbortSignal, headers?: Record<string, string> }} [options]
- * @returns {Promise<
- *   | { ok: true, status: number, data: unknown, meta: unknown }
- *   | { ok: false, status: number, kind: string, code?: string | null, message: string }
- * >}
  */
 export async function apiGet(path, options = {}) {
-  const { accessToken, signal, headers: extraHeaders } = options
+  const { signal, headers: extraHeaders } = options
+  const accessToken = await resolveAccessToken(options.accessToken)
   const baseUrl = normalizeBaseUrl(appConfig.API_BASE_URL)
   const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`
 
@@ -67,8 +97,7 @@ export async function apiGet(path, options = {}) {
 
     const kind = classifyApiFailure(res.status)
     if (kind === 'unauthorized') {
-      // Global session invalidation (best-effort) to avoid inconsistent private rendering.
-      store.dispatch(invalidateSessionThunk({ reason: 'unauthorized' }))
+      await handleUnauthorized()
     }
 
     return {
@@ -92,7 +121,8 @@ export async function apiGet(path, options = {}) {
 }
 
 async function apiSendJson(method, path, body, options = {}) {
-  const { accessToken, signal, headers: extraHeaders } = options
+  const { signal, headers: extraHeaders } = options
+  const accessToken = await resolveAccessToken(options.accessToken)
   const baseUrl = normalizeBaseUrl(appConfig.API_BASE_URL)
   const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`
 
@@ -113,7 +143,11 @@ async function apiSendJson(method, path, body, options = {}) {
     if (res.ok) {
       const data = responseBody && typeof responseBody === 'object' ? responseBody.data : null
       const meta = responseBody && typeof responseBody === 'object' ? responseBody.meta : null
-      return { ok: true, status: res.status, data, meta }
+      const message =
+        responseBody && typeof responseBody === 'object' && typeof responseBody.message === 'string'
+          ? responseBody.message
+          : null
+      return { ok: true, status: res.status, data, meta, message }
     }
 
     const messageFromBody =
@@ -135,16 +169,29 @@ async function apiSendJson(method, path, body, options = {}) {
 
     const kind = classifyApiFailure(res.status)
     if (kind === 'unauthorized') {
-      store.dispatch(invalidateSessionThunk({ reason: 'unauthorized' }))
+      await handleUnauthorized()
     }
 
-    const missingFieldKeys =
+    const metaFromBody =
+      responseBody && typeof responseBody === 'object' && responseBody.meta && typeof responseBody.meta === 'object'
+        ? responseBody.meta
+        : undefined
+
+    const missingFields =
+      metaFromBody && Array.isArray(metaFromBody.missingFields) ? metaFromBody.missingFields : undefined
+
+    const existingFromBody =
       responseBody &&
       typeof responseBody === 'object' &&
       responseBody.error &&
-      Array.isArray(responseBody.error.missingFieldKeys)
-        ? responseBody.error.missingFieldKeys
+      responseBody.error.existing &&
+      typeof responseBody.error.existing === 'object'
+        ? responseBody.error.existing
         : undefined
+
+    const existing =
+      existingFromBody ??
+      (metaFromBody?.existing && typeof metaFromBody.existing === 'object' ? metaFromBody.existing : undefined)
 
     return {
       ok: false,
@@ -152,7 +199,9 @@ async function apiSendJson(method, path, body, options = {}) {
       kind,
       code: codeFromBody,
       message: messageFromBody || mapHttpStatusToSpanish(res.status),
-      ...(missingFieldKeys ? { missingFieldKeys } : {})
+      ...(missingFields ? { missingFields } : {}),
+      ...(metaFromBody ? { meta: metaFromBody } : {}),
+      ...(existing ? { existing } : {})
     }
   } catch (e) {
     if (e && typeof e === 'object' && e.name === 'AbortError') {
@@ -175,3 +224,60 @@ export async function apiPut(path, body, options = {}) {
   return apiSendJson('PUT', path, body, options)
 }
 
+export async function apiDelete(path, options = {}) {
+  const { signal, headers: extraHeaders } = options
+  const accessToken = await resolveAccessToken(options.accessToken)
+  const baseUrl = normalizeBaseUrl(appConfig.API_BASE_URL)
+  const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`
+
+  try {
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(extraHeaders && typeof extraHeaders === 'object' ? extraHeaders : {})
+      },
+      signal
+    })
+
+    const body = await res.json().catch(() => ({}))
+
+    if (res.ok) {
+      const data = body && typeof body === 'object' ? body.data : null
+      const meta = body && typeof body === 'object' ? body.meta : null
+      return { ok: true, status: res.status, data, meta }
+    }
+
+    const messageFromBody =
+      body && typeof body === 'object' && body.error && typeof body.error.message === 'string'
+        ? body.error.message
+        : body && typeof body === 'object' && typeof body.message === 'string'
+          ? body.message
+          : null
+    const codeFromBody =
+      body && typeof body === 'object' && body.error && typeof body.error.code === 'string' ? body.error.code : null
+
+    const kind = classifyApiFailure(res.status)
+    if (kind === 'unauthorized') {
+      await handleUnauthorized()
+    }
+
+    return {
+      ok: false,
+      status: res.status,
+      kind,
+      code: codeFromBody,
+      message: messageFromBody || mapHttpStatusToSpanish(res.status)
+    }
+  } catch (e) {
+    if (e && typeof e === 'object' && e.name === 'AbortError') {
+      return { ok: false, status: 0, kind: 'aborted', message: 'Solicitud cancelada.' }
+    }
+    return {
+      ok: false,
+      status: 0,
+      kind: 'network',
+      message: 'No se pudo conectar con el servidor. Verifique su conexión e intente nuevamente.'
+    }
+  }
+}

@@ -8,8 +8,10 @@ describe('getSidebarIconForNavItem', () => {
   })
 
   it('returns icon by NAV_ITEM code', () => {
-    expect(getSidebarIconForNavItem({ code: 'NAV_ITEM_INICIO_BANDEJA_TAREAS' }).name).toBe('inbox')
+    expect(getSidebarIconForNavItem({ code: 'NAV_ITEM_CONTRATOS_CONSTRUCTOR_DOCUMENTO' }).name).toBe('build')
     expect(getSidebarIconForNavItem({ code: 'NAV_ITEM_CONTRATOS_PLANTILLAS' }).name).toBe('library_books')
+    expect(getSidebarIconForNavItem({ code: 'NAV_ITEM_CONTRATOS_FIRMA' }).name).toBe('draw')
+    expect(getSidebarIconForNavItem({ code: 'NAV_ITEM_ADMIN_GLOBAL_CLIENTES' }).name).toBe('storefront')
   })
 
   it('falls back to routePath mapping when code is unknown', () => {

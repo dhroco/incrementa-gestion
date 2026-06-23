@@ -72,22 +72,6 @@ exports.up = async function up(knex) {
     )
   }
 
-  // Pre-check: orphan FKs (auth.users and profile)
-  const orphanAuth = await knex.raw(
-    `
-    select up.user_id
-    from user_profile up
-    left join auth.users au on au.id = up.user_id
-    where au.id is null
-    limit 1
-  `
-  )
-  if ((orphanAuth?.rows?.length ?? 0) > 0) {
-    throw new Error(
-      `Cannot enforce FK user_profile.user_id -> auth.users.id: orphan user_id detected (example: ${orphanAuth.rows[0].user_id}).`
-    )
-  }
-
   const orphanProfile = await knex.raw(
     `
     select up.profile_id
@@ -110,21 +94,6 @@ exports.up = async function up(knex) {
   }
 
   // Ensure FKs exist (avoid duplicates by checking presence first).
-  if (
-    !(await hasFkOnColumn(knex, {
-      tableName: 'user_profile',
-      columnName: 'user_id',
-      refTable: 'auth.users',
-    }))
-  ) {
-    await knex.raw(`
-      alter table user_profile
-      add constraint user_profile_user_id_fk
-      foreign key (user_id) references auth.users(id)
-      on delete cascade
-    `)
-  }
-
   if (
     !(await hasFkOnColumn(knex, {
       tableName: 'user_profile',

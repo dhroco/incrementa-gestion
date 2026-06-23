@@ -1,53 +1,25 @@
-import { branchesToPayload } from '../components/CompanyFormSections'
 import { parseOptionalRut, parseRut } from './rut'
-
-export function branchRowHasData(r) {
-  return [r.name, r.address, r.commune, r.city, r.region, r.email, r.phone].some((x) => String(x || '').trim().length > 0)
-}
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
 }
 
-/** Headquarters or branch email: empty is valid. */
+/** Headquarters email: empty is valid. */
 export function isValidEmailField(v) {
   if (!isNonEmptyString(v)) return true
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
-}
-
-export function branchesClientValidationOk(branches) {
-  for (const r of branches) {
-    if (!branchRowHasData(r)) continue
-    if (!String(r.name || '').trim()) return false
-    if (String(r.email || '').trim() && !isValidEmailField(r.email)) return false
-  }
-  return true
-}
-
-/**
- * @param {unknown[]} branches
- * @returns {{ ok: true, significant: unknown[] } | { ok: false, message: string }}
- */
-export function validateSignificantBranchesForSubmit(branches) {
-  const significant = branches.filter(branchRowHasData)
-  for (const r of significant) {
-    if (!String(r.name || '').trim()) {
-      return { ok: false, message: 'Cada sucursal con datos debe tener un nombre.' }
-    }
-    if (String(r.email || '').trim() && !isValidEmailField(r.email)) {
-      return { ok: false, message: 'Revise el correo de las sucursales.' }
-    }
-  }
-  return { ok: true, significant }
 }
 
 /**
  * Same rules as company create/edit forms before calling the API.
  * @returns {{ ok: true } | { ok: false, message: string }}
  */
-export function validateHeadquartersForCompanySubmit({ businessName, rut, email, rutLegal1, rutLegal2 }) {
+export function validateHeadquartersForCompanySubmit({ businessName, shortName, rut, email, rutLegal1, rutLegal2 }) {
   if (!isNonEmptyString(businessName)) {
     return { ok: false, message: 'La razón social es obligatoria.' }
+  }
+  if (!isNonEmptyString(shortName)) {
+    return { ok: false, message: 'El nombre comercial es obligatorio.' }
   }
   const rutCheck = parseRut(rut)
   if (!rutCheck.ok) {
@@ -68,9 +40,10 @@ export function validateHeadquartersForCompanySubmit({ businessName, rut, email,
 }
 
 /**
- * Body for `createCompany` / `updateCompany` (snake_case fields + branches).
+ * Body for `createCompany` / `updateCompany` (snake_case fields).
  * @param {{
  *   businessName: string,
+ *   shortName: string,
  *   rut: string,
  *   businessActivity: string,
  *   address: string,
@@ -82,13 +55,13 @@ export function validateHeadquartersForCompanySubmit({ businessName, rut, email,
  *   nameLegal1: string,
  *   rutLegal1: string,
  *   nameLegal2: string,
- *   rutLegal2: string,
- *   significantBranches: unknown[]
+ *   rutLegal2: string
  * }} p
  */
 export function buildCompanyMutationPayload(p) {
   return {
     business_name: p.businessName,
+    short_name: p.shortName?.trim() || null,
     rut: p.rut,
     business_activity: p.businessActivity.trim() || null,
     address: p.address.trim() || null,
@@ -100,7 +73,6 @@ export function buildCompanyMutationPayload(p) {
     name_legal_representative_1: p.nameLegal1.trim() || null,
     rut_legal_representative_1: p.rutLegal1.trim() || null,
     name_legal_representative_2: p.nameLegal2.trim() || null,
-    rut_legal_representative_2: p.rutLegal2.trim() || null,
-    branches: branchesToPayload(p.significantBranches)
+    rut_legal_representative_2: p.rutLegal2.trim() || null
   }
 }

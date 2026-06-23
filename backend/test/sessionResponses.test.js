@@ -20,30 +20,50 @@ test('buildEnrichedSessionSuccessBody includes userId, email, profile', () => {
   assert.equal(body.email, null)
   assert.deepEqual(body.profile, { code: 'X', label: 'Y' })
   assert.equal('navigation' in body, false)
+  assert.equal('permissions' in body, false)
 })
 
-test('buildEnrichedSessionSuccessBody includes navigation when provided', () => {
-  const nav = { tree: [{ code: 'N1' }], routes: [{ routePath: '/app/a' }] }
-  const body = buildEnrichedSessionSuccessBody('u1', 'a@b.cl', { code: 'X', label: 'Y' }, nav)
-  assert.deepEqual(body.navigation, nav)
+test('buildEnrichedSessionSuccessBody includes permissions when provided', () => {
+  const permissions = [{ action: 'manage', subject: 'all' }]
+  const body = buildEnrichedSessionSuccessBody('u1', 'a@b.cl', { code: 'X', label: 'Y' }, permissions)
+  assert.deepEqual(body.permissions, permissions)
 })
 
 test('buildEnrichedSessionSuccessBody includes session meta flags when provided', () => {
-  const nav = { tree: [], routes: [] }
+  const permissions = [{ action: 'read', subject: 'Company' }]
   const body = buildEnrichedSessionSuccessBody(
     'u1',
     'a@b.cl',
-    { code: 'CONTADOR', label: 'Contador' },
-    nav,
-    { mustChangePassword: true, isActive: true }
+    { code: 'ADMINISTRADOR_PLATAFORMA', label: 'Administrador' },
+    permissions,
+    { isActive: true }
   )
-  assert.equal(body.mustChangePassword, true)
+  assert.equal('mustChangePassword' in body, false)
   assert.equal(body.isActive, true)
 })
 
 test('buildEnrichedSessionSuccessBody includes name when displayName is non-empty', () => {
-  const body = buildEnrichedSessionSuccessBody('u1', 'a@b.cl', { code: 'X', label: 'Y' }, null, null, 'María López')
+  const body = buildEnrichedSessionSuccessBody('u1', 'a@b.cl', { code: 'X', label: 'Y' }, [], null, 'María López')
   assert.equal(body.name, 'María López')
+})
+
+test('buildEnrichedSessionSuccessBody includes profile extras when provided', () => {
+  const body = buildEnrichedSessionSuccessBody(
+    'u1',
+    'login@example.com',
+    { code: 'X', label: 'Y' },
+    [],
+    {
+      isActive: true,
+      contactEmail: 'contacto@empresa.cl',
+      widgetPreferences: { suppliers: true, contracts: false, templates: true },
+      avatarUrl: 'https://storage.example/avatar.jpg'
+    }
+  )
+  assert.equal(body.contact_email, 'contacto@empresa.cl')
+  assert.deepEqual(body.widget_preferences, { suppliers: true, contracts: false, templates: true })
+  assert.equal(body.avatar_url, 'https://storage.example/avatar.jpg')
+  assert.equal('avatar_gcs_path' in body, false)
 })
 
 test('buildForbiddenBody includes code and message', () => {

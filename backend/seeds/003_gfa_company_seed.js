@@ -71,46 +71,6 @@ exports.seed = async function seed(knex) {
     .onConflict('id')
     .merge()
 
-  const hasBranchTable = await knex.schema.hasTable('company_branch')
-  if (hasBranchTable) {
-    await knex('company_branch').whereIn('company_id', [c1, c2]).del()
-    await knex('company_branch').insert([
-      {
-        company_id: c1,
-        name: 'Casa Matriz',
-        address: 'Av. Providencia 1234',
-        commune: 'Providencia',
-        city: 'Santiago',
-        region: 'Región Metropolitana',
-        email: 'sucursal.centro@demo-uno.cl',
-        phone: '+56 2 2000 0001',
-        sort_order: 0
-      },
-      {
-        company_id: c1,
-        name: 'Sucursal Norte',
-        address: 'Av. Chicureo 200',
-        commune: 'Colina',
-        city: 'Colina',
-        region: 'Región Metropolitana',
-        email: 'sucursal.norte@demo-uno.cl',
-        phone: '+56 2 2000 0002',
-        sort_order: 1
-      },
-      {
-        company_id: c2,
-        name: 'Oficina Central',
-        address: 'Los Leones 456',
-        commune: 'Las Condes',
-        city: 'Santiago',
-        region: 'Región Metropolitana',
-        email: 'oficina@demo-dos.cl',
-        phone: '+56 2 2222 2223',
-        sort_order: 0
-      }
-    ])
-  }
-
   // Optional pruning: keep only the two demo companies and delete others + dependents.
   // IMPORTANT: This is a development helper. Enable explicitly via env var.
   const prune = String(process.env.GFA_SEED_PRUNE_COMPANIES || '').trim() === '1'
@@ -122,12 +82,12 @@ exports.seed = async function seed(knex) {
       await trx('document').whereNotIn('company_id', keepIds).del()
 
       // Clean direct references (most are CASCADE on company delete, but we clean explicitly).
-      if (await trx.schema.hasTable('company_branch')) {
-        await trx('company_branch').whereNotIn('company_id', keepIds).del()
+      if (await trx.schema.hasTable('accountant_company')) {
+        await trx('accountant_company').whereNotIn('company_id', keepIds).del()
       }
-      await trx('accountant_company').whereNotIn('company_id', keepIds).del()
-      await trx('company_internal_user').whereNotIn('company_id', keepIds).del()
-      await trx('template_company').whereNotIn('company_id', keepIds).del()
+      if (await trx.schema.hasTable('company_internal_user')) {
+        await trx('company_internal_user').whereNotIn('company_id', keepIds).del()
+      }
 
       // Company-scoped clauses (CASCADE on company delete, but safe to delete explicitly).
       await trx('clause_company').whereNotIn('company_id', keepIds).del()

@@ -3,15 +3,15 @@
 :root {
   /* Color Palette */
   /* Main Layout Colors */
-  --color-main-headerbar: #031B30;
-  --color-sidebar: #194166;
-  --color-sidebar-submenu: #133553;
-  --color-work-area: #F0F1F2;
-  --color-sub-header: #F0F1F2;
+  --color-main-headerbar: #1A1A1A;
+  --color-sidebar: #FFFFFF;
+  --color-sidebar-submenu: #FAFAFA;
+  --color-work-area: #FFFFFF;
+  --color-sub-header: #FFFFFF;
   
   /* Interactive Colors */
   /* Acciones de texto en tablas (Ver/Editar) y enlaces de breadcrumb del subheader: normal `--color-selection`, hover `--color-main-headerbar`. */
-  --color-selection: #657A8A;
+  --color-selection: #F62D84;
   --color-cards: #FFFFFF;
   
   /* Text Colors */
@@ -34,17 +34,18 @@
   --color-border-table-lines: #E5E7E9;
   
   /* Interactive States */
-  --color-hover-menu: rgba(255, 255, 255, 0.06);
+  --color-hover-menu: rgba(0, 0, 0, 0.05);
   --color-hover-hamburger: #F7F7F7;
   
   /* Typography */
-  --font-family-base: 'Inter', sans-serif;
+  --font-family-base: 'Nunito Sans', sans-serif;
   /* Cuerpo del editor de cláusulas (variante documento) */
   --font-family-clause-editor: 'Lora', Georgia, 'Times New Roman', serif;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
   
   /* Font Sizes */
   --font-size-base: 13px;
@@ -65,7 +66,7 @@
   --spacing-gap-actions: 8px;
   
   /* Layout Dimensions */
-  --height-main-header: 44px;
+  --height-main-header: 48px;
   --height-sub-header: 48px;
   --width-sidebar: 250px;
   --size-avatar: 32px;
@@ -75,6 +76,7 @@
   
   /* Border Radius */
   --border-radius-small: 4px;
+  --border-radius-card: 8px;
   --border-radius-icon: 6px;
   
   /* Transitions */

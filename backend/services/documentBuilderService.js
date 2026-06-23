@@ -1,48 +1,212 @@
+const { randomUUID } = require('node:crypto')
 const { resolveReadableCompanyId } = require('../lib/resolveReadableCompanyId')
 const { tipTapDocToPlainTextAsync } = require('../utils/tipTapPlainText')
-const { materializeTipTapDocAsync } = require('../utils/tipTapMaterialize')
 const {
   buildSubstitutionMap,
   applySubstitutionsToTipTapDoc,
-  unresolvedKeys,
-  placeholderKeysInText
+  unresolvedKeys
 } = require('./documentBuilderVariableContext')
-const { buildPdfBytesFromTipTapDoc } = require('./documentBuilderTipTapPdf')
 const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTapReactPdf')
-const { parseDocumentBuilderRenderEngine } = require('../lib/parseDocumentBuilderRenderEngine')
+const supplierServiceDefault = require('./supplierService')
+const clientServiceDefault = require('./clientService')
+const { numberToWords } = require('../utils/numberToWords')
 
-/** Max trabajadores por solicitud (POC). */
-const DOCUMENT_BUILDER_MAX_EMPLOYEES_PER_BATCH = 50
+const SECONDARY_FIELDS = {
+  proveedor_cuenta_social: 'proveedor_red_social',
+  precio_texto: 'precio_numero'
+}
+
+const VARIABLE_META = {
+  // Proveedor — source: 'supplier' → Claude debe actualizar el proveedor antes de generar
+  proveedor_nombre:        { label: 'Nombre / Razón Social', type: 'text',   source: 'supplier' },
+  proveedor_rut:           { label: 'RUT Proveedor',         type: 'text',   source: 'supplier' },
+  proveedor_direccion:     { label: 'Dirección Proveedor',   type: 'text',   source: 'supplier' },
+  proveedor_giro:          { label: 'Giro',                  type: 'text',   source: 'supplier' },
+  proveedor_rep_legal:     { label: 'Nombre Rep. Legal',     type: 'text',   source: 'supplier' },
+  proveedor_rep_legal_rut: { label: 'RUT Rep. Legal',        type: 'text',   source: 'supplier' },
+  proveedor_red_social:    { label: 'Red Social',            type: 'select', source: 'supplier' },
+  proveedor_cuenta_social: { label: 'Cuenta Red Social',     type: 'text',   source: 'supplier' },
+  // Empresa — source: 'company' → dato de la empresa emisora, raro que falte
+  company_legal_name:     { label: 'Razón Social Empresa',      type: 'text', source: 'company' },
+  company_nombre_comercial: { label: 'Nombre Comercial',        type: 'text', source: 'company' },
+  company_rut:            { label: 'RUT Empresa',               type: 'text', source: 'company' },
+  company_email:          { label: 'Email Empresa',             type: 'text', source: 'company' },
+  company_address:        { label: 'Dirección Empresa',         type: 'text', source: 'company' },
+  company_commune:        { label: 'Comuna',                    type: 'text', source: 'company' },
+  company_city:           { label: 'Ciudad',                    type: 'text', source: 'company' },
+  company_region:         { label: 'Región',                    type: 'text', source: 'company' },
+  company_legal_rep1_name:{ label: 'Nombre Rep. Legal 1',       type: 'text', source: 'company' },
+  company_legal_rep1_rut: { label: 'RUT Rep. Legal 1',          type: 'text', source: 'company' },
+  company_legal_rep2_name:{ label: 'Nombre Rep. Legal 2',       type: 'text', source: 'company' },
+  company_legal_rep2_rut: { label: 'RUT Rep. Legal 2',          type: 'text', source: 'company' },
+  // Cliente — source: 'client' → Claude debe actualizar el cliente antes de generar
+  client_name:             { label: 'Nombre Cliente',    type: 'text',   source: 'client' },
+  client_brand:            { label: 'Marca',             type: 'text',   source: 'client' },
+  client_brand_account:    { label: 'Cuenta Marca',      type: 'text',   source: 'client' },
+  client_product_campaign: { label: 'Producto/Campaña',  type: 'select', source: 'client' },
+  // Contrato — source: 'contract' → específico del contrato, se pasa como override
+  fecha_contrato:  { label: 'Fecha del contrato',  type: 'date',   source: 'contract' },
+  lugar_contrato:  { label: 'Lugar del contrato',  type: 'text',   source: 'contract' },
+  mes_ejecucion:   { label: 'Mes de ejecución',    type: 'text',   source: 'contract' },
+  cantidad_reels:  { label: 'Cantidad de reels',   type: 'number', source: 'contract' },
+  precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
+  precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
+}
+
+function getVariableMeta(key) {
+  return VARIABLE_META[key] ?? { label: key, type: 'text' }
+}
+
+function normalizeMissingKeys(missingKeys) {
+  const keys = new Set()
+  for (const key of missingKeys) {
+    keys.add(SECONDARY_FIELDS[key] ?? key)
+  }
+  return [...keys]
+}
+
+function getPairFieldForPrimary(primaryKey) {
+  for (const [secondary, primary] of Object.entries(SECONDARY_FIELDS)) {
+    if (primary === primaryKey) return secondary
+  }
+  return undefined
+}
+
+function parseIntegerOverride(value) {
+  const raw = String(value ?? '').replace(/\./g, '').trim()
+  if (raw === '') return null
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function formatThousands(n) {
+  return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })
+}
+
+function preprocessMissingFieldOverrides(overrides) {
+  const out = { ...(overrides || {}) }
+
+  if (out.cantidad_reels != null && String(out.cantidad_reels).trim() !== '') {
+    const n = parseIntegerOverride(out.cantidad_reels)
+    if (n != null) out.cantidad_reels = formatThousands(n)
+  }
+
+  let priceParsed = null
+  if (out.precio_numero != null && String(out.precio_numero).trim() !== '') {
+    priceParsed = parseIntegerOverride(out.precio_numero)
+    if (priceParsed != null) out.precio_numero = formatThousands(priceParsed)
+  }
+
+  if (priceParsed != null) {
+    out.precio_texto = numberToWords(priceParsed)
+  }
+
+  return out
+}
+
+function buildMissingFields(missingKeys, { clientRow, supplierRow } = {}) {
+  const normalized = normalizeMissingKeys(missingKeys)
+  return normalized.map((key) => {
+    const meta = getVariableMeta(key)
+    const pairField = getPairFieldForPrimary(key)
+    const field = { key, label: meta.label, type: meta.type, source: meta.source ?? 'contract' }
+    if (pairField) field.pairField = pairField
+
+    if (key === 'client_product_campaign' && clientRow?.product_campaigns?.length > 0) {
+      field.type = 'select'
+      field.options = clientRow.product_campaigns.map((c) => c.name)
+    }
+
+    if (key === 'proveedor_red_social') {
+      const networks = supplierRow?.social_networks ?? []
+      if (networks.length > 0) {
+        field.type = 'select'
+        field.options = networks.map((sn) => ({
+          label: `${String(sn.name || '').trim()} — ${String(sn.account_name || '').trim()}`,
+          values: {
+            proveedor_red_social: String(sn.name || '').trim(),
+            proveedor_cuenta_social: String(sn.account_name || '').trim()
+          }
+        }))
+      } else {
+        field.type = 'text'
+      }
+    }
+
+    return field
+  })
+}
 
 function sanitizeFilePart(s) {
-  return String(s || '')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/gu, '')
-    .replace(/[^\w.-]+/gu, '_')
-    .replace(/_+/gu, '_')
-    .replace(/^_|_$/gu, '')
-    .slice(0, 80) || 'documento'
+  return (
+    String(s || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/gu, '')
+      .replace(/[^\w.-]+/gu, '_')
+      .replace(/_+/gu, '_')
+      .replace(/^_|_$/gu, '')
+      .slice(0, 80) || 'documento'
+  )
 }
 
-async function loadClauseContentJson(trx, clauseId, clauseKind, companyId) {
-  if (clauseKind === 'universal') {
-    const row = await trx('clause as c')
-      .join('clause_universal as cu', 'cu.id', 'c.id')
-      .select('c.content_json')
-      .where('c.id', clauseId)
-      .first()
-    return row?.content_json ?? null
-  }
-  const row = await trx('clause as c')
-    .join('clause_company as cc', 'cc.id', 'c.id')
-    .select('c.content_json')
-    .where('c.id', clauseId)
-    .where('cc.company_id', companyId)
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function normalizeTipTapDoc(contentJson) {
+  if (!isPlainObject(contentJson)) return { type: 'doc', content: [] }
+  if (contentJson.type === 'doc' && Array.isArray(contentJson.content)) return contentJson
+  return { type: 'doc', content: [] }
+}
+
+function yearMonthInSantiago(date = new Date()) {
+  const year = new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric' }).format(
+    date
+  )
+  const month = new Intl.DateTimeFormat('en', {
+    timeZone: 'America/Santiago',
+    month: '2-digit'
+  }).format(date)
+  return { year, month }
+}
+
+function buildDraftGcsPath({ companyId, supplierId, templateCode, docId, fileName }) {
+  const { year, month } = yearMonthInSantiago()
+  const codePart = sanitizeFilePart(templateCode || 'template')
+  return `contratos/${companyId}/${supplierId}/${codePart}/${year}/${month}/${docId}_${fileName}`
+}
+
+async function findActiveDuplicateDraft(trx, { companyId, supplierId, templateId, year, month }) {
+  const yearNum = Number(year)
+  const monthNum = Number(month)
+  return trx('draft_document')
+    .select('id', 'file_name', 'gcs_path', 'created_at', 'status')
+    .where({
+      supplier_id: supplierId,
+      company_id: companyId,
+      template_id: templateId
+    })
+    .whereNotIn('status', ['signed', 'rejected'])
+    .whereRaw("EXTRACT(YEAR FROM created_at AT TIME ZONE 'America/Santiago') = ?", [yearNum])
+    .whereRaw("EXTRACT(MONTH FROM created_at AT TIME ZONE 'America/Santiago') = ?", [monthNum])
+    .orderBy('created_at', 'desc')
     .first()
-  return row?.content_json ?? null
 }
 
-function createDocumentBuilderService({ db }) {
+function createDocumentBuilderService({
+  db,
+  supplierService = supplierServiceDefault,
+  clientService = clientServiceDefault,
+  gcsService,
+  getUserProfileIdByUserId
+}) {
+  if (!gcsService) {
+    throw new Error('gcsService is required')
+  }
+  if (!getUserProfileIdByUserId) {
+    throw new Error('getUserProfileIdByUserId is required')
+  }
+
   async function resolveCompany(userId, requestedCompanyId) {
     return resolveReadableCompanyId(userId, requestedCompanyId)
   }
@@ -50,88 +214,50 @@ function createDocumentBuilderService({ db }) {
   async function loadCompanyRow(trx, companyId) {
     const row = await trx('company').where({ id: companyId }).first()
     if (!row) return null
-    let branches_text = ''
-    if (await trx.schema.hasTable('company_branch')) {
-      const branches = await trx('company_branch')
-        .select('name', 'city')
-        .where({ company_id: companyId })
-        .orderBy('name', 'asc')
-        .limit(30)
-      branches_text = branches.map((b) => [b.name, b.city].filter(Boolean).join(' — ')).join('; ')
-    }
-    return { ...row, branches_text }
+    return row
   }
 
-  async function getTemplateRow(trx, kind, templateId, companyId) {
-    if (kind === 'standard') {
-      return trx('template as t')
-        .join('template_standard as ts', 'ts.id', 't.id')
-        .select('t.id', 't.name', 't.description', 't.content_json')
-        .where('t.id', templateId)
-        .first()
-    }
-    if (kind === 'company') {
-      return trx('template as t')
-        .join('template_company as tc', 'tc.id', 't.id')
-        .select('t.id', 't.name', 't.description', 't.content_json')
-        .where('t.id', templateId)
-        .where('tc.company_id', companyId)
-        .first()
-    }
-    return null
+  async function getTemplateRow(trx, templateId) {
+    return trx('template as t')
+      .join('template_standard as ts', 'ts.id', 't.id')
+      .select('t.id', 't.code', 't.name', 't.description', 't.content_json')
+      .where('t.id', templateId)
+      .first()
   }
 
-  async function materializeTemplateMergedDoc(trx, contentJson, companyId) {
-    return materializeTipTapDocAsync(
-      contentJson,
-      (ref) =>
-        loadClauseContentJson(
-          trx,
-          ref.clauseId,
-          ref.clauseKind,
-          ref.clauseKind === 'company' ? ref.companyId ?? companyId : companyId
-        ),
-      companyId
-    )
+  function materializeTemplateMergedDoc(contentJson) {
+    return normalizeTipTapDoc(contentJson)
   }
 
-  async function materializeTemplatePlainText(trx, contentJson, companyId) {
-    const merged = await materializeTemplateMergedDoc(trx, contentJson, companyId)
-    return tipTapDocToPlainTextAsync(merged, async () => '', companyId)
+  async function materializeTemplatePlainText(contentJson) {
+    const merged = materializeTemplateMergedDoc(contentJson)
+    return tipTapDocToPlainTextAsync(merged)
   }
 
-  async function listEligibleTemplates({ userId, requestedCompanyId }) {
+  async function listEligibleTemplates({ userId, requestedCompanyId, supplierType }) {
     const gate = await resolveCompany(userId, requestedCompanyId)
     if (!gate.ok) return gate
-    const { companyId } = gate
 
-    const standardRows = await db('template as t')
+    let query = db('template as t')
       .join('template_standard as ts', 'ts.id', 't.id')
-      .select('t.id', 't.name', 't.description', 't.status')
+      .select('t.id', 't.name', 't.description', 't.status', 't.supplier_type')
+      .where('t.status', 'active')
       .orderBy('t.name', 'asc')
 
-    const companyRows = await db('template as t')
-      .join('template_company as tc', 'tc.id', 't.id')
-      .select('t.id', 't.name', 't.description', 't.status')
-      .where('tc.company_id', companyId)
-      .orderBy('t.name', 'asc')
+    if (supplierType === 'persona_natural' || supplierType === 'empresa') {
+      query = query.where('t.supplier_type', supplierType)
+    }
 
-    const items = [
-      ...standardRows.map((r) => ({
-        kind: 'standard',
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        status: r.status
-      })),
-      ...companyRows.map((r) => ({
-        kind: 'company',
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        status: r.status
-      }))
-    ]
+    const standardRows = await query
+
+    const items = standardRows.map((r) => ({
+      kind: 'standard',
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      status: r.status,
+      supplier_type: r.supplier_type,
+    }))
 
     return { ok: true, data: { items } }
   }
@@ -139,17 +265,25 @@ function createDocumentBuilderService({ db }) {
   async function getTemplateDetail({ userId, requestedCompanyId, kind, templateId }) {
     const gate = await resolveCompany(userId, requestedCompanyId)
     if (!gate.ok) return gate
-    const { companyId } = gate
 
-    const row = await getTemplateRow(db, kind, templateId, companyId)
+    if (kind !== 'standard') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'Solo se admiten plantillas estándar.'
+      }
+    }
+
+    const row = await getTemplateRow(db, templateId)
     if (!row) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
 
-    const plain = await materializeTemplatePlainText(db, row.content_json, companyId)
+    const plain = await materializeTemplatePlainText(row.content_json)
     return {
       ok: true,
       data: {
         template: {
-          kind,
+          kind: 'standard',
           id: row.id,
           name: row.name,
           description: row.description,
@@ -164,47 +298,65 @@ function createDocumentBuilderService({ db }) {
     if (!gate.ok) return gate
     const { companyId } = gate
 
-    const employeeIdsRaw = Array.isArray(body?.employeeIds) ? body.employeeIds : []
-    const employeeIds = [...new Set(employeeIdsRaw.map((x) => String(x)))].filter(Boolean)
+    const supplierId = body?.supplierId != null ? String(body.supplierId).trim() : ''
     const template = body?.template
-    const overrides =
+    const overridesRaw =
       body?.missingFieldOverrides && typeof body.missingFieldOverrides === 'object'
         ? body.missingFieldOverrides
         : {}
+    const overrides = preprocessMissingFieldOverrides(overridesRaw)
 
-    if (employeeIds.length === 0) {
+    if (!supplierId) {
       return {
         ok: false,
         status: 400,
         code: 'VALIDATION_ERROR',
-        message: 'Debe seleccionar al menos un trabajador.'
+        message: 'Debe seleccionar un proveedor.'
       }
     }
-    if (employeeIds.length > DOCUMENT_BUILDER_MAX_EMPLOYEES_PER_BATCH) {
+    if (!template || template.kind !== 'standard' || !template.id) {
       return {
         ok: false,
         status: 400,
         code: 'VALIDATION_ERROR',
-        message: `No puede generar más de ${DOCUMENT_BUILDER_MAX_EMPLOYEES_PER_BATCH} documentos por lote.`
-      }
-    }
-    if (!template || (template.kind !== 'standard' && template.kind !== 'company') || !template.id) {
-      return {
-        ok: false,
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'Debe indicar una plantilla válida (estándar o por empresa).'
+        message: 'Debe indicar una plantilla estándar válida.'
       }
     }
 
-    const engine = parseDocumentBuilderRenderEngine(body)
-    if (!engine.ok) {
+    const createdBy = await getUserProfileIdByUserId(userId)
+    if (!createdBy) {
       return {
         ok: false,
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: engine.message
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Perfil de usuario no encontrado.'
       }
+    }
+
+    const supplierResult = await supplierService.getSupplierById(supplierId)
+    if (!supplierResult.ok) {
+      return {
+        ok: false,
+        status: supplierResult.status ?? 404,
+        code: supplierResult.code ?? 'NOT_FOUND',
+        message: supplierResult.message ?? 'Proveedor no encontrado.'
+      }
+    }
+    const supplier = supplierResult.data?.supplier
+
+    const clientIdRaw = body?.clientId != null ? String(body.clientId).trim() : ''
+    let clientRow = null
+    if (clientIdRaw) {
+      const clientResult = await clientService.getClientById(clientIdRaw)
+      if (!clientResult.ok) {
+        return {
+          ok: false,
+          status: clientResult.status ?? 404,
+          code: clientResult.code ?? 'NOT_FOUND',
+          message: clientResult.message ?? 'Cliente no encontrado.'
+        }
+      }
+      clientRow = clientResult.data?.client ?? null
     }
 
     const companyRow = await loadCompanyRow(db, companyId)
@@ -212,102 +364,143 @@ function createDocumentBuilderService({ db }) {
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
     }
 
-    return db.transaction(async (trx) => {
-      const templateRow = await getTemplateRow(trx, template.kind, template.id, companyId)
-      if (!templateRow) {
-        return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
+    const templateRow = await getTemplateRow(db, template.id)
+    if (!templateRow) {
+      return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
+    }
+
+    const mergedDoc = materializeTemplateMergedDoc(templateRow.content_json)
+    const baseText = await tipTapDocToPlainTextAsync(mergedDoc)
+    const map = buildSubstitutionMap(supplier, companyRow, clientRow, overrides)
+    const missing = unresolvedKeys(baseText, map)
+
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        status: 422,
+        code: 'MISSING_PLACEHOLDERS',
+        message: 'Faltan variables requeridas en la plantilla.',
+        data: { missingFields: buildMissingFields(missing, { clientRow, supplierRow: supplier }) }
       }
+    }
 
-      const mergedDoc = await materializeTemplateMergedDoc(trx, templateRow.content_json, companyId)
-      const baseText = await tipTapDocToPlainTextAsync(mergedDoc, async () => '', companyId)
-      const keysInTemplate = placeholderKeysInText(baseText)
+    if (body?.dryRun === true) {
+      return {
+        ok: true,
+        data: {
+          valid: true,
+          message: 'Todas las variables están resueltas.'
+        }
+      }
+    }
 
-      const employees = await trx('employee as e')
-        .leftJoin('position as p', 'p.id', 'e.position_id')
-        .leftJoin('work_schedule as w', 'w.id', 'e.work_schedule_id')
-        .where('e.company_id', companyId)
-        .whereIn('e.id', employeeIds)
-        .select(
-          'e.*',
-          'p.name as position_name',
-          'p.description as position_description',
-          'w.name as work_schedule_name'
-        )
+    const { year, month } = yearMonthInSantiago()
+    const duplicateScope = {
+      companyId,
+      supplierId,
+      templateId: template.id,
+      year,
+      month
+    }
+    const existingDuplicate = await findActiveDuplicateDraft(db, duplicateScope)
 
-      if (employees.length !== employeeIds.length) {
+    if (existingDuplicate) {
+      if (body?.overwrite !== true) {
         return {
           ok: false,
-          status: 400,
-          code: 'VALIDATION_ERROR',
-          message: 'Uno o más trabajadores no existen en la empresa seleccionada.'
+          status: 409,
+          code: 'DUPLICATE_DRAFT',
+          message:
+            'Ya existe un contrato generado para este proveedor con esta plantilla en el mismo mes.',
+          data: {
+            existing: {
+              id: existingDuplicate.id,
+              file_name: existingDuplicate.file_name,
+              created_at: existingDuplicate.created_at,
+              status: existingDuplicate.status
+            }
+          }
         }
       }
 
-      const missingUnion = new Set()
-      for (const emp of employees) {
-        const empMap = {
-          ...emp,
-          rut: emp.rut_body ? `${emp.rut_body}-${emp.rut_dv ?? ''}` : '',
-          position_name: emp.position_name,
-          work_schedule_name: emp.work_schedule_name
-        }
-        const map = buildSubstitutionMap(empMap, companyRow, overrides)
-        const missing = unresolvedKeys(baseText, map)
-        for (const m of missing) missingUnion.add(m)
-      }
-
-      if (missingUnion.size > 0) {
-        return {
-          ok: false,
-          status: 422,
-          code: 'MISSING_PLACEHOLDERS',
-          message: 'Faltan datos para completar variables del documento.',
-          data: { missingFieldKeys: [...missingUnion], knownKeysSample: keysInTemplate.slice(0, 20) }
-        }
-      }
-
-      const templateName = sanitizeFilePart(templateRow.name || 'plantilla')
-      const documentsOut = []
-
-      for (const emp of employees) {
-        const empMap = {
-          ...emp,
-          rut: emp.rut_body ? `${emp.rut_body}-${emp.rut_dv ?? ''}` : '',
-          position_name: emp.position_name,
-          work_schedule_name: emp.work_schedule_name
-        }
-        const map = buildSubstitutionMap(empMap, companyRow, overrides)
-        const resolvedDoc = applySubstitutionsToTipTapDoc(mergedDoc, map)
-
-        const pdfBytes =
-          engine.input === 'react-pdf'
-            ? await buildPdfBytesFromTipTapWithReactPdf(resolvedDoc)
-            : await buildPdfBytesFromTipTapDoc(resolvedDoc)
-        const rutPart = sanitizeFilePart(empMap.rut || emp.id)
-        const file_name = `${templateName}_${rutPart}.pdf`
-
-        const insertPayload = {
-          employee_id: emp.id,
-          company_id: companyId,
-          file_name,
-          file_data: Buffer.from(pdfBytes),
-          standard_template_id: template.kind === 'standard' ? template.id : null,
-          company_template_id: template.kind === 'company' ? template.id : null,
-          pdf_render_engine: engine.storage
+      const existingForOverwrite = await findActiveDuplicateDraft(db, duplicateScope)
+      if (existingForOverwrite) {
+        try {
+          await gcsService.deleteFile({ gcsPath: existingForOverwrite.gcs_path })
+        } catch {
+          return {
+            ok: false,
+            status: 500,
+            code: 'GCS_DELETE_FAILED',
+            message: 'No se pudo reemplazar el documento anterior. Intente nuevamente.'
+          }
         }
 
-        const [ins] = await trx('generated_document').insert(insertPayload).returning(['id', 'file_name', 'employee_id', 'pdf_render_engine'])
-        const row = ins && typeof ins === 'object' ? ins : { id: ins, file_name, employee_id: emp.id, pdf_render_engine: engine.storage }
-        documentsOut.push({
-          id: row.id,
-          file_name: row.file_name,
-          employee_id: row.employee_id,
-          pdfRenderEngine: row.pdf_render_engine ?? engine.storage
+        await db.transaction(async (trx) => {
+          const row = await findActiveDuplicateDraft(trx, duplicateScope)
+          if (row) {
+            await trx('draft_document').where({ id: row.id }).delete()
+          }
         })
       }
+    }
 
-      return { ok: true, data: { documents: documentsOut } }
+    const templateName = sanitizeFilePart(templateRow.name || 'plantilla')
+    const resolvedDoc = applySubstitutionsToTipTapDoc(mergedDoc, map)
+
+    const pdfBytes = await buildPdfBytesFromTipTapWithReactPdf(resolvedDoc)
+
+    const rutPart =
+      sanitizeFilePart(
+        supplier.supplier_type === 'empresa' ? supplier.rut_empresa_display : supplier.rut_display
+      ) || sanitizeFilePart(supplierId)
+    const file_name = `${templateName}_${rutPart}.pdf`
+
+    const docId = randomUUID()
+    const gcs_path = buildDraftGcsPath({
+      companyId,
+      supplierId,
+      templateCode: templateRow.code,
+      docId,
+      fileName: file_name
     })
+
+    await gcsService.uploadBuffer({
+      buffer: Buffer.from(pdfBytes),
+      gcsPath: gcs_path,
+      contentType: 'application/pdf'
+    })
+
+    const [ins] = await db('draft_document')
+      .insert({
+        id: docId,
+        template_id: template.id,
+        supplier_id: supplierId,
+        company_id: companyId,
+        client_id: clientRow?.id ?? null,
+        gcs_path,
+        file_name,
+        status: 'draft',
+        created_by: createdBy,
+        contract_overrides: overrides
+      })
+      .returning(['id', 'file_name', 'gcs_path', 'status'])
+
+    const row = ins && typeof ins === 'object' ? ins : { id: docId, file_name, gcs_path, status: 'draft' }
+
+    return {
+      ok: true,
+      data: {
+        documents: [
+          {
+            id: row.id,
+            file_name: row.file_name,
+            gcs_path: row.gcs_path,
+            status: row.status
+          }
+        ]
+      }
+    }
   }
 
   async function getGeneratedDocumentForDownload({ userId, requestedCompanyId, documentId }) {
@@ -315,8 +508,8 @@ function createDocumentBuilderService({ db }) {
     if (!gate.ok) return gate
     const { companyId } = gate
 
-    const row = await db('generated_document')
-      .select('id', 'company_id', 'file_name', 'file_data')
+    const row = await db('draft_document')
+      .select('id', 'company_id', 'file_name', 'gcs_path')
       .where({ id: documentId })
       .first()
 
@@ -324,11 +517,13 @@ function createDocumentBuilderService({ db }) {
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Documento no encontrado.' }
     }
 
+    const buffer = await gcsService.downloadBuffer({ gcsPath: row.gcs_path })
+
     return {
       ok: true,
       data: {
         file_name: row.file_name,
-        buffer: row.file_data
+        buffer
       }
     }
   }
@@ -337,12 +532,17 @@ function createDocumentBuilderService({ db }) {
     listEligibleTemplates,
     getTemplateDetail,
     generateAndPersist,
-    getGeneratedDocumentForDownload,
-    DOCUMENT_BUILDER_MAX_EMPLOYEES_PER_BATCH
+    getGeneratedDocumentForDownload
   }
 }
 
 module.exports = {
   createDocumentBuilderService,
-  DOCUMENT_BUILDER_MAX_EMPLOYEES_PER_BATCH,
+  buildDraftGcsPath,
+  yearMonthInSantiago,
+  findActiveDuplicateDraft,
+  getVariableMeta,
+  buildMissingFields,
+  preprocessMissingFieldOverrides,
+  SECONDARY_FIELDS
 }

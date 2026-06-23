@@ -1,7 +1,7 @@
 const path = require('path')
 const React = require('react')
 const { Document, Page, View, Text, StyleSheet, Font, renderToBuffer } = require('@react-pdf/renderer')
-const { sanitizeTextForWinAnsi, normalizeTextForPdfTokenization } = require('./documentBuilderTipTapPdf')
+const { sanitizeTextForWinAnsi, normalizeTextForPdfTokenization } = require('./documentBuilderPdfTextUtils')
 
 const PAGE = { W: 595.28, H: 841.89 }
 const MARGIN = 48
@@ -35,23 +35,30 @@ function tryRegisterLora() {
 
 const warnedTypes = new Set()
 
+function variableHasFormattingFlag(attrs, marks, type) {
+  if (attrs && attrs[type]) return true
+  return Array.isArray(marks) && marks.some((m) => m?.type === type)
+}
+
 function parseMarks(marks) {
   let bold = false
   let italic = false
   let underline = false
-  if (!Array.isArray(marks)) return { bold, italic, underline }
+  let uppercase = false
+  if (!Array.isArray(marks)) return { bold, italic, underline, uppercase }
   for (const m of marks) {
     const t = m?.type
     if (t === 'bold') bold = true
     if (t === 'italic') italic = true
     if (t === 'underline') underline = true
+    if (t === 'uppercase') uppercase = true
   }
-  return { bold, italic, underline }
+  return { bold, italic, underline, uppercase }
 }
 
 /**
  * @param {unknown} nodes
- * @returns {Array<{ break?: boolean, text?: string, bold?: boolean, italic?: boolean, underline?: boolean }>}
+ * @returns {Array<{ break?: boolean, text?: string, bold?: boolean, italic?: boolean, underline?: boolean, uppercase?: boolean }>}
  */
 function flattenInline(nodes) {
   const out = []
@@ -63,13 +70,27 @@ function flattenInline(nodes) {
       const parts = normalizeTextForPdfTokenization(n.text).split(/\n/u)
       for (let i = 0; i < parts.length; i += 1) {
         if (i > 0) out.push({ break: true })
-        if (parts[i].length) out.push({ text: parts[i], ...st })
+        if (parts[i].length) {
+          const text = st.uppercase ? parts[i].toUpperCase() : parts[i]
+          out.push({ text, ...st })
+        }
       }
     } else if (n.type === 'hardBreak') {
       out.push({ break: true })
     } else if (n.type === 'variable') {
-      const vid = typeof n.attrs?.variableId === 'string' ? n.attrs.variableId.trim() : ''
-      out.push({ text: vid ? `{{${vid}}}` : '', bold: false, italic: false, underline: false })
+      const attrs = n.attrs && typeof n.attrs === 'object' ? n.attrs : {}
+      const nodeMarks = Array.isArray(n.marks) ? n.marks : []
+      const vid = typeof attrs.variableId === 'string' ? attrs.variableId.trim() : ''
+      let text = vid ? `{{${vid}}}` : ''
+      const uppercase = variableHasFormattingFlag(attrs, nodeMarks, 'uppercase')
+      if (uppercase && text) text = text.toUpperCase()
+      out.push({
+        text,
+        bold: variableHasFormattingFlag(attrs, nodeMarks, 'bold'),
+        italic: variableHasFormattingFlag(attrs, nodeMarks, 'italic'),
+        underline: variableHasFormattingFlag(attrs, nodeMarks, 'underline'),
+        uppercase,
+      })
     } else if (Array.isArray(n.content)) {
       out.push(...flattenInline(n.content))
     }
@@ -94,11 +115,20 @@ function flatToCoalescedParts(flat) {
     const bold = Boolean(f.bold)
     const italic = Boolean(f.italic)
     const underline = Boolean(f.underline)
+    const uppercase = Boolean(f.uppercase)
     const last = out[out.length - 1]
-    if (last && last.type !== 'br' && 'text' in last && last.bold === bold && last.italic === italic && last.underline === underline) {
+    if (
+      last &&
+      last.type !== 'br' &&
+      'text' in last &&
+      last.bold === bold &&
+      last.italic === italic &&
+      last.underline === underline &&
+      last.uppercase === uppercase
+    ) {
       last.text += f.text
     } else {
-      out.push({ text: f.text, bold, italic, underline })
+      out.push({ text: f.text, bold, italic, underline, uppercase })
     }
   }
   return out
@@ -372,4 +402,6 @@ module.exports = {
   buildPdfBytesFromTipTapWithReactPdf,
   TipTapPdfDocument,
   tryRegisterLora,
+  flattenInline,
+  flatToCoalescedParts,
 }

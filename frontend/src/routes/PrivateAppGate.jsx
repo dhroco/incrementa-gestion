@@ -1,29 +1,23 @@
+import { useIsAuthenticated } from '@azure/msal-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import {
   fetchEnrichedSessionThunk,
   selectEnrichmentError,
   selectEnrichmentStatus,
-  selectMustChangePassword,
-  selectSession,
   signOutThunk
 } from '../store/authSlice'
 import { MSG_NAV_MENU_EMPTY } from '../navigation/navigationMessages'
 import { AuthLoadingScreen } from './AuthLoadingScreen'
 
-function normalizePath(p) {
-  return (p || '/').replace(/\/$/, '') || '/'
-}
-
 export function PrivateAppGate() {
   const dispatch = useDispatch()
   const location = useLocation()
-  const session = useSelector(selectSession)
+  const isAuthenticated = useIsAuthenticated()
   const status = useSelector(selectEnrichmentStatus)
   const error = useSelector(selectEnrichmentError)
-  const mustChangePassword = useSelector(selectMustChangePassword)
 
-  if (!session) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
@@ -66,20 +60,32 @@ export function PrivateAppGate() {
     )
   }
 
-  if (status === 'accountant_inactive') {
-    const p = normalizePath(location.pathname)
-    if (p !== '/app/cuenta-inactiva') {
-      return <Navigate to="/app/cuenta-inactiva" replace />
-    }
-    return <Outlet />
-  }
-
-  if (status === 'succeeded' && mustChangePassword) {
-    const p = normalizePath(location.pathname)
-    if (p !== '/app/cambiar-clave') {
-      return <Navigate to="/app/cambiar-clave" replace />
-    }
-    return <Outlet />
+  if (status === 'user_inactive') {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          background: 'var(--color-work-area)',
+          fontFamily: 'var(--font-family-base)',
+          fontSize: '13px',
+          color: 'var(--color-text-dark)',
+          padding: '24px',
+          textAlign: 'center'
+        }}
+      >
+        <p style={{ maxWidth: '420px', margin: 0 }}>
+          Su usuario está deshabilitado. Contacte al administrador de la plataforma para reactivarlo.
+        </p>
+        <button type="button" className="btn" onClick={() => dispatch(signOutThunk())}>
+          Salir
+        </button>
+      </div>
+    )
   }
 
   if (status === 'empty_navigation') {

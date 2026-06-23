@@ -3,9 +3,6 @@ const PROFILE_NOT_ASSIGNED_MESSAGE =
 
 const FORBIDDEN_MESSAGE = 'Acceso denegado. No tiene permisos para realizar esta acción.'
 
-const ACCOUNTANT_INACTIVE_MESSAGE =
-  'Su usuario contador está deshabilitado. Contacte al administrador de la plataforma para reactivarlo.'
-
 const USER_INACTIVE_MESSAGE =
   'Su usuario está deshabilitado. Contacte al administrador de la plataforma para reactivarlo.'
 
@@ -25,15 +22,6 @@ function buildForbiddenBody() {
   }
 }
 
-function buildAccountantInactiveBody(userId, email) {
-  return {
-    code: 'ACCOUNTANT_INACTIVE',
-    message: ACCOUNTANT_INACTIVE_MESSAGE,
-    userId,
-    email: email ?? null
-  }
-}
-
 function buildUserInactiveBody(userId, email) {
   return {
     code: 'USER_INACTIVE',
@@ -45,14 +33,14 @@ function buildUserInactiveBody(userId, email) {
 
 /**
  * @param {{ code: string, label: string }} profile
- * @param {{ tree: unknown[], routes: unknown[], grantedCodes?: string[] } | null | undefined} [navigation] - effective navigation from database (tree + flat routes + optional code list)
+ * @param {unknown[] | null | undefined} [permissions] - packed CASL rules for the user's profile
  * @param {string | null} [displayName] - `user_profile.full_name` (trimmed); when set, response includes `name` for UI
  */
 function buildEnrichedSessionSuccessBody(
   userId,
   email,
   profile,
-  navigation,
+  permissions,
   sessionMeta = null,
   displayName = null
 ) {
@@ -64,15 +52,25 @@ function buildEnrichedSessionSuccessBody(
   if (displayName && typeof displayName === 'string' && displayName.trim().length > 0) {
     body.name = displayName.trim()
   }
-  if (navigation) {
-    body.navigation = navigation
+  if (Array.isArray(permissions)) {
+    body.permissions = permissions
   }
   if (sessionMeta && typeof sessionMeta === 'object') {
-    if (typeof sessionMeta.mustChangePassword === 'boolean') {
-      body.mustChangePassword = sessionMeta.mustChangePassword
-    }
     if (sessionMeta.isActive === true || sessionMeta.isActive === false) {
       body.isActive = sessionMeta.isActive
+    }
+    if (typeof sessionMeta.contactEmail === 'string' && sessionMeta.contactEmail.trim().length > 0) {
+      body.contact_email = sessionMeta.contactEmail.trim()
+    }
+    if (
+      sessionMeta.widgetPreferences != null &&
+      typeof sessionMeta.widgetPreferences === 'object' &&
+      !Array.isArray(sessionMeta.widgetPreferences)
+    ) {
+      body.widget_preferences = sessionMeta.widgetPreferences
+    }
+    if (typeof sessionMeta.avatarUrl === 'string' && sessionMeta.avatarUrl.trim().length > 0) {
+      body.avatar_url = sessionMeta.avatarUrl.trim()
     }
   }
   return body
@@ -81,11 +79,9 @@ function buildEnrichedSessionSuccessBody(
 module.exports = {
   PROFILE_NOT_ASSIGNED_MESSAGE,
   FORBIDDEN_MESSAGE,
-  ACCOUNTANT_INACTIVE_MESSAGE,
   USER_INACTIVE_MESSAGE,
   buildNoProfileAssignedBody,
   buildForbiddenBody,
-  buildAccountantInactiveBody,
   buildUserInactiveBody,
   buildEnrichedSessionSuccessBody
 }

@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/pages/DashboardPage.jsx', 'src/pages/ContratosPage.jsx'],
+    files: ['src/pages/DashboardPage.jsx'],
     rules: {
       // Standard "fetch on mount" pages; keep state-driven lifecycle explicit.
       'react-hooks/set-state-in-effect': 'off',

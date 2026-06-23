@@ -3,8 +3,6 @@ const { parseRut } = require('../utils/rut')
 const { isValidEmail } = require('../utils/validation')
 const { resolveCompanyScopeByUserId } = require('./companyScopeService')
 
-const MAX_BRANCHES = 50
-
 /**
  * @param {import('knex').Knex.QueryBuilder} qb
  * @param {Awaited<ReturnType<import('./companyScopeService').resolveCompanyScopeByUserId>>} scope
@@ -24,32 +22,6 @@ function applyScopeToCompanyQuery(qb, scope, opts = {}) {
     return qb.whereIn(idCol, ids)
   }
   return qb.whereRaw('1=0')
-}
-
-function assertCanCreate(scope) {
-  if (!scope || scope.profileCode !== 'ADMINISTRADOR_PLATAFORMA') {
-    return { ok: false, status: 403, code: 'FORBIDDEN', message: 'No tiene permisos para crear empresas.' }
-  }
-  return { ok: true }
-}
-
-function assertCanEdit(scope, companyId) {
-  if (!scope) return { ok: false, status: 403, code: 'FORBIDDEN', message: 'No tiene permisos para editar empresas.' }
-  if (scope.profileCode === 'ADMINISTRADOR_PLATAFORMA') return { ok: true }
-  if (scope.profileCode === 'USUARIO_EMPRESA_ADMINISTRADOR' && scope.mode === 'single' && scope.companyId === companyId) {
-    return { ok: true }
-  }
-  if (scope.profileCode === 'CONTADOR') {
-    if (scope.mode === 'set' && (scope.companyIds || []).includes(companyId)) return { ok: true }
-  }
-  return { ok: false, status: 403, code: 'FORBIDDEN', message: 'No tiene permisos para editar empresas.' }
-}
-
-function assertCanAssignAccountants(scope) {
-  if (!scope || scope.profileCode !== 'ADMINISTRADOR_PLATAFORMA') {
-    return { ok: false, status: 403, code: 'FORBIDDEN', message: 'No tiene permisos para asignar contadores.' }
-  }
-  return { ok: true }
 }
 
 function trimOrNull(v) {
@@ -89,44 +61,10 @@ function validateLegalRep(n, payload, errors) {
   return { name, rut_body: null, rut_dv: null }
 }
 
-function validateBranchesPayload(rawBranches) {
-  if (rawBranches === undefined) return { ok: true, branches: undefined }
-  if (!Array.isArray(rawBranches)) {
-    return { ok: false, errors: ['El campo sucursales (branches) debe ser un arreglo.'] }
-  }
-  if (rawBranches.length > MAX_BRANCHES) {
-    return { ok: false, errors: [`No puede haber más de ${MAX_BRANCHES} sucursales.`] }
-  }
-  const errors = []
-  const normalized = []
-  for (let i = 0; i < rawBranches.length; i++) {
-    const b = rawBranches[i] || {}
-    const name = trimOrNull(b.name ?? b.nombre)
-    if (!name) {
-      errors.push(`La sucursal en la posición ${i + 1} debe tener un nombre.`)
-      continue
-    }
-    const email = trimOrNull(b.email ?? b.correo)
-    if (email && !isValidEmail(email)) {
-      errors.push(`El correo de la sucursal "${name}" no tiene un formato válido.`)
-    }
-    normalized.push({
-      name,
-      address: trimOrNull(b.address ?? b.direccion),
-      commune: trimOrNull(b.commune ?? b.comuna),
-      city: trimOrNull(b.city ?? b.ciudad),
-      region: trimOrNull(b.region ?? b.region),
-      email,
-      phone: trimOrNull(b.phone ?? b.telefono)
-    })
-  }
-  if (errors.length) return { ok: false, errors }
-  return { ok: true, branches: normalized }
-}
-
 function validateCompanyPayload(payload, { requireAll = false } = {}) {
   const errors = []
   const businessName = payload?.business_name ?? payload?.businessName ?? null
+  const shortName = trimOrNull(payload?.short_name ?? payload?.shortName ?? null)
   const rutInput = payload?.rut ?? payload?.rut_input ?? payload?.rutInput ?? null
   const email = payload?.email ?? null
 
@@ -134,6 +72,9 @@ function validateCompanyPayload(payload, { requireAll = false } = {}) {
   const businessNameTrimmed = typeof businessName === 'string' ? businessName.trim() : ''
   if (requireAll && businessNameTrimmed.length === 0) {
     errors.push('Razón Social es obligatoria.')
+  }
+  if (requireAll && !shortName) {
+    errors.push('Nombre comercial es obligatorio.')
   }
   if (!requireAll && businessNameIsProvided && businessNameTrimmed.length === 0) {
     errors.push('Razón Social no puede estar vacía.')
@@ -154,18 +95,13 @@ function validateCompanyPayload(payload, { requireAll = false } = {}) {
   const rep1 = validateLegalRep(1, payload, errors)
   const rep2 = validateLegalRep(2, payload, errors)
 
-  const bv = validateBranchesPayload(payload?.branches)
-  if (!bv.ok) errors.push(...bv.errors)
-
   if (errors.length > 0) return { ok: false, errors }
-
-  let branchesOut = bv.branches
-  if (requireAll && branchesOut === undefined) branchesOut = []
 
   return {
     ok: true,
     data: {
       business_name: businessNameIsProvided ? businessNameTrimmed : undefined,
+      short_name: shortName !== null ? shortName : undefined,
       rut_body: rutParsed?.ok ? rutParsed.rut_body : undefined,
       rut_dv: rutParsed?.ok ? rutParsed.rut_dv : undefined,
       business_activity: payload?.business_activity ?? payload?.giro ?? undefined,
@@ -181,61 +117,25 @@ function validateCompanyPayload(payload, { requireAll = false } = {}) {
       name_legal_representative_2: rep2.name,
       rut_body_legal_representative_2: rep2.rut_body,
       rut_dv_legal_representative_2: rep2.rut_dv
-    },
-    branches: branchesOut
+    }
   }
-}
-
-async function replaceCompanyBranches(trx, companyId, rows) {
-  if (!(await trx.schema.hasTable('company_branch'))) return
-  await trx('company_branch').where({ company_id: companyId }).del()
-  if (!rows || rows.length === 0) return
-  const now = trx.fn.now()
-  await trx('company_branch').insert(
-    rows.map((r, idx) => ({
-      company_id: companyId,
-      name: r.name,
-      address: r.address,
-      commune: r.commune,
-      city: r.city,
-      region: r.region,
-      email: r.email,
-      phone: r.phone,
-      sort_order: idx,
-      created_at: now,
-      updated_at: now
-    }))
-  )
 }
 
 async function listCompanies({ userId, q = '' } = {}) {
   const scope = await resolveCompanyScopeByUserId(userId)
   if (!scope) return { ok: false, status: 403, code: 'PROFILE_NOT_ASSIGNED', message: 'Perfil no asignado.' }
 
-  const qb = db('company as c')
-    .leftJoin('accountant_company as ac', 'ac.company_id', 'c.id')
-    .leftJoin('user_profile as up', 'up.id', 'ac.accountant_id')
-    .leftJoin('auth.users as au', 'au.id', 'up.user_id')
-    .select(
-      'c.id',
-      'c.business_name',
-      'c.rut_body',
-      'c.rut_dv',
-      'c.business_activity',
-      'c.commune',
-      'c.city',
-      'c.updated_at'
-    )
-    .select(
-      db.raw(
-        `
-        COALESCE(
-          string_agg(DISTINCT au.email, ', ' ORDER BY au.email) FILTER (WHERE au.email IS NOT NULL),
-          ''
-        ) as accountants
-      `
-      )
-    )
+  const qb = db('company as c').select(
+    'c.id',
+    'c.business_name',
+    'c.short_name',
+    'c.rut_body',
+    'c.rut_dv',
+    'c.business_activity',
+    'c.commune',
+    'c.city',
+    'c.updated_at'
+  )
 
   applyScopeToCompanyQuery(qb, scope, { companyTableAlias: 'c' })
 
@@ -246,17 +146,6 @@ async function listCompanies({ userId, q = '' } = {}) {
       w.whereILike('c.business_name', t).orWhereILike('c.rut_body', t)
     })
   }
-
-  qb.groupBy(
-    'c.id',
-    'c.business_name',
-    'c.rut_body',
-    'c.rut_dv',
-    'c.business_activity',
-    'c.commune',
-    'c.city',
-    'c.updated_at'
-  )
 
   qb.orderBy('c.updated_at', 'desc')
 
@@ -273,54 +162,20 @@ async function getCompanyDetail({ userId, companyId }) {
   const row = await qb.first()
   if (!row) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
 
-  const accountants = await db('accountant_company as ac')
-    .join('user_profile as up', 'up.id', 'ac.accountant_id')
-    .leftJoin('auth.users as au', 'au.id', 'up.user_id')
-    .select('up.id as id', 'au.email as email', 'up.full_name as full_name')
-    .where('ac.company_id', companyId)
-    .orderBy('au.email', 'asc')
-
-  let branches = []
-  if (await db.schema.hasTable('company_branch')) {
-    branches = await db('company_branch')
-      .select(
-        'id',
-        'name',
-        'address',
-        'commune',
-        'city',
-        'region',
-        'email',
-        'phone',
-        'sort_order',
-        'created_at',
-        'updated_at'
-      )
-      .where({ company_id: companyId })
-      .orderBy('sort_order', 'asc')
-      .orderBy('id', 'asc')
-  }
-
-  return { ok: true, data: { ...row, accountants, branches } }
+  return { ok: true, data: row }
 }
 
 async function createCompany({ userId, payload }) {
   const scope = await resolveCompanyScopeByUserId(userId)
-  const perm = assertCanCreate(scope)
-  if (!perm.ok) return perm
+  if (!scope) return { ok: false, status: 403, code: 'PROFILE_NOT_ASSIGNED', message: 'Perfil no asignado.' }
 
   const v = validateCompanyPayload(payload, { requireAll: true })
   if (!v.ok) return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors.join(' ') }
-
-  const branchRows = v.branches != null ? v.branches : []
 
   const insertData = Object.fromEntries(Object.entries(v.data).filter(([, val]) => val !== undefined))
   try {
     const row = await db.transaction(async (trx) => {
       const [created] = await trx('company').insert(insertData).returning('*')
-      if (branchRows.length > 0) {
-        await replaceCompanyBranches(trx, created.id, branchRows)
-      }
       return created
     })
     const full = await getCompanyDetail({ userId, companyId: row.id })
@@ -335,32 +190,20 @@ async function createCompany({ userId, payload }) {
 
 async function updateCompany({ userId, companyId, payload }) {
   const scope = await resolveCompanyScopeByUserId(userId)
-  const perm = assertCanEdit(scope, companyId)
-  if (!perm.ok) return perm
+  if (!scope) return { ok: false, status: 403, code: 'PROFILE_NOT_ASSIGNED', message: 'Perfil no asignado.' }
 
   const v = validateCompanyPayload(payload, { requireAll: false })
   if (!v.ok) return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors.join(' ') }
 
   const patch = Object.fromEntries(Object.entries(v.data).filter(([, val]) => val !== undefined))
-  const hasBranchUpdate = v.branches !== undefined
-  if (Object.keys(patch).length === 0 && !hasBranchUpdate) {
+  if (Object.keys(patch).length === 0) {
     return { ok: false, status: 400, code: 'EMPTY_PAYLOAD', message: 'No hay campos para actualizar.' }
   }
 
   try {
     const row = await db.transaction(async (trx) => {
-      let updatedRow = null
-      if (Object.keys(patch).length > 0) {
-        const updated = await trx('company').where({ id: companyId }).update(patch).returning('*')
-        updatedRow = updated?.[0] ?? null
-      } else {
-        updatedRow = await trx('company').where({ id: companyId }).first()
-      }
-      if (!updatedRow) return null
-      if (hasBranchUpdate) {
-        await replaceCompanyBranches(trx, companyId, v.branches || [])
-      }
-      return updatedRow
+      const updated = await trx('company').where({ id: companyId }).update(patch).returning('*')
+      return updated?.[0] ?? null
     })
     if (!row) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
     const full = await getCompanyDetail({ userId, companyId })
@@ -373,70 +216,10 @@ async function updateCompany({ userId, companyId, payload }) {
   }
 }
 
-async function listAccountantsCatalog({ userId }) {
-  const scope = await resolveCompanyScopeByUserId(userId)
-  if (!scope) return { ok: false, status: 403, code: 'PROFILE_NOT_ASSIGNED', message: 'Perfil no asignado.' }
-  const perm = assertCanAssignAccountants(scope)
-  if (!perm.ok) return perm
-
-  const rows = await db('user_profile as up')
-    .join('profile as p', 'p.id', 'up.profile_id')
-    .leftJoin('auth.users as au', 'au.id', 'up.user_id')
-    .select('up.id as id', 'au.email as email', 'p.code as profile_code')
-    .where('p.code', 'CONTADOR')
-    .orderBy('au.email', 'asc')
-
-  return { ok: true, data: { items: rows } }
-}
-
-async function getCompanyAccountants({ userId, companyId }) {
-  const scope = await resolveCompanyScopeByUserId(userId)
-  if (!scope) return { ok: false, status: 403, code: 'PROFILE_NOT_ASSIGNED', message: 'Perfil no asignado.' }
-
-  const qb = db('company').select('id').where({ id: companyId })
-  applyScopeToCompanyQuery(qb, scope)
-  const visible = await qb.first()
-  if (!visible) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
-
-  const rows = await db('accountant_company as ac')
-    .join('user_profile as up', 'up.id', 'ac.accountant_id')
-    .leftJoin('auth.users as au', 'au.id', 'up.user_id')
-    .select('up.id as id', 'au.email as email')
-    .where('ac.company_id', companyId)
-    .orderBy('au.email', 'asc')
-
-  return { ok: true, data: { items: rows } }
-}
-
-async function setCompanyAccountants({ userId, companyId, accountantIds }) {
-  const scope = await resolveCompanyScopeByUserId(userId)
-  const perm = assertCanAssignAccountants(scope)
-  if (!perm.ok) return perm
-
-  const ids = Array.isArray(accountantIds) ? accountantIds.filter((x) => typeof x === 'string' && x.length > 0) : []
-
-  const companyRow = await db('company').select('id').where({ id: companyId }).first()
-  if (!companyRow) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
-
-  await db.transaction(async (trx) => {
-    await trx('accountant_company').where({ company_id: companyId }).del()
-    if (ids.length > 0) {
-      await trx('accountant_company')
-        .insert(ids.map((aid) => ({ accountant_id: aid, company_id: companyId })))
-        .onConflict(['accountant_id', 'company_id'])
-        .ignore()
-    }
-  })
-
-  return getCompanyAccountants({ userId, companyId })
-}
-
 module.exports = {
   listCompanies,
   getCompanyDetail,
   createCompany,
   updateCompany,
-  listAccountantsCatalog,
-  getCompanyAccountants,
-  setCompanyAccountants
+  validateCompanyPayload
 }

@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="6" y="6" width="52" height="52" rx="12" fill="#FFF0C0"/>
-  <text
-    x="32"
-    y="38"
-    text-anchor="middle"
-    font-family="Inter, Arial, sans-serif"
-    font-size="18"
-    font-weight="700"
-    fill="#000000"
-  >
-    GCC
-  </text>
+  <defs>
+    <linearGradient id="g" x1="32" y1="8" x2="32" y2="57" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#14C8F0"/>
+      <stop offset="44%" stop-color="#6425D0"/>
+      <stop offset="100%" stop-color="#FF1F6E"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="21" r="13" fill="url(#g)"/>
+  <rect x="19" y="33" width="26" height="24" rx="4" fill="url(#g)"/>
 </svg>

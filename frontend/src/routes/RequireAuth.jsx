@@ -1,11 +1,12 @@
+import { useIsAuthenticated } from '@azure/msal-react'
 import { useSelector } from 'react-redux'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { selectAuthInitialized, selectIsAuthenticated } from '../store/authSlice'
+import { selectAuthInitialized } from '../store/authSlice'
 import { AuthLoadingScreen } from './AuthLoadingScreen'
 
 export function RequireAuth() {
   const initialized = useSelector(selectAuthInitialized)
-  const isAuthenticated = useSelector(selectIsAuthenticated)
+  const isAuthenticated = useIsAuthenticated()
   const location = useLocation()
 
   if (!initialized) {

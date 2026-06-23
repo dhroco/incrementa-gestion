@@ -1,59 +1,10 @@
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { Link, useLocation } from 'react-router-dom'
-import {
-  getModuleTitleFromAuthorizationRoutes,
-  resolveNavRouteMatchForPathname
-} from '../navigation/authorizationSelectors'
+import { getModuleTitleFromMenuConfig, resolveMenuMatchForPathname } from '../navigation/menuConfig'
 import { getSidebarIconForNavItem } from '../navigation/sidebarIconography.jsx'
-import {
-  selectEnrichedCompany,
-  selectEnrichedNavigation,
-  selectEnrichedProfile,
-  selectEnrichmentStatus,
-  selectUser
-} from '../store/authSlice'
-import { selectAssignedCompanies, selectSelectedCompanyId, setSelectedCompanyId } from '../store/sessionCompanySlice'
+import { selectEnrichmentStatus } from '../store/authSlice'
 import { useShell } from './useShell'
 import { fixSpanishMojibake } from '../utils/fixMojibake'
-
-function AccountantCompanySelect() {
-  const dispatch = useDispatch()
-  const user = useSelector(selectUser)
-  const assigned = useSelector(selectAssignedCompanies)
-  const selectedId = useSelector(selectSelectedCompanyId)
-  const userId = user?.id ?? null
-
-  if (!assigned.length) {
-    return (
-      <div className="app-subheader__trail-text">
-        Empresa: <strong>—</strong>
-      </div>
-    )
-  }
-
-  return (
-    <label className="app-subheader__trail-select-label">
-      <span>Empresa</span>
-      <select
-        className="app-subheader__company-select"
-        aria-label="Empresa de trabajo"
-        value={selectedId ?? ''}
-        onChange={(e) => {
-          const v = e.target.value
-          if (userId && v) {
-            dispatch(setSelectedCompanyId({ userId, companyId: v }))
-          }
-        }}
-      >
-        {assigned.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.business_name && String(c.business_name).trim().length > 0 ? c.business_name : c.id}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
 
 function SubheaderIdentity({ breadcrumb, fallbackTitle }) {
   if (breadcrumb && breadcrumb.length > 0) {
@@ -84,9 +35,6 @@ function SubheaderIdentity({ breadcrumb, fallbackTitle }) {
 
 export function AppSubHeader() {
   const { pathname } = useLocation()
-  const navigation = useSelector(selectEnrichedNavigation)
-  const profile = useSelector(selectEnrichedProfile)
-  const company = useSelector(selectEnrichedCompany)
   const enrichmentStatus = useSelector(selectEnrichmentStatus)
   const {
     sidebarCollapsed,
@@ -95,28 +43,22 @@ export function AppSubHeader() {
     subHeaderTitle,
     subHeaderBreadcrumb
   } = useShell()
-  const routes = navigation?.routes
   const navMatch =
-    enrichmentStatus === 'succeeded' && routes?.length ? resolveNavRouteMatchForPathname(pathname, routes) : null
-  const navIcon = getSidebarIconForNavItem({ code: navMatch?.code ?? null, routePath: navMatch?.routePath ?? null })
+    enrichmentStatus === 'succeeded' ? resolveMenuMatchForPathname(pathname) : null
+  const navIcon = getSidebarIconForNavItem({
+    code: navMatch?.code ?? null,
+    routePath: navMatch?.routePath ?? pathname
+  })
 
   const rawFallbackTitle = subHeaderTitle
     ? subHeaderTitle
-    : enrichmentStatus === 'succeeded' && routes?.length
-      ? getModuleTitleFromAuthorizationRoutes(pathname, routes)
+    : enrichmentStatus === 'succeeded'
+      ? getModuleTitleFromMenuConfig(pathname) || 'Módulo'
       : 'Módulo'
   const fallbackTitle = fixSpanishMojibake(rawFallbackTitle)
 
-  const isCompanyAdmin = profile?.code === 'USUARIO_EMPRESA_ADMINISTRADOR'
-  const isAccountant = profile?.code === 'CONTADOR'
-  const companyName =
-    isCompanyAdmin && typeof company?.business_name === 'string' && company.business_name.trim().length
-      ? company.business_name
-      : null
-
   const hasTools = Boolean(subHeaderActions)
-  const hasProfileTrail = isAccountant || isCompanyAdmin
-  const showAfterIdentitySep = hasTools || hasProfileTrail
+  const showAfterIdentitySep = hasTools
 
   return (
     <div className="app-subheader">
@@ -143,17 +85,6 @@ export function AppSubHeader() {
       >
         {hasTools ? <div className="app-subheader__tools-inner">{subHeaderActions}</div> : null}
       </div>
-      {hasProfileTrail ? <div className="app-subheader__rule" role="separator" aria-hidden="true" /> : null}
-      {hasProfileTrail ? (
-        <div className="app-subheader__trail">
-          {isAccountant ? <AccountantCompanySelect /> : null}
-          {isCompanyAdmin ? (
-            <div className="app-subheader__trail-text">
-              Empresa: <strong>{companyName ?? '—'}</strong>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   )
 }

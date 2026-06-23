@@ -1,28 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { useAbility } from '@casl/react'
 import { PageShell } from '../components/PageShell'
 import { ListSearchField } from '../components/ListSearchField'
 import { fetchCompaniesList } from '../api/companiesApi'
-import { selectEnrichedNavigation, selectSession } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
-import './ClauseForm.css'
-
-function formatRut(body, dv) {
-  if (!body) return '—'
-  const d = dv ? String(dv).toUpperCase() : ''
-  return d ? `${body}-${d}` : String(body)
-}
+import { AbilityContext } from '../lib/ability'
+import { formatRut } from '../utils/rut'
+import '../styles/shared-form.css'
 
 export function CompaniesListPage() {
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const accessToken = session?.access_token ?? null
+  const ability = useAbility(AbilityContext)
 
-  const grantedCodes = useMemo(() => buildGrantedCodeSetFromSession(navigation), [navigation])
-  const canCreate = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_EMPRESAS_CREATE')
-  const canEdit = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_EMPRESAS_EDIT')
+  const canCreate = ability.can('create', 'Company')
+  const canEdit = ability.can('update', 'Company')
 
   const [q, setQ] = useState('')
   const [items, setItems] = useState([])
@@ -32,14 +23,9 @@ export function CompaniesListPage() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!accessToken) {
-        setLoading(false)
-        setItems([])
-        return
-      }
       setLoading(true)
       setError(null)
-      const res = await fetchCompaniesList({ q, accessToken })
+      const res = await fetchCompaniesList({ q })
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -54,7 +40,7 @@ export function CompaniesListPage() {
     return () => {
       active = false
     }
-  }, [q, accessToken])
+  }, [q])
 
   const listToolbar = useMemo(
     () => (
@@ -67,7 +53,7 @@ export function CompaniesListPage() {
           onChange={(e) => setQ(e.target.value)}
         />
         {canCreate ? (
-          <button type="button" className="clause-button" onClick={() => navigate('nueva')}>
+          <button type="button" className="btn" onClick={() => navigate('nueva')}>
             Nueva empresa
           </button>
         ) : null}
@@ -91,7 +77,6 @@ export function CompaniesListPage() {
                   <th>Razón social</th>
                   <th>RUT</th>
                   <th>Comuna</th>
-                  <th>Contador(es) asignado(s)</th>
                   <th className="clause-list-col-actions">Acciones</th>
                 </tr>
               </thead>
@@ -106,9 +91,8 @@ export function CompaniesListPage() {
                   items.map((row) => (
                     <tr key={row.id}>
                       <td>{row.business_name ?? '—'}</td>
-                      <td>{formatRut(row.rut_body, row.rut_dv)}</td>
+                      <td>{formatRut(row.rut_body, row.rut_dv) || '—'}</td>
                       <td>{row.commune ?? '—'}</td>
-                      <td>{row.accountants && String(row.accountants).trim().length > 0 ? row.accountants : '—'}</td>
                       <td className="clause-list-col-actions">
                         <button type="button" className="clause-link-button" onClick={() => navigate(`${row.id}`)}>
                           Ver

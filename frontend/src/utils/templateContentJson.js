@@ -3,24 +3,21 @@ function isPlainObject(value) {
 }
 
 /**
- * Collects clause UUIDs from embedded universal clause nodes (TipTap JSON).
- * @param {unknown} doc
- * @returns {string[]}
+ * @param {unknown} value
+ * @returns {{ ok: true } | { ok: false, message: string }}
  */
-export function collectEmbeddedClauseIdsFromDoc(doc) {
-  const out = new Set()
-  function walk(node) {
-    if (!isPlainObject(node)) return
-    if (node.type === 'embeddedUniversalClause' && typeof node.attrs?.clauseId === 'string') {
-      const kind = typeof node.attrs?.clauseKind === 'string' ? node.attrs.clauseKind : 'universal'
-      if (kind !== 'universal') return
-      const id = node.attrs.clauseId.trim()
-      if (id.length > 0) out.add(id)
-    }
-    if (Array.isArray(node.content)) {
-      for (const c of node.content) walk(c)
-    }
+export function validateTemplateContentJsonClient(value) {
+  if (value === undefined || value === null) {
+    return { ok: false, message: 'El contenido de la plantilla es obligatorio.' }
   }
-  walk(doc)
-  return [...out]
+  if (!isPlainObject(value)) {
+    return { ok: false, message: 'El contenido debe ser un documento JSON válido.' }
+  }
+  if (value.type !== 'doc') {
+    return { ok: false, message: 'El contenido del editor no tiene el formato esperado.' }
+  }
+  if (!Array.isArray(value.content) || value.content.length === 0) {
+    return { ok: false, message: 'El contenido de la plantilla no puede estar vacío.' }
+  }
+  return { ok: true }
 }

@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
+import { useAbility } from '@casl/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { mapApiNavTreeToSidebarItems } from '../navigation/authorizationSelectors'
+import { AbilityContext } from '../lib/ability'
+import {
+  buildVisibleMenuFromConfig,
+  mapMenuConfigToSidebarItems
+} from '../navigation/menuConfig'
 import { getSidebarIconForNavItem } from '../navigation/sidebarIconography.jsx'
 import { fixSpanishMojibake } from '../utils/fixMojibake'
 import {
   selectEnrichedEmail,
   selectEnrichedName,
-  selectEnrichedNavigation,
   selectEnrichedProfile,
   selectEnrichmentError,
   selectEnrichmentStatus,
@@ -46,18 +50,19 @@ function SidebarEmptyMenuActions({ onRetry }) {
 export function AppSidebar() {
   const { collapseSidebar } = useShell()
   const dispatch = useDispatch()
+  const ability = useAbility(AbilityContext)
   const user = useSelector(selectUser)
   const enrichedEmail = useSelector(selectEnrichedEmail)
   const enrichedName = useSelector(selectEnrichedName)
   const enrichedProfile = useSelector(selectEnrichedProfile)
   const enrichmentStatus = useSelector(selectEnrichmentStatus)
   const enrichmentError = useSelector(selectEnrichmentError)
-  const navigation = useSelector(selectEnrichedNavigation)
 
   const navStructure = useMemo(() => {
-    if (enrichmentStatus !== 'succeeded' || !navigation?.tree) return []
-    return mapApiNavTreeToSidebarItems(navigation.tree)
-  }, [enrichmentStatus, navigation])
+    if (enrichmentStatus !== 'succeeded' && enrichmentStatus !== 'empty_navigation') return []
+    const visible = buildVisibleMenuFromConfig((action, subject) => ability.can(action, subject))
+    return mapMenuConfigToSidebarItems(visible)
+  }, [enrichmentStatus, ability])
 
   const [openGroups, setOpenGroups] = useState(() => ({}))
 
@@ -118,7 +123,7 @@ export function AppSidebar() {
                 </button>
               </div>
             </div>
-          ) : enrichmentStatus === 'empty_navigation' ? (
+          ) : enrichmentStatus === 'empty_navigation' && navStructure.length === 0 ? (
             <div className="sidebar-nav__state">
               <div>{MSG_NAV_MENU_EMPTY}</div>
               <SidebarEmptyMenuActions onRetry={retryEnrichment} />
@@ -131,24 +136,6 @@ export function AppSidebar() {
           ) : (
             <ul className="sidebar-nav__list">
               {navStructure.map((item) => {
-                if (item.type === 'link') {
-                  const { Component: Icon } = getSidebarIconForNavItem({ code: null, routePath: item.path })
-                  return (
-                    <li key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        className={({ isActive }) =>
-                          `sidebar-nav__link${isActive ? ' sidebar-nav__link--active' : ''}`
-                        }
-                      >
-                        <span className="sidebar-nav__icon" aria-hidden="true">
-                          <Icon />
-                        </span>
-                        <span>{fixSpanishMojibake(item.label)}</span>
-                      </NavLink>
-                    </li>
-                  )
-                }
                 if (item.type === 'group') {
                   const expanded = Boolean(openGroups[item.id])
                   return (

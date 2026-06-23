@@ -13,6 +13,7 @@
   max-width: 480px;
   background: #ffffff;
   border: 1px solid var(--color-border-card, #e3e6e8);
+  border-radius: var(--border-radius-card);
   padding: 16px;
 }
 

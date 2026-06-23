@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { act } from 'react-dom/test-utils'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
@@ -9,6 +9,7 @@ import { MSG_NAV_MENU_EMPTY } from '../navigation/navigationMessages'
 import { AppSidebar } from './AppSidebar'
 import { ShellProvider } from './ShellProvider'
 import { authReducer } from '../store/authSlice'
+import { AbilityContext, ability } from '../lib/ability'
 
 vi.mock('../api/enrichedSessionApi', () => ({
   fetchEnrichedSession: vi.fn(async () => ({
@@ -27,7 +28,8 @@ function makeStore(authOverrides) {
   return store
 }
 
-function renderWith({ auth, initialEntries = ['/app'] }) {
+function renderWith({ auth, initialEntries = ['/app'], rules = [{ action: 'manage', subject: 'all' }] }) {
+  ability.update(rules)
   const store = makeStore(auth)
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -36,11 +38,13 @@ function renderWith({ auth, initialEntries = ['/app'] }) {
   act(() => {
     root.render(
       <Provider store={store}>
-        <ShellProvider>
-          <MemoryRouter initialEntries={initialEntries}>
-            <AppSidebar />
-          </MemoryRouter>
-        </ShellProvider>
+        <AbilityContext.Provider value={ability}>
+          <ShellProvider>
+            <MemoryRouter initialEntries={initialEntries}>
+              <AppSidebar />
+            </MemoryRouter>
+          </ShellProvider>
+        </AbilityContext.Provider>
       </Provider>
     )
   })
@@ -51,6 +55,7 @@ function renderWith({ auth, initialEntries = ['/app'] }) {
     unmount() {
       act(() => root.unmount())
       container.remove()
+      ability.update([])
     }
   }
 }
@@ -61,82 +66,32 @@ function getGroupToggle(container, label) {
 }
 
 describe('AppSidebar', () => {
-  it('lets the user open/close groups independently (no implicit switching)', () => {
+  beforeEach(() => {
+    ability.update([])
+  })
+
+  it('lets the user open/close groups independently', () => {
     const { container, unmount } = renderWith({
       auth: {
-        session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
         user: { id: 'u1', email: 'a@b.com' },
         enrichmentStatus: 'succeeded',
         enrichedEmail: 'a@b.com',
-        enrichedProfile: { code: 'P', label: 'Perfil' },
-        enrichedNavigation: {
-          tree: [
-            {
-              code: 'G1',
-              label: 'Grupo 1',
-              children: [{ code: 'C1', label: 'C1', routePath: '/app/c1', showInMainMenu: true }]
-            },
-            {
-              code: 'G2',
-              label: 'Grupo 2',
-              children: [{ code: 'C2', label: 'C2', routePath: '/app/c2', showInMainMenu: true }]
-            }
-          ],
-          routes: [{ routePath: '/app/c1' }, { routePath: '/app/c2' }]
-        }
+        enrichedProfile: { code: 'P', label: 'Perfil' }
       }
     })
 
-    const g1 = getGroupToggle(container, 'Grupo 1')
-    const g2 = getGroupToggle(container, 'Grupo 2')
-    expect(g1).toBeTruthy()
-    expect(g2).toBeTruthy()
+    const admin = getGroupToggle(container, 'Administración Global')
+    const contratos = getGroupToggle(container, 'Gestión de Contratos')
+    expect(admin).toBeTruthy()
+    expect(contratos).toBeTruthy()
 
-    expect(g1.getAttribute('aria-expanded')).toBe('false')
-    expect(g2.getAttribute('aria-expanded')).toBe('false')
+    act(() => admin.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    expect(admin.getAttribute('aria-expanded')).toBe('true')
+    expect(contratos.getAttribute('aria-expanded')).toBe('false')
 
-    act(() => g1.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-    expect(g1.getAttribute('aria-expanded')).toBe('true')
-    expect(g2.getAttribute('aria-expanded')).toBe('false')
-
-    act(() => g2.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-    // Opening another group does not close the previous one automatically.
-    expect(g1.getAttribute('aria-expanded')).toBe('true')
-    expect(g2.getAttribute('aria-expanded')).toBe('true')
-
-    unmount()
-  })
-
-  it('auto-expands the active group and does not allow collapsing it while a child route is active', () => {
-    const { container, unmount } = renderWith({
-      initialEntries: ['/app/c1'],
-      auth: {
-        session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
-        user: { id: 'u1', email: 'a@b.com' },
-        enrichmentStatus: 'succeeded',
-        enrichedProfile: { code: 'P', label: 'Perfil' },
-        enrichedNavigation: {
-          tree: [
-            {
-              code: 'G1',
-              label: 'Grupo 1',
-              children: [{ code: 'C1', label: 'C1', routePath: '/app/c1', showInMainMenu: true }]
-            }
-          ],
-          routes: [{ routePath: '/app/c1' }]
-        }
-      }
-    })
-
-    const g1 = getGroupToggle(container, 'Grupo 1')
-    // Initial load keeps groups closed even if current route matches a child.
-    expect(g1.getAttribute('aria-expanded')).toBe('false')
-
-    // User must explicitly open/close.
-    act(() => g1.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-    expect(g1.getAttribute('aria-expanded')).toBe('true')
-    act(() => g1.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-    expect(g1.getAttribute('aria-expanded')).toBe('false')
+    act(() => contratos.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    expect(admin.getAttribute('aria-expanded')).toBe('true')
+    expect(contratos.getAttribute('aria-expanded')).toBe('true')
 
     unmount()
   })
@@ -145,7 +100,7 @@ describe('AppSidebar', () => {
     {
       const { container, unmount } = renderWith({
         auth: {
-          session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
+          session: { accessToken: 't', user: { id: 'u1', email: 'a@b.com' } },
           user: { id: 'u1', email: 'a@b.com' },
           enrichmentStatus: 'loading'
         }
@@ -157,74 +112,66 @@ describe('AppSidebar', () => {
     {
       const { container, unmount } = renderWith({
         auth: {
-          session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
+          session: { accessToken: 't', user: { id: 'u1', email: 'a@b.com' } },
           user: { id: 'u1', email: 'a@b.com' },
           enrichmentStatus: 'failed',
           enrichmentError: 'Fallo técnico'
         }
       })
       expect(container.textContent).toContain('Fallo técnico')
-      const retry = Array.from(container.querySelectorAll('button')).find((b) =>
-        b.textContent?.includes('Reintentar')
-      )
-      expect(retry).toBeTruthy()
-      act(() => retry.dispatchEvent(new MouseEvent('click', { bubbles: true })))
       unmount()
     }
 
     {
       const { container, unmount } = renderWith({
         auth: {
-          session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
+          session: { accessToken: 't', user: { id: 'u1', email: 'a@b.com' } },
           user: { id: 'u1', email: 'a@b.com' },
           enrichmentStatus: 'empty_navigation'
         }
       })
-      expect(container.textContent).toContain(MSG_NAV_MENU_EMPTY.slice(0, 40))
-      const buttons = container.querySelectorAll('button')
-      expect(Array.from(buttons).some((b) => b.textContent?.includes('Reintentar'))).toBe(true)
-      expect(Array.from(buttons).some((b) => b.textContent?.includes('Salir'))).toBe(true)
+      expect(container.textContent).toContain('Configuración')
+      expect(container.textContent).toContain('Inicio')
       unmount()
     }
   })
 
-  it('renders submenu structure and icons (non-fragile)', () => {
+  it('renders submenu links from static menu config', () => {
     const { container, unmount } = renderWith({
+      initialEntries: ['/app/admin-global/empresas'],
       auth: {
-        session: { access_token: 't', user: { id: 'u1', email: 'a@b.com' } },
         user: { id: 'u1', email: 'a@b.com' },
         enrichmentStatus: 'succeeded',
-        enrichedProfile: { code: 'P', label: 'Perfil' },
-        enrichedNavigation: {
-          tree: [
-            {
-              code: 'G1',
-              label: 'Grupo 1',
-              children: [
-                { code: 'NAV_USUARIOS', label: 'Usuarios', routePath: '/app/usuarios', showInMainMenu: true },
-                { code: 'NAV_ITEM_X', label: 'No navegable', routePath: null, showInMainMenu: true }
-              ]
-            }
-          ],
-          routes: [{ routePath: '/app/usuarios' }]
-        }
+        enrichedProfile: { code: 'P', label: 'Perfil' }
       }
     })
 
-    const g1 = getGroupToggle(container, 'Grupo 1')
-    act(() => g1.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const admin = getGroupToggle(container, 'Administración Global')
+    act(() => admin.dispatchEvent(new MouseEvent('click', { bubbles: true })))
 
-    const submenus = container.querySelector('.sidebar-nav__submenus')
-    expect(submenus).toBeTruthy()
-    expect(container.querySelector('.sidebar-nav__sublist')).toBeTruthy()
+    expect(container.textContent).toContain('Empresas')
+    expect(container.querySelector('a[href="/app/admin-global/empresas"]')).toBeTruthy()
 
-    const disabled = container.querySelector('.sidebar-nav__sublink--disabled')
-    expect(disabled).toBeTruthy()
+    unmount()
+  })
 
-    const icons = container.querySelectorAll('.sidebar-nav__icon')
-    expect(icons.length).toBeGreaterThan(0)
+  it('renders Configuración > Mi perfil without module permissions', () => {
+    const { container, unmount } = renderWith({
+      initialEntries: ['/app/mi-perfil'],
+      rules: [],
+      auth: {
+        user: { id: 'u1', email: 'a@b.com' },
+        enrichmentStatus: 'empty_navigation',
+        enrichedProfile: { code: 'P', label: 'Perfil' }
+      }
+    })
+
+    const config = getGroupToggle(container, 'Configuración')
+    expect(config).toBeTruthy()
+    act(() => config.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    expect(container.textContent).toContain('Mi perfil')
+    expect(container.querySelector('a[href="/app/mi-perfil"]')).toBeTruthy()
 
     unmount()
   })
 })
-

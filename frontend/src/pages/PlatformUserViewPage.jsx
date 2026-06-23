@@ -1,23 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useAbility } from '@casl/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { fetchPlatformUserDetail } from '../api/platformUsersPlatformApi'
 import { PLATFORM_USERS_LIST_PATH } from '../navigation/platformPaths'
-import { selectEnrichedNavigation, selectSession } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
-import { formatRut } from '../utils/rut'
-import './ClauseForm.css'
+import { AbilityContext } from '../lib/ability'
+import '../styles/shared-form.css'
 
 export function PlatformUserViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const accessToken = session?.access_token ?? null
+  const ability = useAbility(AbilityContext)
 
-  const grantedCodes = useMemo(() => buildGrantedCodeSetFromSession(navigation), [navigation])
-  const canEdit = grantedCodes.has('NAV_ACTION_ADMIN_GLOBAL_USUARIOS_PLATAFORMA_EDIT')
+  const canEdit = ability.can('update', 'PlatformUser')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,10 +21,10 @@ export function PlatformUserViewPage() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!id || !accessToken) return
+      if (!id) return
       setLoading(true)
       setError(null)
-      const res = await fetchPlatformUserDetail(id, { accessToken })
+      const res = await fetchPlatformUserDetail(id, {})
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -43,15 +38,14 @@ export function PlatformUserViewPage() {
     return () => {
       active = false
     }
-  }, [id, accessToken])
+  }, [id])
 
   const u = data?.user
   const co = data?.company
-  const rutDisplay = u ? formatRut(u.rut_body, u.rut_dv) : '—'
 
   const breadcrumb = useMemo(
     () => [
-      { label: 'Usuarios plataforma', to: PLATFORM_USERS_LIST_PATH },
+      { label: 'Usuarios', to: PLATFORM_USERS_LIST_PATH },
       { label: 'Ver' }
     ],
     []
@@ -60,7 +54,7 @@ export function PlatformUserViewPage() {
   const subActions = useMemo(
     () =>
       u && canEdit ? (
-        <button type="button" className="clause-button" onClick={() => navigate(`/app/admin-global/usuarios-plataforma/${id}/edit`)}>
+        <button type="button" className="btn" onClick={() => navigate(`/app/admin-global/usuarios-plataforma/${id}/edit`)}>
           Editar
         </button>
       ) : null,
@@ -88,17 +82,7 @@ export function PlatformUserViewPage() {
               </div>
               <div className="clause-form-row clause-form-row--two-equal">
                 <div className="clause-form-col">
-                  <div className="clause-label">Teléfono</div>
-                  <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={u.phone ?? ''} />
-                </div>
-                <div className="clause-form-col">
-                  <div className="clause-label">RUT</div>
-                  <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={rutDisplay === '—' ? '' : rutDisplay} />
-                </div>
-              </div>
-              <div className="clause-form-row clause-form-row--two-equal">
-                <div className="clause-form-col">
-                  <div className="clause-label">Perfil</div>
+                  <div className="clause-label">Rol</div>
                   <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={u.profile_label ?? u.profile_code ?? ''} />
                 </div>
                 <div className="clause-form-col">

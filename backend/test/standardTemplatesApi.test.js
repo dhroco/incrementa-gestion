@@ -17,31 +17,14 @@ function authMissing(_req, res) {
   })
 }
 
-const VALID_TEMPLATE_DOC = { type: 'doc', content: [{ type: 'paragraph', content: [] }] }
+const { attachAbilityWithRules } = require('./testAbilityHelpers')
 
-const DOC_WITH_EMBEDDED = {
-  type: 'doc',
-  content: [
-    { type: 'paragraph', content: [] },
-    {
-      type: 'embeddedUniversalClause',
-      attrs: {
-        clauseId: '00000000-0000-4000-8000-000000000001',
-        instanceId: '00000000-0000-4000-8000-000000000002',
-        code: 'C1',
-        titleClause: 'T1',
-      },
-    },
-  ],
-}
+const VALID_TEMPLATE_DOC = { type: 'doc', content: [{ type: 'paragraph', content: [] }] }
 
 test('GET /api/standard-templates returns 403 without grant', async () => {
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([]),
   })
 
   const res = await request(app).get('/api/standard-templates')
@@ -58,7 +41,7 @@ test('GET /api/standard-templates returns 200 with items', async () => {
           name: 'Plantilla A',
           code: 'PLANTILLA-A001',
           description: null,
-          status: 'draft',
+          status: 'inactive',
           updated_at: '2026-01-01T00:00:00.000Z',
         },
       ],
@@ -66,10 +49,7 @@ test('GET /api/standard-templates returns 200 with items', async () => {
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
     standardTemplatesService,
   })
 
@@ -89,10 +69,7 @@ test('GET /api/standard-templates passes trimmed search to service when q is pre
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
     standardTemplatesService,
   })
 
@@ -107,15 +84,12 @@ test('GET /api/standard-templates omits search when q is absent', async () => {
   const standardTemplatesService = {
     listStandardTemplates: async ({ search } = {}) => {
       receivedSearch = search
-      return { ok: true, items: [{ id: 't1', name: 'A', code: 'C', description: null, status: 'draft', updated_at: null }] }
+      return { ok: true, items: [{ id: 't1', name: 'A', code: 'C', description: null, status: 'inactive', updated_at: null }] }
     },
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
     standardTemplatesService,
   })
 
@@ -128,10 +102,7 @@ test('GET /api/standard-templates omits search when q is absent', async () => {
 test('POST /api/standard-templates returns 403 without create grant', async () => {
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
   })
 
   const res = await request(app).post('/api/standard-templates').send({
@@ -145,6 +116,7 @@ test('POST /api/standard-templates returns 201 when service succeeds', async () 
   const standardTemplatesService = {
     createStandardTemplate: async (input) => {
       assert.equal(input.code, 'PLANTILLA-A001')
+      assert.equal(input.supplier_type, 'empresa')
       assert.equal(input.actorUserProfileId, 'up1')
       return {
         ok: true,
@@ -153,7 +125,7 @@ test('POST /api/standard-templates returns 201 when service succeeds', async () 
           name: 'Plantilla',
           code: 'PLANTILLA-A001',
           description: null,
-          status: 'draft',
+          status: 'inactive',
           document_type_id: 'dt1',
           created_at: '2026-01-01T00:00:00.000Z',
           updated_at: '2026-01-01T00:00:00.000Z',
@@ -163,10 +135,7 @@ test('POST /api/standard-templates returns 201 when service succeeds', async () 
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_CREATE' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['create', 'Template']]),
     standardTemplatesService,
     userProfileIdResolver: async () => 'up1',
   })
@@ -174,21 +143,69 @@ test('POST /api/standard-templates returns 201 when service succeeds', async () 
   const res = await request(app).post('/api/standard-templates').send({
     name: 'Plantilla',
     code: 'PLANTILLA-A001',
-    content_json: DOC_WITH_EMBEDDED,
-    status: 'draft',
+    supplier_type: 'empresa',
+    content_json: VALID_TEMPLATE_DOC,
+    status: 'inactive',
   })
   assert.equal(res.statusCode, 201)
   assert.equal(res.body?.data?.id, 't-new')
+})
+
+test('POST /api/standard-templates returns 400 when supplier_type is missing', async () => {
+  const standardTemplatesService = { createStandardTemplate: async () => ({ ok: true, template: {} }) }
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['create', 'Template']]),
+    standardTemplatesService,
+    userProfileIdResolver: async () => 'up1',
+  })
+
+  const res = await request(app).post('/api/standard-templates').send({
+    name: 'Plantilla',
+    code: 'PLANTILLA-A001',
+    content_json: VALID_TEMPLATE_DOC,
+  })
+  assert.equal(res.statusCode, 400)
+  assert.equal(res.body?.error?.code, 'TEMPLATE_INVALID_SUPPLIER_TYPE')
+})
+
+test('GET /api/standard-templates passes supplier_type filter to service', async () => {
+  let receivedSupplierType
+  const standardTemplatesService = {
+    listStandardTemplates: async ({ supplier_type } = {}) => {
+      receivedSupplierType = supplier_type
+      return { ok: true, items: [{ id: 't1', name: 'A', code: 'C', supplier_type: 'persona_natural', description: null, status: 'inactive', updated_at: null }] }
+    },
+  }
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
+    standardTemplatesService,
+  })
+
+  const res = await request(app).get('/api/standard-templates').query({ supplier_type: 'persona_natural' })
+  assert.equal(res.statusCode, 200)
+  assert.equal(receivedSupplierType, 'persona_natural')
+  assert.equal(res.body?.data?.items?.[0]?.supplier_type, 'persona_natural')
+})
+
+test('GET /api/standard-templates returns 400 for invalid supplier_type', async () => {
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
+    standardTemplatesService: { listStandardTemplates: async () => ({ ok: true, items: [] }) },
+  })
+
+  const res = await request(app).get('/api/standard-templates').query({ supplier_type: 'invalid' })
+  assert.equal(res.statusCode, 400)
+  assert.equal(res.body?.error?.code, 'TEMPLATE_INVALID_SUPPLIER_TYPE')
 })
 
 test('POST /api/standard-templates returns 400 when code is missing', async () => {
   const standardTemplatesService = { createStandardTemplate: async () => ({ ok: true, template: {} }) }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_CREATE' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['create', 'Template']]),
     standardTemplatesService,
     userProfileIdResolver: async () => 'up1',
   })
@@ -214,10 +231,7 @@ test('POST /api/standard-templates returns 409 when code is duplicated', async (
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_CREATE' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['create', 'Template']]),
     standardTemplatesService,
     userProfileIdResolver: async () => 'up1',
   })
@@ -225,40 +239,11 @@ test('POST /api/standard-templates returns 409 when code is duplicated', async (
   const res = await request(app).post('/api/standard-templates').send({
     name: 'Plantilla',
     code: 'DUP',
+    supplier_type: 'empresa',
     content_json: VALID_TEMPLATE_DOC,
   })
   assert.equal(res.statusCode, 409)
   assert.equal(res.body?.error?.code, 'TEMPLATE_CODE_NOT_UNIQUE')
-})
-
-test('POST /api/standard-templates returns 400 when embedded clauses invalid', async () => {
-  const standardTemplatesService = {
-    createStandardTemplate: async () => ({
-      ok: false,
-      error: {
-        type: 'invalid_clauses',
-        code: 'TEMPLATE_INVALID_EMBEDDED_CLAUSE',
-        message: 'Una o más cláusulas incrustadas no existen o no son universales.',
-      },
-    }),
-  }
-  const app = createApp({
-    requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_CREATE' }],
-    }),
-    standardTemplatesService,
-    userProfileIdResolver: async () => 'up1',
-  })
-
-  const res = await request(app).post('/api/standard-templates').send({
-    name: 'Plantilla',
-    code: 'PLANT-X',
-    content_json: DOC_WITH_EMBEDDED,
-  })
-  assert.equal(res.statusCode, 400)
-  assert.equal(res.body?.error?.code, 'TEMPLATE_INVALID_EMBEDDED_CLAUSE')
 })
 
 test('GET /api/standard-templates returns 401 without auth', async () => {
@@ -273,10 +258,7 @@ const TEMPLATE_ID = '11111111-1111-4111-8111-111111111111'
 test('GET /api/standard-templates/:id returns 403 without read grant', async () => {
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([]),
   })
 
   const res = await request(app).get(`/api/standard-templates/${TEMPLATE_ID}`)
@@ -289,10 +271,7 @@ test('GET /api/standard-templates/:id returns 404 when not found', async () => {
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
     standardTemplatesService,
   })
 
@@ -310,7 +289,7 @@ test('GET /api/standard-templates/:id returns 200 with template body', async () 
         name: 'P',
         code: 'PLANTILLA-A001',
         description: null,
-        status: 'draft',
+        status: 'inactive',
         document_type_id: 'dt1',
         content_json: VALID_TEMPLATE_DOC,
         created_at: '2026-01-01T00:00:00.000Z',
@@ -320,10 +299,7 @@ test('GET /api/standard-templates/:id returns 200 with template body', async () 
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
     standardTemplatesService,
   })
 
@@ -336,10 +312,7 @@ test('GET /api/standard-templates/:id returns 200 with template body', async () 
 test('PUT /api/standard-templates/:id returns 403 without edit grant', async () => {
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_READ' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Template']]),
   })
 
   const res = await request(app).put(`/api/standard-templates/${TEMPLATE_ID}`).send({
@@ -349,41 +322,12 @@ test('PUT /api/standard-templates/:id returns 403 without edit grant', async () 
   assert.equal(res.statusCode, 403)
 })
 
-test('PUT /api/standard-templates/:id returns 400 when embedded clauses invalid', async () => {
-  const standardTemplatesService = {
-    updateStandardTemplate: async () => ({
-      ok: false,
-      error: {
-        type: 'invalid_clauses',
-        code: 'TEMPLATE_INVALID_EMBEDDED_CLAUSE',
-        message: 'Una o más cláusulas incrustadas no existen o no son universales.',
-      },
-    }),
-  }
-  const app = createApp({
-    requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_EDIT' }],
-    }),
-    standardTemplatesService,
-    userProfileIdResolver: async () => 'up1',
-  })
-
-  const res = await request(app).put(`/api/standard-templates/${TEMPLATE_ID}`).send({
-    name: 'Plantilla',
-    code: 'PLANTILLA-A001',
-    content_json: DOC_WITH_EMBEDDED,
-  })
-  assert.equal(res.statusCode, 400)
-  assert.equal(res.body?.error?.code, 'TEMPLATE_INVALID_EMBEDDED_CLAUSE')
-})
-
 test('PUT /api/standard-templates/:id returns 200 when service succeeds', async () => {
   const standardTemplatesService = {
     updateStandardTemplate: async (id, input) => {
       assert.equal(id, TEMPLATE_ID)
       assert.equal(input.code, 'PLANTILLA-A001')
+      assert.equal(input.supplier_type, 'persona_natural')
       assert.equal(input.actorUserProfileId, 'up1')
       return {
         ok: true,
@@ -392,7 +336,7 @@ test('PUT /api/standard-templates/:id returns 200 when service succeeds', async 
           name: 'Plantilla',
           code: 'PLANTILLA-A001',
           description: null,
-          status: 'draft',
+          status: 'inactive',
           document_type_id: 'dt1',
           content_json: VALID_TEMPLATE_DOC,
           created_at: '2026-01-01T00:00:00.000Z',
@@ -403,10 +347,7 @@ test('PUT /api/standard-templates/:id returns 200 when service succeeds', async 
   }
   const app = createApp({
     requireAuth: authOk,
-    effectiveNavigationResolver: async () => ({
-      profile: { id: 'p1', code: 'ADMINISTRADOR_PLATAFORMA', label: 'Admin' },
-      rows: [{ code: 'NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_EDIT' }],
-    }),
+    attachAbilityMiddleware: attachAbilityWithRules([['update', 'Template']]),
     standardTemplatesService,
     userProfileIdResolver: async () => 'up1',
   })
@@ -414,8 +355,9 @@ test('PUT /api/standard-templates/:id returns 200 when service succeeds', async 
   const res = await request(app).put(`/api/standard-templates/${TEMPLATE_ID}`).send({
     name: 'Plantilla',
     code: 'PLANTILLA-A001',
+    supplier_type: 'persona_natural',
     content_json: VALID_TEMPLATE_DOC,
-    status: 'draft',
+    status: 'inactive',
   })
   assert.equal(res.statusCode, 200)
   assert.equal(res.body?.data?.id, TEMPLATE_ID)

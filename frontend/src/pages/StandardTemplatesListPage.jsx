@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useAbility } from '@casl/react'
 import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { ListSearchField } from '../components/ListSearchField'
 import { fetchStandardTemplatesList } from '../api/standardTemplatesApi'
-import { selectSession, selectEnrichedNavigation } from '../store/authSlice'
-import { buildGrantedCodeSetFromSession } from '../navigation/authorizationSelectors'
+import { AbilityContext } from '../lib/ability'
 import { formatLastChangeDate } from '../utils/lastChangeDate'
 import { listRowLastEditorLabel } from '../utils/auditMetadataDisplay'
-import { mapClauseStatusToSpanish } from '../utils/clauseStatus'
-import './ClauseForm.css'
+import { mapTemplateStatusToSpanish } from '../utils/templateStatus'
+import { SupplierTypeChip } from '../components/SupplierTypeChip'
+import '../styles/shared-form.css'
 
 function truncate(s, max = 80) {
   if (!s || typeof s !== 'string') return '—'
@@ -20,18 +20,10 @@ function truncate(s, max = 80) {
 
 export function StandardTemplatesListPage() {
   const navigate = useNavigate()
-  const session = useSelector(selectSession)
-  const navigation = useSelector(selectEnrichedNavigation)
-  const accessToken = session?.access_token ?? null
+  const ability = useAbility(AbilityContext)
 
-  const canEditTemplates = useMemo(
-    () => buildGrantedCodeSetFromSession(navigation).has('NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_EDIT'),
-    [navigation]
-  )
-  const canCreateTemplates = useMemo(
-    () => buildGrantedCodeSetFromSession(navigation).has('NAV_ACTION_CONTRATOS_TEMPLATES_ESTANDAR_CREATE'),
-    [navigation]
-  )
+  const canEditTemplates = ability.can('update', 'Template')
+  const canCreateTemplates = ability.can('create', 'Template')
 
   const [q, setQ] = useState('')
   const [items, setItems] = useState([])
@@ -45,6 +37,7 @@ export function StandardTemplatesListPage() {
       { key: 'code', label: 'Código', sortable: true },
       { key: 'name', label: 'Nombre', sortable: true },
       { key: 'description', label: 'Descripción', sortable: true },
+      { key: 'supplier_type', label: 'Tipo de proveedor', sortable: true },
       { key: 'status', label: 'Estado', sortable: true },
       { key: 'last_editor', label: 'Último editor', sortable: true },
       { key: 'updated_at', label: 'Último cambio', sortable: true },
@@ -63,7 +56,10 @@ export function StandardTemplatesListPage() {
       if (!row || typeof row !== 'object') return ''
       if (key === 'last_editor') return normStr(listRowLastEditorLabel(row))
       if (key === 'description') return normStr(row.description)
-      if (key === 'status') return normStr(mapClauseStatusToSpanish(row.status))
+      if (key === 'supplier_type') {
+        return row.supplier_type === 'empresa' ? 'Empresa' : 'Persona Natural'
+      }
+      if (key === 'status') return normStr(mapTemplateStatusToSpanish(row.status))
       if (key === 'updated_at') return row.updated_at ? new Date(row.updated_at).getTime() : 0
       return normStr(row[key])
     }
@@ -107,14 +103,9 @@ export function StandardTemplatesListPage() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!accessToken) {
-        setLoading(false)
-        setItems([])
-        return
-      }
       setLoading(true)
       setError(null)
-      const res = await fetchStandardTemplatesList({ accessToken, q })
+      const res = await fetchStandardTemplatesList({ q })
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -129,7 +120,7 @@ export function StandardTemplatesListPage() {
     return () => {
       active = false
     }
-  }, [accessToken, q])
+  }, [])
 
   const listToolbar = useMemo(
     () => (
@@ -142,8 +133,8 @@ export function StandardTemplatesListPage() {
           onChange={(e) => setQ(e.target.value)}
         />
         {canCreateTemplates ? (
-          <button type="button" className="clause-button" onClick={() => navigate('nueva')}>
-            Nuevo template
+          <button type="button" className="btn" onClick={() => navigate('nueva')}>
+            Nueva plantilla
           </button>
         ) : null}
       </>
@@ -197,7 +188,7 @@ export function StandardTemplatesListPage() {
               <tbody>
                 {sortedItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="clause-list-empty">
+                    <td colSpan={8} className="clause-list-empty">
                       {q.trim()
                         ? 'No hay plantillas que coincidan con la búsqueda.'
                         : 'No hay plantillas estándar registradas.'}
@@ -209,7 +200,10 @@ export function StandardTemplatesListPage() {
                       <td>{row.code ?? '—'}</td>
                       <td>{row.name ?? '—'}</td>
                       <td>{truncate(row.description, 100)}</td>
-                      <td>{mapClauseStatusToSpanish(row.status)}</td>
+                      <td>
+                        <SupplierTypeChip supplierType={row.supplier_type} />
+                      </td>
+                      <td>{mapTemplateStatusToSpanish(row.status)}</td>
                       <td>{listRowLastEditorLabel(row)}</td>
                       <td>{formatLastChangeDate(row.updated_at)}</td>
                       <td className="clause-list-col-actions">

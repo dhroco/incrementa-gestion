@@ -1,0 +1,107 @@
+.social-network-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-network-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.social-network-selector-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #E3E6E8;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.social-network-selector-card--selected {
+  border-color: #657A8A;
+  background: #F7F8F9;
+}
+
+.social-network-selector-card-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: center;
+}
+
+.social-network-selector-card-toggle:hover {
+  opacity: 0.85;
+}
+
+.social-network-selector-card:not(.social-network-selector-card--selected) .social-network-selector-icon {
+  filter: grayscale(1) opacity(0.4);
+}
+
+.social-network-selector-card--selected .social-network-selector-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.social-network-selector-card-name {
+  line-height: 1.2;
+}
+
+.social-network-selector-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.social-network-selector-handle-input {
+  width: 100%;
+  font-size: 13px;
+}
+
+.social-network-selector-readonly {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.social-network-selector-readonly-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #E3E6E8;
+  border-radius: 8px;
+  background: #FFFFFF;
+  font-size: 13px;
+}
+
+.social-network-selector-readonly-name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.social-network-selector-readonly-handle {
+  color: #5a6370;
+}
+
+.social-network-selector-readonly-handle::before {
+  content: '·';
+  margin-right: 8px;
+  color: #C8CDD2;
+}

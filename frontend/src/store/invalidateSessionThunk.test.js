@@ -1,26 +1,36 @@
-import { describe, expect, it, vi } from 'vitest'
-
-vi.mock('../auth/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signOut: vi.fn(async () => ({ error: null }))
-    }
-  }
-}))
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import { invalidateSessionThunk } from './authSlice'
 
-describe('invalidateSessionThunk', () => {
-  it('dispatches sessionUpdated(null) and sets global message', async () => {
-    const dispatch = vi.fn()
-    const getState = () => ({ auth: { session: { access_token: 't' } } })
+vi.mock('../auth/msalInstance', () => ({
+  msalInstance: {
+    logoutRedirect: vi.fn(async () => undefined)
+  }
+}))
 
-    // @ts-ignore - minimal thunkAPI
+describe('invalidateSessionThunk', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('dispatches sign out flow and sets global message', async () => {
+    const dispatch = vi.fn((action) => {
+      if (typeof action === 'function') {
+        return action(dispatch, getState, undefined)
+      }
+      return action
+    })
+    const getState = () => ({
+      auth: {
+        user: { id: 'u1', email: 'a@b.cl' },
+        initialized: true
+      }
+    })
+
     await invalidateSessionThunk({ reason: 'unauthorized' })(dispatch, getState, undefined)
 
     const dispatchedTypes = dispatch.mock.calls.map((c) => c?.[0]?.type).filter(Boolean)
-    expect(dispatchedTypes).toContain('auth/sessionUpdated')
     expect(dispatchedTypes).toContain('auth/setAuthGlobalMessage')
+    expect(dispatchedTypes).toContain('auth/signOut/pending')
   })
 })
-

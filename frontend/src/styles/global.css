@@ -3,11 +3,87 @@
 /* Import CSS Variables */
 @import './variables.css';
 
+/* Nunito Sans */
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-SemiBoldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../assets/fonts/NunitoSans_10pt-ExtraBoldItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* Global Reset and Base Styles */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 html {
@@ -58,25 +134,51 @@ body {
 
 /* Button Base Styles */
 .btn {
-  background: var(--color-selection);
-  color: var(--color-text-light);
-  border: none;
-  padding: 4px 10px;
+  background: #FFFFFF;
+  color: #1a1a1a;
+  border: 1px solid #C8CDD2;
+  padding: 4px 14px;
   cursor: pointer;
-  border-radius: var(--border-radius-small);
+  border-radius: 9999px;
   font-size: var(--font-size-base);
   font-family: var(--font-family-base);
-  transition: opacity 0.2s ease;
+  width: fit-content;
+  transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
 }
 
-.btn:hover {
-  opacity: 0.92;
+.btn:hover:not(:disabled) {
+  background: #F5F6F7;
+}
+
+.btn:active:not(:disabled) {
+  background: #D9DBE0;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(1px);
+}
+
+.btn.btn--danger {
+  color: #b42318;
+  border-color: #b42318;
+}
+
+.btn.btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.btn.btn--danger:active:not(:disabled) {
+  background: #fecaca;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Card Base Styles */
 .card {
   background: var(--color-cards);
   border: 1px solid var(--color-border-card);
+  border-radius: var(--border-radius-card);
   padding: var(--spacing-card);
   box-shadow: none;
 }

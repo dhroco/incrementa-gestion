@@ -33,30 +33,6 @@ function createCompanyController({ companyService }) {
       const result = await companyService.updateCompany({ userId, companyId, payload: req.body })
       if (!result.ok) return sendError(res, { status: result.status, code: result.code, message: result.message })
       return sendOk(res, result.data)
-    },
-
-    getAccountantsCatalog: async (req, res) => {
-      const userId = req?.auth?.userId
-      const result = await companyService.listAccountantsCatalog({ userId })
-      if (!result.ok) return sendError(res, { status: result.status, code: result.code, message: result.message })
-      return sendOk(res, result.data)
-    },
-
-    getCompanyAccountants: async (req, res) => {
-      const userId = req?.auth?.userId
-      const companyId = req?.params?.id
-      const result = await companyService.getCompanyAccountants({ userId, companyId })
-      if (!result.ok) return sendError(res, { status: result.status, code: result.code, message: result.message })
-      return sendOk(res, result.data)
-    },
-
-    putCompanyAccountants: async (req, res) => {
-      const userId = req?.auth?.userId
-      const companyId = req?.params?.id
-      const accountantIds = req?.body?.accountant_ids ?? req?.body?.accountantIds ?? []
-      const result = await companyService.setCompanyAccountants({ userId, companyId, accountantIds })
-      if (!result.ok) return sendError(res, { status: result.status, code: result.code, message: result.message })
-      return sendOk(res, result.data)
     }
   }
 }

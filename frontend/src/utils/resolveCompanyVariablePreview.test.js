@@ -13,10 +13,7 @@ describe('resolveCompanyVariablePreview', () => {
     region: 'RM',
     name_legal_representative_1: 'Ana Pérez',
     rut_body_legal_representative_1: '12345678',
-    rut_dv_legal_representative_1: '5',
-    branches: [
-      { name: 'Sucursal Norte', address: 'Calle 2', commune: 'Colina', city: 'Colina', region: 'RM', email: 'n@x.cl', phone: '1', sort_order: 0 }
-    ]
+    rut_dv_legal_representative_1: '5'
   }
 
   it('resolves legal name and RUT', () => {
@@ -32,15 +29,5 @@ describe('resolveCompanyVariablePreview', () => {
     expect(resolveCompanyVariablePreview('company_address', base)).toBe('Av. Central 1')
     expect(resolveCompanyVariablePreview('company_commune', base)).toBe('Providencia')
     expect(resolveCompanyVariablePreview('company_region', base)).toBe('RM')
-  })
-
-  it('formats branches block', () => {
-    const t = resolveCompanyVariablePreview('company_branches', base)
-    expect(t).toContain('Sucursal Norte')
-    expect(t).toContain('n@x.cl')
-  })
-
-  it('returns empty branches when none', () => {
-    expect(resolveCompanyVariablePreview('company_branches', { ...base, branches: [] })).toBe('')
   })
 })

@@ -1,45 +1,50 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { fetchEnrichedSessionThunk, sessionUpdated, setInitialized } from '../store/authSlice'
-import { supabase } from './supabaseClient'
+import { msalInstance } from './msalInstance'
+import { msalUserFromAccount } from './msalToken'
+import { fetchEnrichedSessionThunk, setInitialized, setMsalUser } from '../store/authSlice'
+import { AuthLoadingScreen } from '../routes/AuthLoadingScreen'
 
 /**
- * Loads initial session and subscribes to Supabase auth state changes.
+ * Handles MSAL redirect return, active account selection, and enriched session bootstrap.
  */
-export function AuthInitializer() {
+export function AuthInitializer({ children }) {
   const dispatch = useDispatch()
+  const [bootstrapped, setBootstrapped] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    let subscription = null
 
-    ;(async () => {
-      const {
-        data: { session }
-      } = await supabase.auth.getSession()
-      if (cancelled) return
-      dispatch(sessionUpdated(session))
-      dispatch(setInitialized(true))
-      if (session?.access_token) {
-        dispatch(fetchEnrichedSessionThunk())
+    async function bootstrap() {
+      await msalInstance.initialize()
+      const response = await msalInstance.handleRedirectPromise()
+      const account = response?.account ?? msalInstance.getAllAccounts()[0] ?? null
+      if (account) {
+        msalInstance.setActiveAccount(account)
+        dispatch(setMsalUser(msalUserFromAccount(account)))
+        await dispatch(fetchEnrichedSessionThunk())
       }
+      dispatch(setInitialized(true))
+      if (!cancelled) {
+        setBootstrapped(true)
+      }
+    }
 
-      const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-        if (!cancelled) {
-          dispatch(sessionUpdated(nextSession))
-          if (nextSession?.access_token) {
-            dispatch(fetchEnrichedSessionThunk())
-          }
-        }
-      })
-      subscription = data.subscription
-    })()
+    bootstrap().catch(() => {
+      dispatch(setInitialized(true))
+      if (!cancelled) {
+        setBootstrapped(true)
+      }
+    })
 
     return () => {
       cancelled = true
-      subscription?.unsubscribe()
     }
   }, [dispatch])
 
-  return null
+  if (!bootstrapped) {
+    return <AuthLoadingScreen />
+  }
+
+  return children
 }
