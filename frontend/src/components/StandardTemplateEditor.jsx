@@ -103,7 +103,7 @@ export function StandardTemplateEditor({ mode, templateId }) {
   const defaultAuthorLabel = auditPersonLabel(profile?.label, null)
   const defaultUpdatedAtLabel = formatAuditDateTime(new Date())
 
-  /** Evita recargar desde el servidor al refrescar el token OIDC (SessionKeepAlive). */
+  /** Evita recargar desde el servidor al renovar el token MSAL en segundo plano. */
   const loadedTemplateIdRef = useRef(null)
   const [savedSnapshot, setSavedSnapshot] = useState(null)
 

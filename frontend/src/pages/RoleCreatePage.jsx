@@ -27,7 +27,7 @@ export function RoleCreatePage() {
 
   const canSubmit = useMemo(() => {
     return isNonEmptyString(label) && isNonEmptyString(code)
-  }, [])
+  }, [label, code])
 
   async function onSubmit() {
     if (!canSubmit) return

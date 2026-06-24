@@ -6,7 +6,7 @@ import { PLATFORM_USERS_LIST_PATH } from '../navigation/platformPaths'
 import '../styles/shared-form.css'
 
 const IDP_NOT_FOUND_MSG =
-  'Este email no está registrado en el servidor de autenticación. El administrador debe crear el usuario en Keycloak primero.'
+  'Este email no está registrado en el directorio de Microsoft Entra. El administrador debe crear el usuario en el tenant primero.'
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
@@ -53,7 +53,7 @@ export function PlatformUserCreatePage() {
 
   const canSubmit = useMemo(() => {
     return isValidEmail(email) && isNonEmptyString(profileCode)
-  }, [])
+  }, [email, profileCode])
 
   async function onSubmit() {
     if (!canSubmit) return

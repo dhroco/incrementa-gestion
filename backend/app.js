@@ -28,7 +28,6 @@ const { createDocumentBuilderService } = require('./services/documentBuilderServ
 const { gcsService } = require('./services/gcsService')
 const { createDocumentBuilderController } = require('./controllers/documentBuilderController')
 const { buildPackedRulesForUser } = require('./services/abilityService')
-const { createAuthController } = require('./controllers/authController')
 const { createMeController, createAvatarUploadRouteHandler } = require('./controllers/meController')
 const { createRolesController } = require('./controllers/rolesController')
 const rolesServiceDefault = require('./services/rolesService')
@@ -87,11 +86,6 @@ function createApp({
       timestamp: new Date().toISOString()
     })
   })
-
-  const authController = createAuthController()
-  app.post('/api/auth/login', authController.postLogin)
-  app.post('/api/auth/refresh', authController.postRefresh)
-  app.post('/api/auth/logout', requireAuth, authController.postLogout)
 
   const effectiveResolveInternalIdentity =
     resolveInternalIdentityMiddleware ??

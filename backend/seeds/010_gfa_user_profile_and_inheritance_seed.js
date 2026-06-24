@@ -1,7 +1,6 @@
 /**
  * Seed de perfiles y asignación de usuarios de prueba.
- * Los user_id corresponden a los UUID (claim "sub") de los usuarios creados en Keycloak
- * realm "incrementa". Ver infra/keycloak/README.md para instrucciones de inicio de Keycloak.
+ * Los user_id corresponden a los UUID (claim "sub") de usuarios en Microsoft Entra.
  *
  * Usuarios de prueba:
  *   admin@incrementa.la      → ADMINISTRADOR_PLATAFORMA  (d91840bb-206c-4cc0-8de3-2ca93e361524)

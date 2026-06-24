@@ -1,8 +1,5 @@
-# platform-users-admin Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change simplify-platform-users. Update Purpose after archive.
-## Requirements
 ### Requirement: Platform user create accepts minimal payload
 
 `POST /api/platform/users` (via `createPlatformUser`) SHALL accept only `email`, `profile_code`, and optional `is_active` (default `true`). It SHALL NOT require nor persist `full_name`, `phone`, `rut`, `rut_body`, or `rut_dv` from the request body. Validation errors SHALL be returned in Spanish (es-CL).
@@ -18,7 +15,7 @@ TBD - created by archiving change simplify-platform-users. Update Purpose after 
 - **WHEN** `email` or `profile_code` is missing or invalid
 - **THEN** the API returns HTTP **400** with code `VALIDATION_ERROR` and Spanish messages
 
-### Requirement: full_name populated from Entra on create
+### Requirement: full_name populated from Keycloak on create
 
 On successful Entra directory lookup during create via Microsoft Graph, `user_profile.full_name` SHALL be set from the `fullName` returned by `findUserByEmail` (Graph `displayName`). If `displayName` is empty or missing, `full_name` SHALL fall back to the normalized email.
 
@@ -53,30 +50,6 @@ On successful Entra directory lookup during create via Microsoft Graph, `user_pr
 - **WHEN** admin submits `{ full_name: "Otro Nombre" }` in the update payload
 - **THEN** `full_name` in the database is not modified
 
-### Requirement: Platform user API responses exclude phone and RUT
-
-List and detail endpoints for platform users SHALL NOT include `phone`, `rut_body`, or `rut_dv` in response bodies. They MAY include `full_name` as read-only display data. Search/filter on list SHALL NOT query `phone`.
-
-#### Scenario: User detail response shape
-
-- **WHEN** admin fetches a platform user by id
-- **THEN** the response includes `email`, `full_name`, `profile_code`, `is_active`, and identifiers
-- **AND** does not include `phone`, `rut_body`, or `rut_dv`
-
-### Requirement: Drop personal columns from user_profile
-
-A Knex migration SHALL remove columns `phone`, `rut_body`, and `rut_dv` from `user_profile`. Each `DROP COLUMN` SHALL be guarded with `hasColumn` for idempotency. The migration `down` SHALL recreate the three columns as nullable.
-
-#### Scenario: Migration up on existing schema
-
-- **WHEN** `knex migrate:latest` runs and the columns exist
-- **THEN** `phone`, `rut_body`, and `rut_dv` are dropped from `user_profile`
-
-#### Scenario: Migration down restores nullable columns
-
-- **WHEN** `knex migrate:rollback` runs after the up migration
-- **THEN** `phone`, `rut_body`, and `rut_dv` exist again as nullable columns
-
 ### Requirement: Platform users admin UI minimal forms
 
 The platform user admin UI SHALL reflect the minimal access-registration model.
@@ -91,7 +64,7 @@ The platform user admin UI SHALL reflect the minimal access-registration model.
 
 - **WHEN** admin opens the edit platform user page
 - **THEN** the form allows editing Rol and Activo only
-- **AND** does not show an editable Email field
+- **AND** displays Email as read-only (non-editable field or static text using readonly form styling)
 - **AND** does not show editable nombre, teléfono, or RUT fields
 
 #### Scenario: List and view without phone and RUT
@@ -100,3 +73,7 @@ The platform user admin UI SHALL reflect the minimal access-registration model.
 - **THEN** teléfono and RUT are not displayed
 - **AND** nombre may appear as read-only informational text on detail (not editable)
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: full_name populated from Keycloak on create`
+- TO: `### Requirement: full_name populated from Entra on create`

@@ -56,13 +56,14 @@ test('GET /api/platform/users returns 403 when missing grant', async () => {
   assert.equal(res.body?.status, 'forbidden')
 })
 
-test('POST /api/platform/users returns 422 when user not in Keycloak', async () => {
+test('POST /api/platform/users returns 422 when user not in Entra tenant', async () => {
   const platformUsersService = {
     createPlatformUser: async () => ({
       ok: false,
       status: 422,
       code: 'IDP_USER_NOT_FOUND',
-      message: 'El usuario con ese email no existe en el servidor de autenticación. Créalo primero en Keycloak.'
+      message:
+        'El usuario con ese email no existe en el directorio de Microsoft Entra. Créalo primero en el tenant.'
     })
   }
   const app = createApp({

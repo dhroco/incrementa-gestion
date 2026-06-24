@@ -32,7 +32,7 @@ export function PlatformUserEditPage() {
 
   const canSubmit = useMemo(() => {
     return isValidEmail(email) && isNonEmptyString(profileCode)
-  }, [])
+  }, [email, profileCode])
 
   useEffect(() => {
     let active = true

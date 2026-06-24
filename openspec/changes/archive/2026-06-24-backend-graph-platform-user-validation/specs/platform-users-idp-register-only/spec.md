@@ -1,9 +1,6 @@
-# platform-users-idp-register-only Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change platform-users-idp-register-only. Update Purpose after archive.
-## Requirements
-### Requirement: Platform user creation links pre-existing Entra identity
+### Requirement: Platform user creation links pre-existing Keycloak identity
 
 `backend/services/platformUsersAdminService.js` function `createPlatformUser` SHALL validate payload (`email`, `profile_code`, optional `is_active`). It SHALL call `findUserByEmail(normalizedEmail)` on the Microsoft Graph client (`getGraphClient()`). If no user id is returned, it SHALL fail with HTTP **422** and a Spanish (es-CL) message stating that the user does not exist in the Microsoft Entra directory and must be created in the tenant first. If a `user_profile` row already exists for that email or Graph user `id`, it SHALL fail with HTTP **409** and a Spanish message that the user is already registered. On success it SHALL `INSERT` into `user_profile` using the Graph user `id` (oid) as `user_id`. It SHALL NOT call Keycloak admin APIs, `createUser`, `deleteUser`, `resetUserPassword`, or `generateTempPassword`. The API response SHALL NOT include a temporary password.
 
@@ -32,15 +29,6 @@ TBD - created by archiving change platform-users-idp-register-only. Update Purpo
 - **THEN** the API responds with HTTP **503** and code `ADMIN_CLIENT_UNAVAILABLE`
 - **AND** the message is distinct from the "user not found" case
 
-### Requirement: Database migration removes must_change_password
-
-A Knex migration named with current timestamp prefix `drop_must_change_password` SHALL execute `ALTER TABLE user_profile DROP COLUMN must_change_password` in `up`. The `down` migration MAY re-add the column as boolean default `false` for rollback only.
-
-#### Scenario: Schema after migrate latest
-
-- **WHEN** `knex migrate:latest` completes on a database that had `must_change_password`
-- **THEN** `user_profile` has no column `must_change_password`
-
 ### Requirement: Platform user create UI has no password flow
 
 `frontend/src/pages/PlatformUserCreatePage.jsx` SHALL NOT display fields, copy, or success states related to temporary passwords. On successful create it SHALL show a success toast and navigate to the platform users list. When the API returns the Entra-not-found error, the form SHALL show a Spanish message indicating the email is not registered in the authentication directory and must be created in Microsoft Entra first.
@@ -56,18 +44,3 @@ A Knex migration named with current timestamp prefix `drop_must_change_password`
 - **WHEN** the API returns HTTP **422** for IdP user not found
 - **THEN** the form displays the Spanish Entra-first message
 - **AND** no temporary password UI is shown
-
-### Requirement: No application-managed mandatory password change
-
-The system SHALL NOT expose `PUT /api/me/password`, `POST /api/me/password-rotation-complete`, `MandatoryPasswordChangePage`, or router guards that redirect based on `mustChangePassword`. Password changes SHALL be performed only in Keycloak.
-
-#### Scenario: Password endpoints removed
-
-- **WHEN** a client calls `PUT /api/me/password` or `POST /api/me/password-rotation-complete`
-- **THEN** the response is HTTP **404** (route not registered)
-
-#### Scenario: Authenticated user accesses app without password gate
-
-- **WHEN** a user with a valid session and `is_active` profile loads `/app/*`
-- **THEN** no redirect occurs to a mandatory password change route
-

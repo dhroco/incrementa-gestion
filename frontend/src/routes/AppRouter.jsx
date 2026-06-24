@@ -3,11 +3,9 @@ import { AppShellLayout } from '../layout/AppShellLayout'
 import { ShellProvider } from '../layout/ShellProvider'
 import { DashboardPage } from '../pages/DashboardPage'
 import { AccessDeniedPage } from '../pages/AccessDeniedPage'
-import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { LoginPage } from '../pages/LoginPage'
 import { NoProfilePage } from '../pages/NoProfilePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
-import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { CompaniesCreateForm, CompaniesCreatePage } from '../pages/CompaniesCreatePage'
 import { CompaniesEditForm, CompaniesEditPage } from '../pages/CompaniesEditPage'
 import { CompaniesListPage } from '../pages/CompaniesListPage'
@@ -61,8 +59,6 @@ export function AppRouter() {
           </GuestOnlyRoute>
         }
       />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/sin-perfil" element={<NoProfilePage />} />
         <Route element={<PrivateAppGate />}>

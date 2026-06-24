@@ -1,8 +1,5 @@
-# frontend-backend-auth-session Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change replace-frontend-supabase-auth. Update Purpose after archive.
-## Requirements
 ### Requirement: Auth state shape and selectors remain stable at the Redux boundary
 
 The frontend auth slice SHALL expose the same top-level enriched state fields and selector functions used by the application (`initialized`, `user`, enriched profile fields, `enrichedIsActive`, and existing enriched `select*` exports) except that `enrichedNavigation` and `mustChangePassword` SHALL remain removed. CASL rules SHALL NOT be stored in Redux; they SHALL live in the frontend ability singleton. The Redux `session` object SHALL NOT be the source of truth for API access tokens or authentication status; MSAL SHALL hold token cache and account state. Redux MAY retain a minimal `user` object `{ id, email }` derived from enriched session or MSAL account claims for display compatibility. `selectIsAuthenticated` SHALL NOT be used as the primary authentication guard; route guards SHALL use MSAL authentication state instead.
@@ -18,18 +15,6 @@ The frontend auth slice SHALL expose the same top-level enriched state fields an
 - **WHEN** `RequireAuth` evaluates whether to allow access
 - **THEN** it uses MSAL authenticated account state
 - **AND** does not require `state.auth.session.accessToken` to be present
-
-### Requirement: signOutThunk clears client session
-
-`signOutThunk` SHALL initiate MSAL `logoutRedirect` as best-effort, then clear Redux enriched auth state including enriched fields. It SHALL reset the ability singleton with `ability.update([])`. It SHALL NOT call `POST /api/auth/logout` or depend on Redux-stored refresh tokens.
-
-#### Scenario: Logout from header menu
-
-- **WHEN** the user chooses "Salir"
-- **THEN** MSAL logout redirect is triggered
-- **AND** Redux enriched state is cleared
-- **AND** the ability singleton has no rules
-- **AND** navigation eventually returns to `/login` after Microsoft logout completes
 
 ### Requirement: fetchEnrichedSessionThunk uses backend session endpoint
 
@@ -47,15 +32,27 @@ The frontend auth slice SHALL expose the same top-level enriched state fields an
 - **WHEN** `GET /api/me/session` returns **403** for an inactive platform user
 - **THEN** Redux enrichment status reflects user inactive (not `accountant_inactive`)
 
+### Requirement: signOutThunk clears client session
+
+`signOutThunk` SHALL initiate MSAL `logoutRedirect` as best-effort, then clear Redux enriched auth state including enriched fields. It SHALL reset the ability singleton with `ability.update([])`. It SHALL NOT call `POST /api/auth/logout` or depend on Redux-stored refresh tokens.
+
+#### Scenario: Logout from header menu
+
+- **WHEN** the user chooses "Salir"
+- **THEN** MSAL logout redirect is triggered
+- **AND** Redux enriched state is cleared
+- **AND** the ability singleton has no rules
+- **AND** navigation eventually returns to `/login` after Microsoft logout completes
+
 ### Requirement: AuthInitializer has no Supabase dependency
 
-`AuthInitializer` SHALL await `msalInstance.handleRedirectPromise()`, set the active MSAL account when applicable, dispatch `fetchEnrichedSessionThunk` when an authenticated account exists, and then set `initialized` to **true**. It SHALL NOT dispatch `initAuthThunk` or read legacy `incrementa.*` localStorage token keys. It SHALL NOT import `tokenStorage.js`.
+`AuthInitializer` SHALL await `msalInstance.handleRedirectPromise()`, set the active MSAL account when applicable, dispatch `fetchEnrichedSessionThunk` when an authenticated account exists, and then set `initialized` to **true**. It SHALL NOT dispatch `initAuthThunk` or read `incrementa.*` localStorage token keys.
 
 #### Scenario: Application mount
 
 - **WHEN** the React tree mounts `AuthInitializer`
 - **THEN** redirect promise handling completes before `initialized` becomes true
-- **AND** no import from `tokenStorage.js` or `jwtUtils.js` occurs in the bootstrap path
+- **AND** no import from `tokenStorage.js` occurs in the bootstrap path
 
 #### Scenario: Cold start without prior login
 
@@ -71,15 +68,6 @@ The frontend auth slice SHALL expose the same top-level enriched state fields an
 
 - **WHEN** `apiGet('/api/...')` runs with an active MSAL account
 - **THEN** the request includes `Authorization: Bearer <accessToken>` from MSAL silent acquisition
-
-### Requirement: Supabase auth client removed from frontend
-
-The file `frontend/src/auth/supabaseClient.js` SHALL be deleted. No production frontend module SHALL import `@supabase/supabase-js` for end-user authentication. Frontend configuration SHALL NOT require `supabaseUrl` or `supabaseAnonKey` for auth.
-
-#### Scenario: Codebase search after migration
-
-- **WHEN** searching `frontend/src` for `supabaseClient` or `supabase.auth`
-- **THEN** no auth-related imports remain (excluding unrelated backend documentation)
 
 ### Requirement: invalidateSessionThunk equivalent to sign out
 
@@ -111,3 +99,46 @@ The frontend auth slice SHALL store `avatarUrl`, `contactEmail`, and `widgetPref
 - **WHEN** `signOutThunk` completes or session is cleared
 - **THEN** `avatarUrl`, `contactEmail`, and `widgetPreferences` are reset to null
 
+## REMOVED Requirements
+
+### Requirement: Token persistence in localStorage
+
+**Reason**: Access and refresh tokens are managed by MSAL cache (`localStorage` under MSAL keys), not custom `incrementa.*` keys.
+
+**Migration**: Remove reads/writes of `incrementa.access_token`, `incrementa.refresh_token`, and `incrementa.expires_at` from auth bootstrap and thunks. Token lifecycle is handled by MSAL `acquireTokenSilent` / `acquireTokenRedirect`.
+
+### Requirement: initAuthThunk bootstraps application auth
+
+**Reason**: Replaced by MSAL redirect handling and account restoration in `AuthInitializer`.
+
+**Migration**: Delete `initAuthThunk`; bootstrap via `handleRedirectPromise()` and active account selection.
+
+### Requirement: signInWithPasswordThunk uses backend login
+
+**Reason**: Login moves to Microsoft Entra ID; ROPC against `/api/auth/login` is no longer used in the UI.
+
+**Migration**: Users authenticate via "Continuar con Microsoft". Backend ROPC endpoints remain until stage 5.5 cleanup.
+
+### Requirement: refreshSessionThunk renews tokens via backend
+
+**Reason**: Token renewal is handled by MSAL silent/redirect acquisition, not `/api/auth/refresh`.
+
+**Migration**: Remove `refreshSessionThunk`; `apiClient` renews via `acquireApiAccessToken()` on **401**.
+
+### Requirement: SessionKeepAlive schedules proactive token refresh
+
+**Reason**: MSAL acquires fresh tokens on demand; Redux no longer stores `expiresAt` for scheduling.
+
+**Migration**: Do not mount `SessionKeepAlive` in authenticated routes. Component may remain until stage 5.5 cleanup.
+
+### Requirement: SessionKeepAlive mounted for authenticated routes
+
+**Reason**: Proactive ROPC refresh timer is obsolete with MSAL on-demand renewal.
+
+**Migration**: Remove `<SessionKeepAlive />` from `RequireAuth.jsx`.
+
+### Requirement: Reactive 401 refresh remains unchanged
+
+**Reason**: The previous behavior dispatched `refreshSessionThunk` against the backend; MSAL replaces this path.
+
+**Migration**: On **401**, `apiClient` SHALL attempt one `acquireApiAccessToken()` retry; on `InteractionRequiredAuthError`, trigger `acquireTokenRedirect`; otherwise dispatch sign-out or surface unauthorized handling consistent with `signOutThunk`.

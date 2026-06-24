@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Elimina un usuario de aplicación con perfil ADMINISTRADOR_PLATAFORMA (Postgres + Keycloak).
+ * Elimina un usuario de aplicación con perfil ADMINISTRADOR_PLATAFORMA (solo Postgres).
+ * No modifica identidades en Microsoft Entra; gestionar el tenant aparte si corresponde.
  *
  * Uso (desde el directorio `backend`):
  *   node scripts/delete-app-user.js --email=admin@ejemplo.cl --dry-run
- *   CONFIRM_DELETE_APP_USER=YES node scripts/delete-app-user.js --user-id=<uuid-keycloak>
+ *   CONFIRM_DELETE_APP_USER=YES node scripts/delete-app-user.js --user-id=<uuid-entra-oid>
  */
 
 const { db } = require('../db/knex')
 const { normalizeAuthEmail } = require('../lib/normalizeAuthEmail')
-const { getKeycloakAdminClient } = require('../lib/keycloakAdminClient')
 
 const ALLOWED_PROFILE_CODES = new Set(['ADMINISTRADOR_PLATAFORMA'])
 
@@ -38,20 +38,31 @@ function isUuid(s) {
   )
 }
 
-async function loadAppUserContext(knex, keycloakUserId) {
-  const row = await knex('user_profile as up')
+async function loadAppUserContext(knex, { userId, userProfileId, email }) {
+  let query = knex('user_profile as up')
     .join('profile as p', 'p.id', 'up.profile_id')
     .select(
       'up.id as user_profile_id',
-      'up.user_id as keycloak_user_id',
+      'up.user_id as entra_user_id',
+      'up.email as email',
       'p.code as profile_code',
       'p.label as profile_label'
     )
-    .where('up.user_id', keycloakUserId)
-    .first()
+
+  if (userProfileId) {
+    query = query.where('up.id', userProfileId)
+  } else if (userId) {
+    query = query.where('up.user_id', userId)
+  } else if (email) {
+    query = query.where('up.email', email)
+  } else {
+    return { ok: false, code: 'INVALID', message: 'Falta identificador de usuario.' }
+  }
+
+  const row = await query.first()
 
   if (!row) {
-    return { ok: false, code: 'NO_PROFILE', message: 'No existe user_profile para ese usuario de Keycloak.' }
+    return { ok: false, code: 'NO_PROFILE', message: 'No existe user_profile para ese usuario.' }
   }
 
   if (!ALLOWED_PROFILE_CODES.has(row.profile_code)) {
@@ -73,7 +84,7 @@ async function main() {
   const modes = [args.email, args.userId, args.userProfileId].filter(Boolean)
   if (modes.length !== 1) {
     console.error(
-      'Indica exactamente uno de: --email=... | --user-id=<uuid-keycloak> | --user-profile-id=<uuid-user_profile>'
+      'Indica exactamente uno de: --email=... | --user-id=<uuid-entra-oid> | --user-profile-id=<uuid-user_profile>'
     )
     process.exit(1)
   }
@@ -87,38 +98,21 @@ async function main() {
     process.exit(1)
   }
 
-  const kc = getKeycloakAdminClient()
-  if (!kc) {
-    console.error(
-      'Keycloak Admin no configurado (KEYCLOAK_ADMIN_URL, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_REALM).'
-    )
-    process.exit(1)
-  }
-
-  let keycloakUserId = args.userId
-
+  let lookup = {}
   if (args.email) {
     const norm = normalizeAuthEmail(args.email)
     if (!norm) {
       console.error('Email inválido o vacío.')
       process.exit(1)
     }
-    const found = await kc.findUserIdByEmail(norm)
-    if (!found?.id) {
-      console.error(`No hay usuario en Keycloak con correo: ${norm}`)
-      process.exit(1)
-    }
-    keycloakUserId = found.id
-  } else if (args.userProfileId) {
-    const up = await db('user_profile').select('user_id').where({ id: args.userProfileId }).first()
-    if (!up?.user_id) {
-      console.error('No existe user_profile con ese --user-profile-id.')
-      process.exit(1)
-    }
-    keycloakUserId = up.user_id
+    lookup = { email: norm }
+  } else if (args.userId) {
+    lookup = { userId: args.userId }
+  } else {
+    lookup = { userProfileId: args.userProfileId }
   }
 
-  const ctx = await loadAppUserContext(db, keycloakUserId)
+  const ctx = await loadAppUserContext(db, lookup)
   if (!ctx.ok) {
     console.error(ctx.message)
     process.exit(1)
@@ -127,7 +121,8 @@ async function main() {
   const d = ctx.data
   console.log('Objetivo:')
   console.log(`  perfil             = ${d.profile_code} (${d.profile_label ?? ''})`)
-  console.log(`  Keycloak user id   = ${d.keycloak_user_id}`)
+  console.log(`  Entra user id      = ${d.entra_user_id}`)
+  console.log(`  email              = ${d.email ?? ''}`)
   console.log(`  user_profile.id    = ${d.user_profile_id}`)
   if (args.dryRun) {
     console.log('\n[--dry-run] No se ejecutaron borrados.')
@@ -140,15 +135,13 @@ async function main() {
   }
 
   await db.transaction(async (trx) => {
-    const delUp = await trx('user_profile').where({ user_id: keycloakUserId }).del()
+    const delUp = await trx('user_profile').where({ id: d.user_profile_id }).del()
     if (delUp !== 1) {
       throw new Error(`Se esperaba borrar 1 user_profile, filas eliminadas: ${delUp}`)
     }
   })
 
-  await kc.deleteUser(keycloakUserId)
-
-  console.log('\nListo: usuario de aplicación eliminado (user_profile en cascada + usuario en Keycloak).')
+  console.log('\nListo: registro de aplicación eliminado (user_profile). La identidad en Microsoft Entra no fue modificada.')
   process.exit(0)
 }
 
