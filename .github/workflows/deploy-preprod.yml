@@ -1,0 +1,170 @@
+name: Deploy Pre-Prod
+
+on:
+  push:
+    branches: [preprod]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-preprod-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT: incrementa-gestion-dev
+  GCP_REGION: us-central1
+  AR_HOST: us-central1-docker.pkg.dev/incrementa-gestion-dev/incrementa
+  BACKEND_SERVICE: incrementa-backend
+  FRONTEND_SERVICE: incrementa-frontend
+  RUNTIME_SA: incrementa-run-sa@incrementa-gestion-dev.iam.gserviceaccount.com
+  WIF_PROVIDER: projects/1058943943576/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOYER_SA: incrementa-deploy-sa@incrementa-gestion-dev.iam.gserviceaccount.com
+  CLOUDSQL_INSTANCE: incrementa-gestion-dev:us-central1:incrementa-db
+  AZURE_TENANT_ID: 60322b4a-13bf-4f19-89ae-efe4a54ffed6
+  AZURE_CLIENT_ID: dc734f4a-5f25-4e88-b728-aab4715f2122
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- Setup ---
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Autenticar a GCP (WIF keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - name: Configurar gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Configurar Docker para Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      # --- (a) Build + push backend ---
+      - name: Build imagen backend
+        run: |
+          if ! docker build \
+            -t "${{ env.AR_HOST }}/backend:${{ github.sha }}" \
+            -t "${{ env.AR_HOST }}/backend:preprod" \
+            ./backend; then
+            echo "::error::Error al construir la imagen del backend. Revise los logs anteriores."
+            exit 1
+          fi
+
+      - name: Push imagen backend
+        run: |
+          if ! docker push "${{ env.AR_HOST }}/backend:${{ github.sha }}"; then
+            echo "::error::Error al publicar la imagen del backend en Artifact Registry."
+            exit 1
+          fi
+          if ! docker push "${{ env.AR_HOST }}/backend:preprod"; then
+            echo "::error::Error al publicar el tag preprod del backend en Artifact Registry."
+            exit 1
+          fi
+
+      # --- (b) Deploy backend (sin CORS_ORIGIN) ---
+      - name: Deploy backend a Cloud Run
+        run: |
+          gcloud run deploy "${{ env.BACKEND_SERVICE }}" \
+            --project "${{ env.GCP_PROJECT }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --image "${{ env.AR_HOST }}/backend:${{ github.sha }}" \
+            --service-account "${{ env.RUNTIME_SA }}" \
+            --add-cloudsql-instances "${{ env.CLOUDSQL_INSTANCE }}" \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,GRAPH_CLIENT_SECRET=GRAPH_CLIENT_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest" \
+            --set-env-vars "ENVIRONMENT=dev,OIDC_ISSUER_URL=https://login.microsoftonline.com/${{ env.AZURE_TENANT_ID }}/v2.0,OIDC_AUDIENCE=${{ env.AZURE_CLIENT_ID }},GRAPH_TENANT_ID=${{ env.AZURE_TENANT_ID }},GRAPH_CLIENT_ID=${{ env.AZURE_CLIENT_ID }},GCS_BUCKET=incrementa-contratos-dev,RESEND_FROM_EMAIL=onboarding@resend.dev" \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Obtener URL del backend
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe "${{ env.BACKEND_SERVICE }}" \
+            --project "${{ env.GCP_PROJECT }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --format='value(status.url)')
+          if [ -z "$URL" ]; then
+            echo "::error::No se pudo obtener la URL del backend desplegado."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Backend URL: $URL"
+
+      # --- (c) Build + push frontend ---
+      - name: Build imagen frontend
+        run: |
+          if ! docker build \
+            -t "${{ env.AR_HOST }}/frontend:${{ github.sha }}" \
+            -t "${{ env.AR_HOST }}/frontend:preprod" \
+            --build-arg "VITE_API_BASE_URL=${{ steps.backend-url.outputs.url }}" \
+            --build-arg "VITE_AZURE_CLIENT_ID=${{ env.AZURE_CLIENT_ID }}" \
+            --build-arg "VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/${{ env.AZURE_TENANT_ID }}" \
+            --build-arg "VITE_AZURE_API_SCOPE=api://${{ env.AZURE_CLIENT_ID }}/access_as_user" \
+            --build-arg "ENVIRONMENT=dev" \
+            ./frontend; then
+            echo "::error::Error al construir la imagen del frontend. Revise los logs anteriores."
+            exit 1
+          fi
+
+      - name: Push imagen frontend
+        run: |
+          if ! docker push "${{ env.AR_HOST }}/frontend:${{ github.sha }}"; then
+            echo "::error::Error al publicar la imagen del frontend en Artifact Registry."
+            exit 1
+          fi
+          if ! docker push "${{ env.AR_HOST }}/frontend:preprod"; then
+            echo "::error::Error al publicar el tag preprod del frontend en Artifact Registry."
+            exit 1
+          fi
+
+      # --- (d) Deploy frontend ---
+      - name: Deploy frontend a Cloud Run
+        run: |
+          gcloud run deploy "${{ env.FRONTEND_SERVICE }}" \
+            --project "${{ env.GCP_PROJECT }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --image "${{ env.AR_HOST }}/frontend:${{ github.sha }}" \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Obtener URL del frontend
+        id: frontend-url
+        run: |
+          URL=$(gcloud run services describe "${{ env.FRONTEND_SERVICE }}" \
+            --project "${{ env.GCP_PROJECT }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --format='value(status.url)')
+          if [ -z "$URL" ]; then
+            echo "::error::No se pudo obtener la URL del frontend desplegado."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Frontend URL: $URL"
+
+      # --- (e) Update CORS_ORIGIN en backend ---
+      - name: Actualizar CORS_ORIGIN del backend
+        run: |
+          gcloud run services update "${{ env.BACKEND_SERVICE }}" \
+            --project "${{ env.GCP_PROJECT }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --update-env-vars "CORS_ORIGIN=${{ steps.frontend-url.outputs.url }}" \
+            --quiet
+
+      - name: Resumen del despliegue
+        run: |
+          echo "Despliegue pre-prod completado exitosamente."
+          echo "Backend:  ${{ steps.backend-url.outputs.url }}"
+          echo "Frontend: ${{ steps.frontend-url.outputs.url }}"
+          echo "Imagen backend:  ${{ env.AR_HOST }}/backend:${{ github.sha }}"
+          echo "Imagen frontend: ${{ env.AR_HOST }}/frontend:${{ github.sha }}"

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arquitectura de Entornos — incrementa-gestion</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --local:#1f6feb; --localbg:#e7f0ff;
+    --cloud:#0a7d33; --cloudbg:#e6f6ec;
+    --ci:#8250df; --cibg:#f1e9ff;
+    --azure:#0b6bcb; --azurebg:#e3f0fb;
+    --ink:#1a1a1a; --muted:#5a6370; --border:#E3E6E8; --card:#fff;
+    --warn:#b42318; --warnbg:#fdecea;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+       margin:0;background:#f6f7f9;line-height:1.5;font-size:14px}
+  header{background:#000;color:#fff;padding:22px 32px}
+  header h1{margin:0;font-size:22px;letter-spacing:-.5px}
+  header p{margin:6px 0 0;color:#c9ccd1;font-size:13px}
+  main{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:10px;
+          padding:20px 24px;margin:18px 0}
+  h2{font-size:18px;margin:0 0 4px;border-left:4px solid #657A8A;padding-left:10px}
+  h3{font-size:15px;margin:18px 0 6px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:13px}
+  .mermaid{background:#fbfcfd;border:1px dashed var(--border);border-radius:8px;padding:14px;overflow-x:auto;text-align:center}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f2f4f6;font-weight:600}
+  code{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);
+        border-radius:999px;padding:4px 12px;font-size:12px;background:#fff}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:600}
+  .done{background:var(--cloudbg);color:var(--cloud)}
+  .pend{background:#fff4e5;color:#8a5a00}
+  .note{background:#f0f6ff;border:1px solid #cfe1ff;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px}
+  .warn{background:var(--warnbg);border:1px solid #f3c9c4;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px}
+  .toc{columns:2;font-size:13px}
+  .toc a{color:#1f6feb;text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  ul{margin:6px 0 6px 0;padding-left:20px}
+  .small{font-size:12px;color:var(--muted)}
+  .kbd{font-family:ui-monospace,Menlo,monospace;background:#111;color:#fff;border-radius:5px;padding:1px 7px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Arquitectura de Entornos — incrementa-gestion</h1>
+  <p>Sistema de Gestión de Contratos · Local (dev) · GCP Pre-Prod · CI/CD · Microsoft Entra ID &nbsp;|&nbsp; Documento generado durante la Etapa B (setup GCP)</p>
+</header>
+<main>
+
+  <section>
+    <h2>Cómo leer este documento</h2>
+    <p class="sub">Tres planos + un proveedor de identidad externo. Cada color = un entorno/zona. Las flechas muestran colaboración (quién llama a quién).</p>
+    <div class="legend">
+      <span class="chip"><span class="dot" style="background:var(--local)"></span> Entorno LOCAL (tu Mac)</span>
+      <span class="chip"><span class="dot" style="background:var(--cloud)"></span> GCP Pre-Prod (nube)</span>
+      <span class="chip"><span class="dot" style="background:var(--ci)"></span> CI/CD (GitHub Actions)</span>
+      <span class="chip"><span class="dot" style="background:var(--azure)"></span> Microsoft Entra ID (externo)</span>
+    </div>
+    <p style="margin-top:10px"><b>Convención de flechas:</b> línea continua = llamada directa / dependencia en runtime; línea punteada = identidad, credencial o carga de configuración.</p>
+    <div class="note"><b>Estado:</b> <span class="pill done">verde = ya construido</span> en esta sesión; <span class="pill pend">ámbar = pendiente</span> (B.5 WIF/Deployer SA, Etapa C workflow, Etapa D primer deploy). Los diagramas incluyen lo pendiente en tono atenuado para que veas el destino completo.</p>
+    <h3>Índice</h3>
+    <div class="toc">
+      <a href="#vista">1. Vista general (los 3 planos)</a><br/>
+      <a href="#local">2. Entorno LOCAL en detalle</a><br/>
+      <a href="#cloud">3. Entorno NUBE (Pre-Prod) en detalle</a><br/>
+      <a href="#cicd">4. CI/CD — flujo de despliegue</a><br/>
+      <a href="#auth">5. Flujo de autenticación (MSAL + identidad por email)</a><br/>
+      <a href="#apis">6. APIs de GCP habilitadas</a><br/>
+      <a href="#secrets">7. Secretos e identidades (Secret Manager + Service Accounts)</a><br/>
+      <a href="#env">8. Variables: local vs. nube (misma app, distinta fuente)</a><br/>
+      <a href="#ideas">9. Ideas clave para recordar</a>
+    </div>
+  </section>
+
+  <!-- 1. VISTA GENERAL -->
+  <section id="vista">
+    <h2>1. Vista general — los tres planos</h2>
+    <p class="sub">El mismo código de aplicación (un frontend React + un backend Express) corre en dos entornos. Un tercer plano (CI/CD) construye y despliega. Azure es el proveedor de identidad, compartido por ambos entornos.</p>
+    <div class="mermaid">
+flowchart TB
+  subgraph AZURE["☁️ Microsoft Entra ID · externo, compartido"]
+    ENTRA["App Registration<br/>client dc734f4a…<br/>OIDC (login) + Graph app-only"]
+  end
+
+  subgraph LOCAL["💻 Entorno LOCAL · tu Mac"]
+    direction TB
+    LFE["Frontend Vite<br/>localhost:5173"]
+    LBE["Backend Express<br/>localhost:3000"]
+    LPROXY["Cloud SQL Auth Proxy<br/>127.0.0.1:5432"]
+    LFE -->|"REST + JWT"| LBE
+    LBE --> LPROXY
+  end
+
+  subgraph CI["🐙 CI/CD · GitHub Actions"]
+    GHWF["Workflow deploy<br/>(push a rama preprod)"]
+  end
+
+  subgraph GCP["☁️ GCP Pre-Prod · proyecto incrementa-gestion-dev · us-central1"]
+    direction TB
+    CRFE["Cloud Run · frontend (nginx)"]
+    CRBE["Cloud Run · backend (Express)"]
+    AR["Artifact Registry<br/>us-central1/incrementa"]
+    SM["Secret Manager"]
+    SQL["Cloud SQL<br/>incrementa-db (PG16)"]
+    GCS["Cloud Storage<br/>incrementa-contratos-dev"]
+    RUNSA["Runtime SA<br/>incrementa-run-sa"]
+    WIF["Workload Identity Federation"]
+    DEPSA["Deployer SA"]
+    CRFE -->|"REST"| CRBE
+    CRBE -->|"socket /cloudsql"| SQL
+    CRBE -->|"lee secretos"| SM
+    CRBE -->|"ADC"| GCS
+    CRBE -.identidad.-> RUNSA
+    AR -->|"imagenes"| CRBE
+    AR -->|"imagenes"| CRFE
+  end
+
+  %% cross-zone
+  LFE -->|"login OIDC"| ENTRA
+  LBE -->|"valida JWT · Graph"| ENTRA
+  CRFE -->|"login OIDC"| ENTRA
+  CRBE -->|"valida JWT · Graph"| ENTRA
+  LPROXY --> SQL
+  LBE -.->|"firma URLs con key local"| GCS
+  GHWF -.->|"OIDC keyless"| WIF
+  WIF -.->|"impersona"| DEPSA
+  DEPSA -->|"build + push"| AR
+  DEPSA -->|"deploy"| CRBE
+  DEPSA -->|"deploy"| CRFE
+
+  classDef local fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef cloud fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef ci fill:#f1e9ff,stroke:#8250df,color:#3a1d66;
+  classDef az fill:#e3f0fb,stroke:#0b6bcb,color:#08375f;
+  classDef pend fill:#fff4e5,stroke:#c98a00,color:#5a3d00,stroke-dasharray:4 3;
+  class LFE,LBE,LPROXY local;
+  class CRFE,CRBE,AR,SM,SQL,GCS,RUNSA cloud;
+  class GHWF ci;
+  class ENTRA az;
+  class WIF,DEPSA pend;
+    </div>
+    <p class="small">Nota: <b>Cloud SQL</b> y <b>Cloud Storage</b> son los mismos servicios en ambos entornos (la BD es una sola). Lo que cambia es <b>cómo se conecta</b> cada entorno: local usa el <i>Auth Proxy</i> + key; la nube usa el <i>conector de socket</i> + identidad (ADC). Los nodos atenuados (<span class="pill pend">WIF, Deployer SA</span>) son B.5, aún por crear.</p>
+  </section>
+
+  <!-- 2. LOCAL -->
+  <section id="local">
+    <h2>2. Entorno LOCAL en detalle</h2>
+    <p class="sub">Todo corre en tu Mac. Los secretos y la config se cargan con <code>backend/set-env-local.sh</code> (fuera de git). La BD es la de la nube, alcanzada por un túnel seguro.</p>
+    <div class="mermaid">
+flowchart LR
+  subgraph MAC["💻 Tu Mac"]
+    direction TB
+    BROWSER["Navegador<br/>localhost:5173"]
+    VITE["Vite dev server<br/>React + Redux + MSAL"]
+    EXPRESS["Express<br/>localhost:3000<br/>Knex.js + pg"]
+    ENV["set-env-local.sh<br/><small>ENVIRONMENT, DATABASE_URL,<br/>OIDC_*, GRAPH_*, GCS_*, RESEND_*</small>"]
+    KEY["backend/secrets/<br/>gcs-service-account.json"]
+    PROXY["cloud-sql-proxy<br/>127.0.0.1:5432"]
+    ADC["ADC de usuario<br/>gcloud auth<br/>application-default login"]
+    BROWSER --> VITE
+    VITE -->|"REST + Bearer JWT"| EXPRESS
+    ENV -.carga env.-> EXPRESS
+    EXPRESS -->|"pg :5432"| PROXY
+    EXPRESS -.firma con key.-> KEY
+    PROXY -.autentica.-> ADC
+  end
+  ENTRA["Microsoft Entra ID<br/>login.microsoftonline.com"]
+  SQL["Cloud SQL · incrementa-db<br/>us-central1 (PG16)"]
+  GCS["Cloud Storage<br/>incrementa-contratos-dev"]
+  VITE -->|"Authorization Code + PKCE"| ENTRA
+  EXPRESS -->|"valida JWT (OIDC discovery)<br/>+ Graph app-only"| ENTRA
+  PROXY ==>|"túnel TLS"| SQL
+  KEY -.->|"URLs firmadas V4"| GCS
+
+  classDef local fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef cloud fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef az fill:#e3f0fb,stroke:#0b6bcb,color:#08375f;
+  class BROWSER,VITE,EXPRESS,ENV,KEY,PROXY,ADC local;
+  class SQL,GCS cloud;
+  class ENTRA az;
+    </div>
+    <h3>Qué hace cada pieza en local</h3>
+    <table>
+      <tr><th>Pieza</th><th>Rol</th></tr>
+      <tr><td><code>Vite (5173)</code></td><td>Sirve el frontend React con hot-reload. Hace el login con Microsoft (MSAL) y llama al backend con el JWT.</td></tr>
+      <tr><td><code>Express (3000)</code></td><td>API REST. Valida el JWT en cada request protegido, resuelve tu identidad interna por email y consulta la BD.</td></tr>
+      <tr><td><code>set-env-local.sh</code></td><td>Carga todas las variables de entorno (incluidos secretos) al proceso del backend. <b>No se versiona.</b> Reemplaza al viejo <code>.cmd</code> de Windows.</td></tr>
+      <tr><td><code>cloud-sql-proxy</code></td><td>Túnel local cifrado a la BD. Expone <code>127.0.0.1:5432</code> y autentica con tu identidad (ADC) — <b>no depende de tu IP pública</b>, por eso lo elegimos sobre autorizar IPs.</td></tr>
+      <tr><td><code>gcs-service-account.json</code></td><td>Llave de la SA <code>incrementa-gcs-sa</code>. En local se necesita para <b>firmar</b> URLs de GCS (el ADC de usuario no puede firmar). En la nube NO se usa.</td></tr>
+    </table>
+    <div class="warn"><b>Gotcha resuelto:</b> con el Auth Proxy el túnel ya va cifrado, así que en local <b>no</b> se usa <code>PGSSLMODE=require</code> (romper&iacute;a la conexión a <code>localhost</code>). Y la firma de avatares fallaba con ADC de usuario → se resolvió con la key de la service account.</div>
+  </section>
+
+  <!-- 3. CLOUD -->
+  <section id="cloud">
+    <h2>3. Entorno NUBE (Pre-Prod) en detalle</h2>
+    <p class="sub">Todo dentro de GCP, proyecto <code>incrementa-gestion-dev</code>, región <code>us-central1</code>. Sin llaves en disco: la identidad la da la <b>Runtime SA</b> (ADC). Los secretos viven en Secret Manager.</p>
+    <div class="mermaid">
+flowchart LR
+  USER["👤 Usuario final<br/>navegador"]
+  subgraph GCP["☁️ GCP · incrementa-gestion-dev · us-central1"]
+    direction TB
+    CRFE["Cloud Run · frontend<br/>nginx (SPA :8080)"]
+    CRBE["Cloud Run · backend<br/>Express (:8080)"]
+    RUNSA["Runtime SA<br/>incrementa-run-sa<br/><small>identidad del contenedor</small>"]
+    SM["Secret Manager<br/><small>DATABASE_URL · GRAPH_CLIENT_SECRET · RESEND_API_KEY</small>"]
+    SQL["Cloud SQL · incrementa-db<br/>PG16 · db-f1-micro"]
+    GCS["Cloud Storage<br/>incrementa-contratos-dev"]
+  end
+  ENTRA["Microsoft Entra ID"]
+  RESEND["Resend<br/>(email)"]
+
+  USER -->|"HTTPS"| CRFE
+  USER -->|"login OIDC"| ENTRA
+  CRFE -->|"REST + JWT"| CRBE
+  CRBE -->|"conector socket<br/>/cloudsql/…:incrementa-db"| SQL
+  CRBE -->|"lee (secretAccessor)"| SM
+  CRBE -->|"ADC · objectAdmin<br/>firma vía IAM signBlob"| GCS
+  CRBE -->|"valida JWT · Graph app-only"| ENTRA
+  CRBE -->|"envía correos"| RESEND
+  CRBE -.corre como.-> RUNSA
+  RUNSA -.permite firmar.-> GCS
+
+  classDef cloud fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef az fill:#e3f0fb,stroke:#0b6bcb,color:#08375f;
+  classDef ext fill:#f5f5f5,stroke:#999,color:#333;
+  class CRFE,CRBE,RUNSA,SM,SQL,GCS cloud;
+  class ENTRA az;
+  class USER,RESEND ext;
+    </div>
+    <div class="note"><b>Diferencia clave local ↔ nube:</b>
+      <ul>
+        <li><b>BD:</b> local = Auth Proxy (<code>127.0.0.1</code>); nube = conector de socket unix (<code>/cloudsql/…</code>). Ninguno usa la IP pública.</li>
+        <li><b>Secretos:</b> local = <code>set-env-local.sh</code>; nube = Secret Manager (inyectados por Cloud Run).</li>
+        <li><b>GCS / firma:</b> local = key JSON en disco; nube = identidad de la Runtime SA (ADC) firmando por <b>IAM signBlob</b> — por eso la SA tiene <code>tokenCreator</code> sobre sí misma.</li>
+        <li><b>Frontend:</b> local = Vite dev server; nube = build estático servido por nginx.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4. CI/CD -->
+  <section id="cicd">
+    <h2>4. CI/CD — flujo de despliegue <span class="pill pend">Etapa B.5 + C + D pendientes</span></h2>
+    <p class="sub">GitHub Actions se autentica a GCP <b>sin llaves</b> (Workload Identity Federation). Un push a la rama <code>preprod</code> dispara build de imágenes y deploy a Cloud Run.</p>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Dev as Desarrollador
+  participant GH as GitHub (rama preprod)
+  participant WF as GitHub Actions (workflow)
+  participant WIF as GCP Workload Identity Fed.
+  participant DSA as Deployer SA
+  participant AR as Artifact Registry
+  participant CR as Cloud Run (be + fe)
+  Dev->>GH: git push preprod
+  GH->>WF: dispara workflow
+  WF->>WIF: presenta token OIDC de GitHub
+  Note over WIF: Verifica atributo<br/>repository == owner/repo
+  WIF-->>WF: credencial de corta vida (impersona Deployer SA)
+  WF->>AR: docker build + push (backend y frontend)<br/>frontend con build-args VITE_*
+  WF->>CR: deploy backend<br/>(--add-cloudsql-instances, secretos de SM,<br/>runtime SA, env vars)
+  WF->>CR: deploy frontend (nginx)
+  CR->>AR: pull de imágenes
+  CR-->>Dev: URLs de servicio (be + fe)
+    </div>
+    <h3>Por qué WIF (keyless) y no una llave de SA</h3>
+    <ul>
+      <li>No hay que subir un JSON de service account a GitHub Secrets (nada que se filtre o rote).</li>
+      <li>La confianza se limita por <b>atributo</b>: solo <code>owner/repo</code> (y opcionalmente la rama) puede autenticarse.</li>
+      <li>Las credenciales que recibe el workflow son <b>efímeras</b> (minutos), no una llave permanente.</li>
+    </ul>
+    <div class="warn"><b>Pendiente para armar B.5:</b> falta el <code>owner/repo</code> de GitHub para crear el provider WIF y el binding. La <b>Deployer SA</b> tendrá <code>artifactregistry.writer</code>, <code>run.admin</code> y <code>iam.serviceAccountUser</code> (sobre la Runtime SA).</div>
+  </section>
+
+  <!-- 5. AUTH -->
+  <section id="auth">
+    <h2>5. Flujo de autenticación — MSAL + identidad interna por email</h2>
+    <p class="sub">Aplica igual en local y en la nube (cambian solo las URLs). El backend confía en el token de Entra ID, pero la identidad interna se resuelve por <b>email</b>, no por el <code>sub</code> del IdP.</p>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Usuario
+  participant FE as Frontend (MSAL)
+  participant AZ as Microsoft Entra ID
+  participant BE as Backend Express
+  participant DB as Cloud SQL (user_profile)
+  U->>FE: abre la app
+  FE->>AZ: Authorization Code + PKCE
+  AZ-->>FE: id_token + access_token (JWT)
+  FE->>BE: GET sesión  (Authorization: Bearer JWT)
+  BE->>AZ: valida firma/issuer/audience (OIDC discovery)
+  AZ-->>BE: token válido (claims: email, oid…)
+  BE->>DB: SELECT user_profile WHERE lower(email)=lower(claim.email)
+  DB-->>BE: perfil + is_active + avatar_gcs_path
+  BE->>BE: arma permisos (CASL) + firma URL de avatar
+  BE-->>FE: sesión enriquecida (perfil, permisos, avatarUrl)
+  FE-->>U: app cargada (menús según rol)
+    </div>
+    <div class="note"><b>Por qué identidad por email:</b> desacopla la app del <code>sub</code> del proveedor. Si mañana cambia el IdP (o el tenant del cliente en prod), el usuario sigue mapeando por su email mediante un índice único parcial sobre <code>LOWER(email)</code>. El alta de usuarios valida además que el email exista en el tenant vía <b>Microsoft Graph app-only</b>.</div>
+  </section>
+
+  <!-- 6. APIS -->
+  <section id="apis">
+    <h2>6. APIs de GCP habilitadas — para qué sirve cada una</h2>
+    <table>
+      <tr><th>API</th><th>¿Para qué la habilitamos?</th><th>Estado</th></tr>
+      <tr><td><code>sqladmin</code></td><td>Administrar Cloud SQL (la instancia <code>incrementa-db</code>).</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>storage</code></td><td>Cloud Storage: bucket <code>incrementa-contratos-dev</code> (avatares, documentos, dumps).</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>secretmanager</code></td><td>Guardar los secretos de runtime (DATABASE_URL, GRAPH_CLIENT_SECRET, RESEND_API_KEY).</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>run</code></td><td>Cloud Run: donde correrán los contenedores de backend y frontend.</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>artifactregistry</code></td><td>Registro Docker privado <code>us-central1/incrementa</code> para las imágenes.</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>iamcredentials</code></td><td>Emitir credenciales de corta vida / impersonación (base de WIF y del signBlob).</td><td><span class="pill done">on</span></td></tr>
+      <tr><td><code>sts</code></td><td>Security Token Service: canjea el token OIDC de GitHub por credenciales GCP (WIF).</td><td><span class="pill done">on</span></td></tr>
+    </table>
+  </section>
+
+  <!-- 7. SECRETS + IAM -->
+  <section id="secrets">
+    <h2>7. Secretos e identidades</h2>
+    <h3>Secretos en Secret Manager</h3>
+    <table>
+      <tr><th>Secreto</th><th>Contenido</th><th>Quién lo consume</th></tr>
+      <tr><td><code>DATABASE_URL</code></td><td>Cadena de conexión con <b>socket del conector</b> (<code>host=/cloudsql/…:incrementa-db</code>), sin IP ni SSL.</td><td>Backend en Cloud Run.</td></tr>
+      <tr><td><code>GRAPH_CLIENT_SECRET</code></td><td>Secreto del App Registration para Microsoft Graph app-only.</td><td>Backend (alta/validación de usuarios).</td></tr>
+      <tr><td><code>RESEND_API_KEY</code></td><td>API key de Resend para enviar correos.</td><td>Backend (email de contratos firmados).</td></tr>
+    </table>
+    <div class="warn"><b>Recordatorio de seguridad:</b> <code>GRAPH_CLIENT_SECRET</code> quedó expuesto en chat durante dev → <b>rotarlo antes de producción</b>. Para el tenant del cliente en prod: nuevo App Registration + secreto + consentimiento <code>User.Read.All</code>.</div>
+
+    <h3>Service Accounts (identidades de máquina)</h3>
+    <table>
+      <tr><th>Service Account</th><th>Uso</th><th>Roles</th></tr>
+      <tr><td><code>incrementa-gcs-sa</code></td><td>Firmar URLs de GCS en <b>local</b> (su key JSON está en <code>backend/secrets/</code>).</td><td>(acceso a Storage; solo local)</td></tr>
+      <tr><td><code>incrementa-run-sa</code><br/><span class="pill done">creada</span></td><td>Identidad de los contenedores de Cloud Run (<b>runtime</b>).</td><td>
+        <code>cloudsql.client</code> · <code>secretmanager.secretAccessor</code> · <code>storage.objectAdmin</code> (bucket) · <code>iam.serviceAccountTokenCreator</code> (sobre sí misma → firmar URLs)
+      </td></tr>
+      <tr><td><b>Deployer SA</b><br/><span class="pill pend">pendiente B.5</span></td><td>La que usa GitHub Actions para desplegar.</td><td>
+        <code>artifactregistry.writer</code> · <code>run.admin</code> · <code>iam.serviceAccountUser</code> (sobre la runtime SA)
+      </td></tr>
+    </table>
+    <div class="note"><b>Regla mental:</b> la <b>Runtime SA</b> es <i>quién es la app cuando corre</i>; la <b>Deployer SA</b> es <i>quién despliega la app</i>. Separarlas = menor privilegio (el pipeline no puede leer la BD; la app no puede desplegarse a sí misma).</div>
+  </section>
+
+  <!-- 8. ENV -->
+  <section id="env">
+    <h2>8. Variables: misma app, distinta fuente según entorno</h2>
+    <p class="sub">El código lee siempre de <code>process.env</code> / <code>config.js</code>. Lo que cambia es <b>quién</b> pone esas variables.</p>
+    <table>
+      <tr><th>Variable</th><th>En LOCAL</th><th>En NUBE (Cloud Run)</th></tr>
+      <tr><td><code>DATABASE_URL</code></td><td>Proxy <code>127.0.0.1:5432</code> (set-env-local.sh)</td><td>Socket del conector (Secret Manager)</td></tr>
+      <tr><td><code>PGSSLMODE</code></td><td><b>sin setear</b> (túnel ya cifrado)</td><td><b>sin setear</b> (socket local)</td></tr>
+      <tr><td><code>GOOGLE_APPLICATION_CREDENTIALS</code></td><td>ruta a la key JSON</td><td><b>NO se setea</b> (usa ADC de la runtime SA)</td></tr>
+      <tr><td><code>GRAPH_CLIENT_SECRET</code>, <code>RESEND_API_KEY</code></td><td>set-env-local.sh</td><td>Secret Manager</td></tr>
+      <tr><td><code>OIDC_*</code>, <code>GRAPH_TENANT_ID/CLIENT_ID</code></td><td>set-env-local.sh (o defaults de config.js)</td><td>env vars de Cloud Run</td></tr>
+      <tr><td><code>VITE_*</code> (frontend)</td><td>defaults hardcodeados en <code>msalConfig.js</code></td><td>build-args horneados por el CI (Vite build-time)</td></tr>
+      <tr><td><code>PORT</code></td><td>3000 (backend) / 5173 (vite)</td><td>8080 (lo inyecta Cloud Run)</td></tr>
+      <tr><td><code>CORS_ORIGIN</code></td><td><code>http://localhost:5173</code></td><td>URL del frontend en Cloud Run (Etapa D)</td></tr>
+    </table>
+    <div class="warn"><b>Recuerda:</b> Vite <b>hornea</b> las <code>VITE_*</code> en build-time → cambiar la URL del API en la nube requiere <b>rebuild</b> del frontend (por eso van como build-args en el pipeline).</div>
+  </section>
+
+  <!-- 9. IDEAS -->
+  <section id="ideas">
+    <h2>9. Ideas clave para recordar</h2>
+    <ul>
+      <li><b>Una sola BD.</b> Local y nube apuntan a la misma <code>incrementa-db</code> (us-central1). Cambia el método de conexión, no la base.</li>
+      <li><b>Sin llaves en la nube.</b> Runtime = ADC de la SA; deploy = WIF keyless. Las únicas llaves en disco están en <b>local</b> (proxy + GCS key), fuera de git.</li>
+      <li><b>Secretos por entorno.</b> Local: <code>set-env-local.sh</code>. Nube: Secret Manager. Nunca en el repo.</li>
+      <li><b>Firmar URLs necesita una identidad que pueda firmar.</b> Local con key; nube con <code>tokenCreator</code> (IAM signBlob). El ADC de usuario no firma.</li>
+      <li><b>Identidad por email</b> desacopla del IdP → migrar de tenant/proveedor no rompe los usuarios.</li>
+      <li><b>Dos identidades de máquina</b> con roles mínimos: runtime (correr) vs deployer (desplegar).</li>
+    </ul>
+    <p class="small">Documento vivo — refleja el estado al momento de la Etapa B (setup GCP), a la espera del <code>owner/repo</code> de GitHub para B.5. Los identificadores mostrados no son secretos; los <b>valores</b> de secretos no aparecen aquí.</p>
+  </section>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis' }, securityLevel: 'loose' });
+</script>
+</body>
+</html>

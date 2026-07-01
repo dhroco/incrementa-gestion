@@ -47,8 +47,9 @@ bower_components/
 .env.test.local
 .env.production.local
 
-# Local scripts with secrets (do not commit)
-backend/SET_VARS_AMBIENTE_LOCAL.cmd
+# Local scripts with secrets (do not commit) — match in any directory
+SET_VARS_AMBIENTE_LOCAL.cmd
+set-env-local.sh
 
 # GCP credentials (never commit)
 backend/secrets/
