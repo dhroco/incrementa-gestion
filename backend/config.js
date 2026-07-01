@@ -41,7 +41,7 @@ const config = {
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
     LOG_LEVEL: 'info',
-    CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://dev.dlrt4e5spibmy.amplifyapp.com'
+    CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://incrementa-frontend-7yl7vz6hyq-uc.a.run.app'
   },
   prod: {
     PORT: process.env.PORT || 3000,

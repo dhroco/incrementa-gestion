@@ -186,61 +186,48 @@ Verificar que `ENVIRONMENT` sea uno de: `local`, `dev`, `prod`
 
 ## ☁️ Arquitectura Cloud y CI/CD
 
-El proyecto está desplegado en AWS con infraestructura automatizada y pipeline de CI/CD.
+El proyecto se despliega en **Google Cloud Platform (GCP)** con CI/CD automatizado y autenticación keyless.
 
-### Infraestructura AWS
+### Infraestructura GCP
 
 **Componentes:**
-- **ECS Fargate**: Contenedores serverless para el backend
-- **ECR**: Registro privado de imágenes Docker
-- **Application Load Balancer (ALB)**: Distribución de tráfico HTTP
-- **VPC**: Red virtual con subnets públicas
-- **CloudWatch Logs**: Monitoreo y logs centralizados
+- **Cloud Run**: contenedores serverless para backend (Express) y frontend (nginx)
+- **Cloud SQL**: PostgreSQL 16 (`incrementa-db`)
+- **Cloud Storage**: bucket de documentos y avatares
+- **Artifact Registry**: registro privado de imágenes Docker
+- **Secret Manager**: secretos de runtime (`DATABASE_URL`, `GRAPH_CLIENT_SECRET`, `RESEND_API_KEY`)
 
 **Ambientes:**
-- **Dev**: 1 task, recursos mínimos (256 CPU, 512 MB RAM)
-- **Prod**: 2 tasks, alta disponibilidad (512 CPU, 1024 MB RAM)
+- **Pre-Prod**: proyecto `incrementa-gestion-dev`, región `us-central1`
+- **Producción**: en la nube del **cliente** (proyecto GCP y tenant Entra ID propios) — ver manuales en `docs/`
 
 ### Pipeline CI/CD (GitHub Actions)
 
 **Flujo automatizado:**
-1. Push a `develop` → Despliega a `dev`
-2. Push a `main` → Despliega a `prod`
+1. Push a `preprod` → despliega a **Pre-Prod**
+2. Push a `prod` → despliega a **Producción** (cuando se configure el workflow de prod)
 
-**Proceso:**
-- Build de imagen Docker
-- Push a Amazon ECR
-- Actualización de task definition
-- Despliegue a ECS con zero-downtime
+**Proceso** (`.github/workflows/deploy-preprod.yml`):
+- Autenticación keyless con **Workload Identity Federation** (sin llaves JSON)
+- Build + push de imágenes a Artifact Registry
+- Deploy de backend y frontend a Cloud Run (backend con conector Cloud SQL y secretos desde Secret Manager)
 
-### Despliegue
+### Despliegue y documentación
 
-Ver documentación completa en [`infra/README.md`](infra/README.md)
-
-**Quick start:**
-```bash
-# Desplegar infraestructura
-./infra/scripts/deploy-stack.sh dev
-
-# Ver outputs del stack
-aws cloudformation describe-stacks --stack-name gfa-contratos-dev-infra --query 'Stacks[0].Outputs'
-```
-
-**Secretos requeridos en GitHub:**
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
+- Detalle de infraestructura: [`infra/README.md`](infra/README.md)
+- Arquitectura de entornos: [`docs/arquitectura-entornos.html`](docs/arquitectura-entornos.html)
+- Manuales de producción (cliente): [`docs/manual-prod-azure-entra-id.html`](docs/manual-prod-azure-entra-id.html) y [`docs/manual-prod-gcp.html`](docs/manual-prod-gcp.html)
 
 ### Monitoreo
 
-**CloudWatch Logs:**
+**Logs de Cloud Run:**
 ```bash
-aws logs tail /ecs/gfa-contratos-dev-backend --follow
+gcloud run services logs read incrementa-backend --region us-central1 --project incrementa-gestion-dev --limit 50
 ```
 
 **Health check:**
 ```bash
-curl http://<ALB_DNS>/health
+curl https://<CLOUD_RUN_BACKEND_URL>/health
 ```
 
 ## 📋 Próximos Pasos

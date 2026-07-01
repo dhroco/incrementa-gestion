@@ -6,7 +6,7 @@
  *   admin@incrementa.la      → ADMINISTRADOR_PLATAFORMA  (d91840bb-206c-4cc0-8de3-2ca93e361524)
  */
 
-const KEYCLOAK_USERS = [
+const SEED_USERS = [
   { email: 'admin@incrementa.la', userId: 'd91840bb-206c-4cc0-8de3-2ca93e361524', profileCode: 'ADMINISTRADOR_PLATAFORMA' }
 ]
 
@@ -19,7 +19,7 @@ exports.seed = async function seed(knex) {
   const profileRows = await knex('profile').select('id', 'code')
   const byCode = new Map(profileRows.map((r) => [r.code, r.id]))
 
-  for (const { userId, profileCode } of KEYCLOAK_USERS) {
+  for (const { userId, profileCode } of SEED_USERS) {
     const profileId = byCode.get(profileCode)
     if (!profileId) throw new Error(`Profile not found: ${profileCode}`)
 

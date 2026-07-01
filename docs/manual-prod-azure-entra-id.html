@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual de configuración — Microsoft Entra ID (Producción) · incrementa-gestion</title>
+<style>
+  :root{
+    --azure:#0b6bcb; --azurebg:#e3f0fb; --ink:#1a1a1a; --muted:#5a6370;
+    --border:#d7dbe0; --card:#fff; --warn:#b42318; --warnbg:#fdecea;
+    --ok:#0a7d33; --okbg:#e6f6ec; --ph:#8a5a00; --phbg:#fff4e5;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+       margin:0;background:#f6f7f9;line-height:1.55;font-size:14px}
+  header{background:var(--azure);color:#fff;padding:24px 34px}
+  header h1{margin:0;font-size:22px}
+  header p{margin:6px 0 0;color:#dbeaf8;font-size:13px}
+  main{max-width:1000px;margin:0 auto;padding:22px 20px 90px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 26px;margin:16px 0}
+  h2{font-size:18px;margin:0 0 6px;border-left:4px solid var(--azure);padding-left:10px}
+  h3{font-size:15px;margin:18px 0 6px}
+  .sub{color:var(--muted);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;font-weight:600}
+  code{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1720;color:#e6edf3;padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+  .ph{background:var(--phbg);color:var(--ph);border:1px solid #f0d8a8;border-radius:4px;padding:0 5px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}
+  .note{background:var(--azurebg);border:1px solid #bcdcf5;border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px}
+  .warn{background:var(--warnbg);border:1px solid #f3c9c4;border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px}
+  .ok{background:var(--okbg);border:1px solid #b6e2c3;border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px}
+  ol{margin:6px 0 6px 0;padding-left:22px}
+  ol li{margin:6px 0}
+  ul{margin:6px 0;padding-left:20px}
+  .step{counter-reset:none}
+  .chk{list-style:none;padding-left:0}
+  .chk li{margin:6px 0}
+  .chk input{margin-right:8px;transform:translateY(1px)}
+  .toc a{color:var(--azure);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .small{font-size:12px;color:var(--muted)}
+  .tag{display:inline-block;background:var(--azure);color:#fff;border-radius:999px;padding:1px 10px;font-size:11px;font-weight:600}
+  @media print{
+    body{background:#fff;font-size:12px}
+    header{background:#fff;color:#000;border-bottom:2px solid #000;padding:10px 0}
+    header p{color:#333}
+    section{border:none;padding:6px 0;margin:8px 0;break-inside:avoid}
+    pre{background:#f4f4f4;color:#000;border:1px solid #ccc}
+    .note,.ok,.warn{border:1px solid #999}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Manual de configuración · Microsoft Entra ID — Producción</h1>
+  <p>Sistema <b>incrementa-gestion</b> · Para el <b>administrador del tenant Entra ID del cliente</b> · Autenticación OIDC (login) + Microsoft Graph (validación de usuarios)</p>
+</header>
+<main>
+
+  <section>
+    <h2>0. Propósito y a quién va dirigido</h2>
+    <p class="sub">Este manual describe, paso a paso, cómo dejar operativa la identidad del sistema <b>incrementa-gestion</b> en el tenant de <b>Microsoft Entra ID del cliente</b>, para el ambiente de <b>producción</b>.</p>
+    <p>Lo ejecuta un <b>administrador con permisos suficientes</b> en el tenant (rol <b>Administrador de aplicaciones</b> o <b>Administrador global</b>; se requiere poder <b>conceder consentimiento de administrador</b>). Al terminar, entregará al equipo de desarrollo un conjunto de <b>valores</b> (sección 8) que se cargarán en GCP.</p>
+    <div class="note"><b>Relación con el manual de GCP:</b> el <span class="tag">CLIENT_SECRET</span> y los IDs que se generan aquí se cargan luego en GCP (Secret Manager y variables de entorno de Cloud Run). El <b>redirect URI</b> del frontend (paso 4) solo se conoce <b>después</b> del primer despliegue en GCP, así que ese paso se completa al final, coordinado con el manual de GCP.</p>
+    <h3>Índice</h3>
+    <div class="toc">
+      1. <a href="#pre">Prerrequisitos</a> ·
+      2. <a href="#ph">Valores del cliente (a completar)</a> ·
+      3. <a href="#app">Crear App Registration</a> ·
+      4. <a href="#api">Exponer API (scope access_as_user)</a> ·
+      5. <a href="#graph">Permiso Graph + consentimiento</a> ·
+      6. <a href="#secret">Secreto de cliente</a> ·
+      7. <a href="#spa">Redirect URI (SPA)</a> ·
+      8. <a href="#deliver">Valores a entregar</a> ·
+      9. <a href="#verify">Verificación</a> ·
+      10. <a href="#sec">Seguridad</a>
+    </div>
+  </section>
+
+  <section id="pre">
+    <h2>1. Prerrequisitos</h2>
+    <ul>
+      <li>Acceso al <a href="https://portal.azure.com">portal.azure.com</a> con un rol que permita crear App Registrations y <b>conceder consentimiento de administrador</b> (Administrador de aplicaciones o Administrador global).</li>
+      <li>Conocer el <b>dominio principal</b> del tenant del cliente (ej. <code>cliente.onmicrosoft.com</code> o su dominio corporativo).</li>
+      <li>Un <b>usuario de prueba</b> real dentro del tenant para validar el login al final.</li>
+    </ul>
+  </section>
+
+  <section id="ph">
+    <h2>2. Valores del cliente (complete a medida que avanza)</h2>
+    <p class="sub">Anote aquí los valores propios del cliente. Los <span class="ph">&lt;EN_NARANJA&gt;</span> son placeholders que se reemplazan por el valor real.</p>
+    <table>
+      <tr><th>Valor</th><th>Cómo se obtiene</th><th>Anotar aquí</th></tr>
+      <tr><td><b>Directory (tenant) ID</b></td><td>Se ve en la App Registration (paso 3) o en Entra ID → Overview.</td><td><span class="ph">&lt;TENANT_ID&gt;</span></td></tr>
+      <tr><td><b>Dominio principal</b></td><td>Entra ID → Overview → Primary domain.</td><td><span class="ph">&lt;PRIMARY_DOMAIN&gt;</span></td></tr>
+      <tr><td><b>Application (client) ID</b></td><td>Se genera al crear la App Registration (paso 3).</td><td><span class="ph">&lt;CLIENT_ID&gt;</span></td></tr>
+      <tr><td><b>Client secret</b></td><td>Se genera en el paso 6 (se muestra una sola vez).</td><td><span class="ph">&lt;CLIENT_SECRET&gt;</span></td></tr>
+      <tr><td><b>URL del frontend (prod)</b></td><td>La entrega el equipo de GCP tras el primer deploy (paso 7).</td><td><span class="ph">&lt;FRONTEND_URL&gt;</span></td></tr>
+    </table>
+  </section>
+
+  <section id="app">
+    <h2>3. Crear la App Registration</h2>
+    <ol>
+      <li>Portal Azure → <b>Microsoft Entra ID</b> → <b>App registrations</b> → <b>+ New registration</b>.</li>
+      <li><b>Name:</b> <code>incrementa-gestion-prod</code> (o el nombre que defina el cliente).</li>
+      <li><b>Supported account types:</b> seleccione <b>Accounts in this organizational directory only</b> (single-tenant). El sistema es para usuarios del tenant del cliente.</li>
+      <li><b>Redirect URI:</b> déjelo <b>vacío</b> por ahora (se configura en el paso 7).</li>
+      <li><b>Register</b>.</li>
+      <li>En la pantalla <b>Overview</b> de la app, copie y anote en la tabla del paso 2:
+        <ul>
+          <li><b>Application (client) ID</b> → <span class="ph">&lt;CLIENT_ID&gt;</span></li>
+          <li><b>Directory (tenant) ID</b> → <span class="ph">&lt;TENANT_ID&gt;</span></li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <section id="api">
+    <h2>4. Exponer una API — scope <code>access_as_user</code></h2>
+    <p class="sub">El frontend solicita un token para esta API; el backend valida ese token. Necesitamos definir el <b>Application ID URI</b> y un <b>scope</b>.</p>
+    <ol>
+      <li>En la app → menú <b>Expose an API</b>.</li>
+      <li><b>Application ID URI:</b> pulse <b>Add</b> / <b>Set</b> y acepte el valor por defecto <code>api://&lt;CLIENT_ID&gt;</code>. Anótelo como <span class="ph">&lt;API_APP_ID_URI&gt;</span>.</li>
+      <li><b>+ Add a scope:</b>
+        <ul>
+          <li><b>Scope name:</b> <code>access_as_user</code></li>
+          <li><b>Who can consent:</b> <b>Admins and users</b></li>
+          <li><b>Admin consent display name:</b> <code>Acceder como usuario</code></li>
+          <li><b>Admin consent description:</b> <code>Permite a la aplicación acceder a la API en nombre del usuario.</code></li>
+          <li><b>State:</b> <b>Enabled</b></li>
+        </ul>
+      </li>
+      <li><b>Add scope</b>. El scope completo queda como <code>api://&lt;CLIENT_ID&gt;/access_as_user</code>.</li>
+    </ol>
+  </section>
+
+  <section id="graph">
+    <h2>5. Permiso de Microsoft Graph + consentimiento de administrador</h2>
+    <p class="sub">El backend valida, al dar de alta usuarios, que el email exista en el tenant. Usa Graph en modo <b>app-only</b> (client credentials), por lo que requiere un permiso de tipo <b>Aplicación</b>.</p>
+    <ol>
+      <li>En la app → menú <b>API permissions</b> → <b>+ Add a permission</b>.</li>
+      <li>Elija <b>Microsoft Graph</b> → <b>Application permissions</b> (NO "Delegated").</li>
+      <li>Busque y marque <b>User.Read.All</b>. → <b>Add permissions</b>.</li>
+      <li>De vuelta en la lista, pulse <b>Grant admin consent for &lt;organización&gt;</b> y confirme.
+        <br/>El estado de <code>User.Read.All</code> debe quedar en verde: <b>Granted</b>.</li>
+    </ol>
+    <div class="warn"><b>Importante:</b> debe ser de tipo <b>Aplicación</b>, no Delegado. Un token de client-credentials solo transporta permisos de aplicación; con Delegado, Graph responde <code>403 Insufficient privileges</code>. Y el <b>consentimiento de admin</b> es obligatorio (un usuario normal no puede otorgar <code>User.Read.All</code>).</div>
+  </section>
+
+  <section id="secret">
+    <h2>6. Crear el secreto de cliente (client secret)</h2>
+    <ol>
+      <li>En la app → menú <b>Certificates &amp; secrets</b> → pestaña <b>Client secrets</b> → <b>+ New client secret</b>.</li>
+      <li><b>Description:</b> <code>incrementa-backend-graph</code>.</li>
+      <li><b>Expires:</b> según política del cliente (recomendado 6–12 meses; anote la fecha para renovarlo a tiempo).</li>
+      <li><b>Add</b>.</li>
+      <li><b>Copie inmediatamente el valor (columna «Value»)</b> y guárdelo como <span class="ph">&lt;CLIENT_SECRET&gt;</span>.
+        <br/><b>Solo se muestra una vez</b>; si lo pierde, deberá generar otro.</li>
+    </ol>
+    <div class="warn"><b>Manejo del secreto:</b> es una credencial sensible. No lo envíe por correo/chat sin cifrar. Idealmente, el equipo de desarrollo lo carga directamente en GCP Secret Manager (o el propio admin lo hace). Nunca queda en el repositorio.</div>
+  </section>
+
+  <section id="spa">
+    <h2>7. Redirect URI de la SPA (se completa tras el deploy en GCP)</h2>
+    <p class="sub">El login del frontend (MSAL, Authorization Code + PKCE) redirige de vuelta a la URL del frontend. Esa URL se conoce <b>después</b> del primer despliegue en Cloud Run (ver manual de GCP).</p>
+    <ol>
+      <li>Cuando el equipo de GCP le entregue la <span class="ph">&lt;FRONTEND_URL&gt;</span> (ej. <code>https://incrementa-frontend-xxxx-uc.a.run.app</code> o el dominio propio de prod):</li>
+      <li>App → <b>Authentication</b> → <b>+ Add a platform</b> → <b>Single-page application (SPA)</b>.</li>
+      <li>En <b>Redirect URIs</b> agregue exactamente la <span class="ph">&lt;FRONTEND_URL&gt;</span> (sin barra final ni ruta). Ej.: <code>https://app.cliente.com</code></li>
+      <li><b>Configure</b> / <b>Save</b>.</li>
+    </ol>
+    <div class="note"><b>Nota:</b> debe ser plataforma <b>SPA</b> (no "Web"). No se requiere activar flujos implícitos: el sistema usa Authorization Code + PKCE. Si en el futuro cambia el dominio del frontend, agregue el nuevo URI aquí.</div>
+  </section>
+
+  <section id="deliver">
+    <h2>8. Valores a entregar al equipo de desarrollo</h2>
+    <p class="sub">Estos valores se cargan en GCP (ver manual de GCP). Entréguelos de forma segura.</p>
+    <table>
+      <tr><th>Valor Entra ID</th><th>Se usará en GCP como…</th></tr>
+      <tr><td><b>Tenant ID</b> <span class="ph">&lt;TENANT_ID&gt;</span></td><td><code>GRAPH_TENANT_ID</code> y parte de <code>OIDC_ISSUER_URL</code> = <code>https://login.microsoftonline.com/&lt;TENANT_ID&gt;/v2.0</code></td></tr>
+      <tr><td><b>Client ID</b> <span class="ph">&lt;CLIENT_ID&gt;</span></td><td><code>OIDC_AUDIENCE</code>, <code>GRAPH_CLIENT_ID</code>, y build-args del frontend (<code>VITE_AZURE_CLIENT_ID</code>, scope <code>api://&lt;CLIENT_ID&gt;/access_as_user</code>)</td></tr>
+      <tr><td><b>Client secret</b> <span class="ph">&lt;CLIENT_SECRET&gt;</span></td><td>Secreto <code>GRAPH_CLIENT_SECRET</code> en Secret Manager</td></tr>
+      <tr><td><b>Authority</b> = <code>https://login.microsoftonline.com/&lt;TENANT_ID&gt;</code></td><td>build-arg del frontend <code>VITE_AZURE_AUTHORITY</code></td></tr>
+    </table>
+  </section>
+
+  <section id="verify">
+    <h2>9. Verificación (al final del wire-up)</h2>
+    <p class="sub">Una vez que GCP esté desplegado y el redirect URI registrado (paso 7):</p>
+    <ul class="chk">
+      <li><input type="checkbox"/> Un usuario de prueba del tenant puede iniciar sesión en <span class="ph">&lt;FRONTEND_URL&gt;</span> con su cuenta Microsoft.</li>
+      <li><input type="checkbox"/> Tras el login, la aplicación carga (perfil y menús) sin error de <code>redirect URI mismatch (AADSTS50011)</code>.</li>
+      <li><input type="checkbox"/> El alta de un usuario de plataforma con un email <b>inexistente</b> en el tenant es rechazada (valida contra Graph); con un email <b>existente</b>, procede. Esto confirma que <code>User.Read.All</code> + consentimiento funcionan.</li>
+    </ul>
+  </section>
+
+  <section id="sec">
+    <h2>10. Notas de seguridad</h2>
+    <ul>
+      <li><b>Menor privilegio:</b> el único permiso de aplicación es <code>User.Read.All</code>. No agregue permisos adicionales salvo necesidad justificada.</li>
+      <li><b>Rotación del secreto:</b> anote la fecha de expiración del client secret y renuévelo antes de que caduque (genere uno nuevo, actualícelo en GCP Secret Manager, y elimine el viejo).</li>
+      <li><b>Single-tenant:</b> la app acepta solo cuentas del directorio del cliente.</li>
+      <li><b>No versionar secretos:</b> el client secret nunca va al repositorio; vive solo en Secret Manager (GCP).</li>
+    </ul>
+    <h3>Checklist final</h3>
+    <ul class="chk">
+      <li><input type="checkbox"/> App Registration creada (single-tenant) y anotados Client ID + Tenant ID</li>
+      <li><input type="checkbox"/> Application ID URI + scope <code>access_as_user</code> creados</li>
+      <li><input type="checkbox"/> Permiso <code>User.Read.All</code> (Aplicación) agregado y con <b>consentimiento de admin</b></li>
+      <li><input type="checkbox"/> Client secret creado, copiado y entregado de forma segura</li>
+      <li><input type="checkbox"/> Redirect URI (SPA) registrado con la URL del frontend de prod</li>
+      <li><input type="checkbox"/> Valores entregados al equipo de desarrollo (sección 8)</li>
+      <li><input type="checkbox"/> Verificación de login + Graph superada</li>
+    </ul>
+    <p class="small">Documento de referencia — incrementa-gestion · Producción · Microsoft Entra ID. Los valores concretos del cliente se completan en la sección 2.</p>
+  </section>
+
+</main>
+</body>
+</html>

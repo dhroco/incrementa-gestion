@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual de configuración — GCP (Producción) · incrementa-gestion</title>
+<style>
+  :root{
+    --gcp:#0a7d33; --gcpbg:#e6f6ec; --ink:#1a1a1a; --muted:#5a6370;
+    --border:#d7dbe0; --card:#fff; --warn:#b42318; --warnbg:#fdecea;
+    --ph:#8a5a00; --phbg:#fff4e5;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+       margin:0;background:#f6f7f9;line-height:1.55;font-size:14px}
+  header{background:var(--gcp);color:#fff;padding:24px 34px}
+  header h1{margin:0;font-size:22px}
+  header p{margin:6px 0 0;color:#d7f0df;font-size:13px}
+  main{max-width:1020px;margin:0 auto;padding:22px 20px 90px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 26px;margin:16px 0}
+  h2{font-size:18px;margin:0 0 6px;border-left:4px solid var(--gcp);padding-left:10px}
+  h3{font-size:15px;margin:18px 0 6px}
+  .sub{color:var(--muted);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;font-weight:600}
+  code{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1720;color:#e6edf3;padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;line-height:1.5}
+  .ph{background:var(--phbg);color:var(--ph);border:1px solid #f0d8a8;border-radius:4px;padding:0 5px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}
+  .note{background:var(--gcpbg);border:1px solid #b6e2c3;border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px}
+  .warn{background:var(--warnbg);border:1px solid #f3c9c4;border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px}
+  ol{margin:6px 0;padding-left:22px}
+  ol li{margin:6px 0}
+  ul{margin:6px 0;padding-left:20px}
+  .chk{list-style:none;padding-left:0}
+  .chk li{margin:6px 0}
+  .chk input{margin-right:8px;transform:translateY(1px)}
+  .toc a{color:var(--gcp);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .small{font-size:12px;color:var(--muted)}
+  .tag{display:inline-block;background:var(--gcp);color:#fff;border-radius:999px;padding:1px 10px;font-size:11px;font-weight:600}
+  @media print{
+    body{background:#fff;font-size:11.5px}
+    header{background:#fff;color:#000;border-bottom:2px solid #000;padding:10px 0}
+    header p{color:#333}
+    section{border:none;padding:6px 0;margin:8px 0;break-inside:avoid}
+    pre{background:#f4f4f4;color:#000;border:1px solid #ccc;white-space:pre-wrap}
+    .note,.warn{border:1px solid #999}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Manual de configuración · Google Cloud (GCP) — Producción</h1>
+  <p>Sistema <b>incrementa-gestion</b> · Para el <b>administrador del proyecto GCP del cliente</b> · Cloud Run + Cloud SQL + GCS + Artifact Registry + Secret Manager + CI/CD keyless (WIF)</p>
+</header>
+<main>
+
+  <section>
+    <h2>0. Propósito y a quién va dirigido</h2>
+    <p class="sub">Deja operativo el backend y el frontend de <b>incrementa-gestion</b> en el proyecto GCP de <b>producción del cliente</b>, con despliegue automatizado desde GitHub Actions <b>sin llaves</b> (Workload Identity Federation).</p>
+    <p>Lo ejecuta alguien con permisos de <b>administrador/propietario</b> sobre el proyecto GCP del cliente (o el equipo de desarrollo junto al admin). Requiere valores generados en el <b>Manual de Azure Entra ID</b> (Tenant ID, Client ID, Client secret).</p>
+    <div class="note"><b>Arquitectura destino (idéntica a pre-prod):</b> dos servicios Cloud Run (backend Express + frontend nginx), una instancia Cloud SQL (PostgreSQL 16), un bucket GCS, un repo Docker en Artifact Registry, secretos en Secret Manager, dos service accounts (runtime y deployer) y WIF para el CI. Todo sin claves JSON descargadas.</p>
+    <h3>Índice</h3>
+    <div class="toc">
+      1. <a href="#pre">Prerrequisitos</a> ·
+      2. <a href="#vars">Variables (a completar)</a> ·
+      3. <a href="#apis">APIs</a> ·
+      4. <a href="#sql">Cloud SQL</a> ·
+      5. <a href="#gcs">Cloud Storage</a> ·
+      6. <a href="#ar">Artifact Registry</a> ·
+      7. <a href="#sm">Secret Manager</a> ·
+      8. <a href="#runsa">Runtime SA</a> ·
+      9. <a href="#depsa">Deployer SA + WIF</a> ·
+      10. <a href="#ci">Datos para el CI</a> ·
+      11. <a href="#deploy">Primer deploy + wire-up</a> ·
+      12. <a href="#sec">Seguridad + checklist</a>
+    </div>
+  </section>
+
+  <section id="pre">
+    <h2>1. Prerrequisitos</h2>
+    <ul>
+      <li><b>gcloud CLI</b> instalado y autenticado: <code>gcloud auth login</code>.</li>
+      <li>Un <b>proyecto GCP de producción</b> del cliente, con <b>facturación habilitada</b>, y permisos de <b>Owner</b> (o roles equivalentes: Service Usage Admin, Cloud SQL Admin, Storage Admin, Artifact Registry Admin, Secret Manager Admin, IAM Admin, Cloud Run Admin).</li>
+      <li>El <b>repositorio GitHub</b> del proyecto (<span class="ph">&lt;OWNER/REPO&gt;</span>) y la <b>rama de producción</b> (ej. <code>prod</code>).</li>
+      <li>Los valores del <b>Manual de Azure</b>: <span class="ph">&lt;TENANT_ID&gt;</span>, <span class="ph">&lt;CLIENT_ID&gt;</span>, <span class="ph">&lt;CLIENT_SECRET&gt;</span>.</li>
+      <li>La <b>API key de Resend</b> de prod (<span class="ph">&lt;RESEND_API_KEY&gt;</span>) y el remitente (<span class="ph">&lt;RESEND_FROM&gt;</span>).</li>
+    </ul>
+  </section>
+
+  <section id="vars">
+    <h2>2. Variables — defínalas una vez en su terminal</h2>
+    <p class="sub">Todos los comandos siguientes usan estas variables. Reemplace los valores <span class="ph">&lt;…&gt;</span> por los reales del cliente y pegue el bloque en su shell (bash/zsh).</p>
+    <pre>export PROJECT_ID="&lt;PROYECTO_PROD_DEL_CLIENTE&gt;"
+export REGION="us-central1"                 # o la región que prefiera el cliente
+export REPO="&lt;OWNER/REPO&gt;"                   # ej. cliente-org/incrementa-gestion
+export PROD_BRANCH="prod"                    # rama que dispara el deploy de prod
+export DB_INSTANCE="incrementa-db"
+export DB_NAME="incrementa"
+export DB_PASSWORD="&lt;PASSWORD_FUERTE_BD&gt;"
+export BUCKET="&lt;BUCKET_PROD&gt;"                # ej. incrementa-contratos-prod (único global)
+export AR_REPO="incrementa"
+
+# Valores desde el Manual de Azure:
+export AZURE_TENANT_ID="&lt;TENANT_ID&gt;"
+export AZURE_CLIENT_ID="&lt;CLIENT_ID&gt;"
+export AZURE_CLIENT_SECRET="&lt;CLIENT_SECRET&gt;"
+
+# Email (Resend):
+export RESEND_API_KEY="&lt;RESEND_API_KEY&gt;"
+export RESEND_FROM="&lt;RESEND_FROM&gt;"          # ej. contratos@dominio-cliente.com
+
+gcloud config set project "$PROJECT_ID"</pre>
+    <div class="note">Guarde también el <b>project number</b> (se usa en WIF): <br/>
+      <pre>export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+echo "$PROJECT_NUMBER"</pre>
+    </div>
+  </section>
+
+  <section id="apis">
+    <h2>3. Habilitar APIs</h2>
+    <pre>gcloud services enable \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  secretmanager.googleapis.com \
+  sqladmin.googleapis.com \
+  storage.googleapis.com \
+  iamcredentials.googleapis.com \
+  sts.googleapis.com</pre>
+    <p class="small">La habilitación puede tardar ~1 minuto en propagar.</p>
+  </section>
+
+  <section id="sql">
+    <h2>4. Cloud SQL (PostgreSQL 16)</h2>
+    <ol>
+      <li>Crear la instancia (ajuste <code>tier</code> según la carga de prod; <code>db-f1-micro</code> es mínimo, para prod considere <code>db-custom-1-3840</code> o superior):
+        <pre>gcloud sql instances create "$DB_INSTANCE" \
+  --database-version=POSTGRES_16 \
+  --region="$REGION" \
+  --tier=db-custom-1-3840 \
+  --storage-auto-increase</pre>
+      </li>
+      <li>Password del usuario <code>postgres</code> y base de datos:
+        <pre>gcloud sql users set-password postgres \
+  --instance="$DB_INSTANCE" --password="$DB_PASSWORD"
+
+gcloud sql databases create "$DB_NAME" --instance="$DB_INSTANCE"</pre>
+      </li>
+      <li>Anote el <b>connection name</b> (se usa en el socket y en Cloud Run):
+        <pre>export CONNECTION_NAME="$(gcloud sql instances describe "$DB_INSTANCE" --format='value(connectionName)')"
+echo "$CONNECTION_NAME"   # -> PROJECT_ID:REGION:incrementa-db</pre>
+      </li>
+    </ol>
+    <div class="note"><b>Cargar el esquema (migraciones):</b> la base arranca vacía. El equipo de desarrollo debe correr las <b>migraciones Knex</b> contra esta instancia una vez (vía <b>Cloud SQL Auth Proxy</b> con <code>DATABASE_URL</code> apuntando al proxy, ejecutando el script de migración del backend). Esto se coordina con el equipo de desarrollo; no forma parte de los comandos de este manual.</div>
+    <div class="warn"><b>Respaldos:</b> para producción habilite backups automáticos y point-in-time recovery (<code>--backup-start-time</code>, <code>--enable-point-in-time-recovery</code>) según la política del cliente.</div>
+  </section>
+
+  <section id="gcs">
+    <h2>5. Cloud Storage (bucket de documentos y avatares)</h2>
+    <pre>gcloud storage buckets create "gs://$BUCKET" \
+  --location="$REGION" \
+  --uniform-bucket-level-access</pre>
+    <p class="small">El nombre del bucket es único a nivel global; si está tomado, elija otro y actualice <code>$BUCKET</code>.</p>
+  </section>
+
+  <section id="ar">
+    <h2>6. Artifact Registry (repo Docker)</h2>
+    <pre>gcloud artifacts repositories create "$AR_REPO" \
+  --repository-format=docker \
+  --location="$REGION" \
+  --description="Imagenes Cloud Run incrementa-gestion (prod)"</pre>
+    <p>Ruta del repo (se usará en el CI): <code>$REGION-docker.pkg.dev/$PROJECT_ID/$AR_REPO</code></p>
+  </section>
+
+  <section id="sm">
+    <h2>7. Secret Manager (3 secretos)</h2>
+    <p class="sub">Se referencian por nombre desde Cloud Run; sus valores nunca van al repositorio. Se usa <code>printf</code> (no <code>echo</code>) para no agregar un salto de línea que corrompa el secreto.</p>
+    <h3>7.1 DATABASE_URL (con socket del conector — sin IP, sin SSL)</h3>
+    <pre>printf '%s' "postgresql://postgres:$DB_PASSWORD@/$DB_NAME?host=/cloudsql/$CONNECTION_NAME" \
+  | gcloud secrets create DATABASE_URL --data-file=- --replication-policy=automatic</pre>
+    <h3>7.2 GRAPH_CLIENT_SECRET (desde el Manual de Azure)</h3>
+    <pre>printf '%s' "$AZURE_CLIENT_SECRET" \
+  | gcloud secrets create GRAPH_CLIENT_SECRET --data-file=- --replication-policy=automatic</pre>
+    <h3>7.3 RESEND_API_KEY</h3>
+    <pre>printf '%s' "$RESEND_API_KEY" \
+  | gcloud secrets create RESEND_API_KEY --data-file=- --replication-policy=automatic</pre>
+    <div class="note">Para rotar un secreto en el futuro: <code>printf '%s' "&lt;nuevo&gt;" | gcloud secrets versions add &lt;NOMBRE&gt; --data-file=-</code> (Cloud Run usa <code>:latest</code>).</div>
+  </section>
+
+  <section id="runsa">
+    <h2>8. Runtime Service Account (identidad de los contenedores)</h2>
+    <pre>export RUNTIME_SA="incrementa-run-sa@$PROJECT_ID.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create incrementa-run-sa \
+  --display-name="Incrementa Cloud Run runtime"
+
+# Conectar a Cloud SQL
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/cloudsql.client"
+
+# Leer secretos
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/secretmanager.secretAccessor"
+
+# Leer/escribir en el bucket
+gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" \
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/storage.objectAdmin"
+
+# Firmar URLs de GCS (avatares/documentos) vía IAM signBlob — sobre sí misma
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/iam.serviceAccountTokenCreator"</pre>
+    <div class="warn"><b>No omita el último binding (<code>serviceAccountTokenCreator</code>):</b> en Cloud Run las URLs firmadas de GCS se generan con IAM signBlob usando la identidad de la runtime SA. Sin este rol, la carga de avatares/documentos firmados falla con 403.</div>
+  </section>
+
+  <section id="depsa">
+    <h2>9. Deployer SA + Workload Identity Federation (CI keyless)</h2>
+    <p class="sub">GitHub Actions se autentica sin llaves: un pool OIDC confía en los tokens de Actions, restringido a <b>su repo y su rama de prod</b>, y permite impersonar la deployer SA.</p>
+    <h3>9.1 Deployer SA + roles</h3>
+    <pre>export DEPLOYER_SA="incrementa-deploy-sa@$PROJECT_ID.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create incrementa-deploy-sa \
+  --display-name="Incrementa CI/CD deployer"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$DEPLOYER_SA" --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$DEPLOYER_SA" --role="roles/run.admin"
+
+# Permitir a la deployer "actuar como" la runtime SA (para desplegar Cloud Run con esa identidad)
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --member="serviceAccount:$DEPLOYER_SA" --role="roles/iam.serviceAccountUser"</pre>
+    <h3>9.2 WIF pool + provider (restringido a repo AND rama)</h3>
+    <pre>gcloud iam workload-identity-pools create github-pool \
+  --location="global" --display-name="GitHub Actions pool"
+
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --location="global" \
+  --workload-identity-pool="github-pool" \
+  --display-name="GitHub provider" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-condition="assertion.repository=='$REPO' &amp;&amp; assertion.ref=='refs/heads/$PROD_BRANCH'"</pre>
+    <h3>9.3 Binding: permitir al repo impersonar la deployer SA</h3>
+    <pre>gcloud iam service-accounts add-iam-policy-binding "$DEPLOYER_SA" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/$REPO"</pre>
+    <div class="note">La condición del provider ya exige <b>repo AND rama</b> (<code>$PROD_BRANCH</code>), así que aunque el binding sea por repo, solo tokens de esa rama pasan. Defensa en profundidad.</div>
+  </section>
+
+  <section id="ci">
+    <h2>10. Datos a recopilar para el CI (entregar al equipo de desarrollo)</h2>
+    <pre>echo "PROJECT_ID       = $PROJECT_ID"
+echo "PROJECT_NUMBER   = $PROJECT_NUMBER"
+echo "REGION           = $REGION"
+echo "AR_HOST          = $REGION-docker.pkg.dev/$PROJECT_ID/$AR_REPO"
+echo "CONNECTION_NAME  = $CONNECTION_NAME"
+echo "BUCKET           = $BUCKET"
+echo "RUNTIME_SA       = $RUNTIME_SA"
+echo "DEPLOYER_SA      = $DEPLOYER_SA"
+echo "WIF_PROVIDER     = projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider"</pre>
+    <div class="note"><b>Lado desarrollo:</b> con estos datos, el equipo crea el workflow de prod (ej. <code>.github/workflows/deploy-prod.yml</code>, análogo al de pre-prod pero disparado en la rama <code>$PROD_BRANCH</code> y apuntando a estos recursos), con <code>ENVIRONMENT=prod</code> y las variables OIDC/Graph del cliente. Los secretos (<code>DATABASE_URL</code>, <code>GRAPH_CLIENT_SECRET</code>, <code>RESEND_API_KEY</code>) se referencian por nombre desde Secret Manager.</div>
+  </section>
+
+  <section id="deploy">
+    <h2>11. Primer deploy + wire-up con Azure</h2>
+    <ol>
+      <li>El equipo de desarrollo hace push a la rama <code>$PROD_BRANCH</code> → el pipeline construye y despliega backend y frontend, y setea el <code>CORS_ORIGIN</code> del backend con la URL del frontend.</li>
+      <li>Tomar la <b>URL del frontend</b> que imprime el pipeline y entregarla al <b>administrador de Azure</b> → registra el <b>redirect URI (SPA)</b> (paso 7 del Manual de Azure).</li>
+      <li><b>Variables de entorno de backend en Cloud Run (prod)</b> que el workflow debe setear (referencia):
+        <table>
+          <tr><th>Variable</th><th>Valor</th></tr>
+          <tr><td><code>ENVIRONMENT</code></td><td><code>prod</code></td></tr>
+          <tr><td><code>OIDC_ISSUER_URL</code></td><td><code>https://login.microsoftonline.com/&lt;TENANT_ID&gt;/v2.0</code></td></tr>
+          <tr><td><code>OIDC_AUDIENCE</code>, <code>GRAPH_CLIENT_ID</code></td><td><span class="ph">&lt;CLIENT_ID&gt;</span></td></tr>
+          <tr><td><code>GRAPH_TENANT_ID</code></td><td><span class="ph">&lt;TENANT_ID&gt;</span></td></tr>
+          <tr><td><code>GCS_BUCKET</code></td><td><span class="ph">&lt;BUCKET&gt;</span></td></tr>
+          <tr><td><code>RESEND_FROM_EMAIL</code></td><td><span class="ph">&lt;RESEND_FROM&gt;</span></td></tr>
+          <tr><td>Secretos (<code>--set-secrets</code>)</td><td><code>DATABASE_URL</code>, <code>GRAPH_CLIENT_SECRET</code>, <code>RESEND_API_KEY</code> (por nombre)</td></tr>
+          <tr><td><b>NO setear</b></td><td><code>PORT</code>, <code>GOOGLE_APPLICATION_CREDENTIALS</code>, <code>PGSSLMODE</code></td></tr>
+        </table>
+      </li>
+      <li>El backend se despliega con <code>--add-cloudsql-instances "$CONNECTION_NAME"</code> y <code>--service-account "$RUNTIME_SA"</code>. El <b>frontend también</b> con <code>--service-account "$RUNTIME_SA"</code>.</li>
+    </ol>
+    <h3>Verificación (smoke)</h3>
+    <ul class="chk">
+      <li><input type="checkbox"/> <code>GET &lt;BACKEND_URL&gt;/health</code> responde <code>{"status":"ok","environment":"prod"}</code></li>
+      <li><input type="checkbox"/> Login con un usuario del tenant carga la sesión (perfil + permisos) sin errores</li>
+      <li><input type="checkbox"/> Los logs de Cloud Run no muestran <code>ECONNREFUSED 127.0.0.1:5432</code> (confirma conexión por socket)</li>
+      <li><input type="checkbox"/> Alta de usuario de plataforma valida contra Graph</li>
+    </ul>
+  </section>
+
+  <section id="sec">
+    <h2>12. Seguridad + checklist final</h2>
+    <ul>
+      <li><b>Sin llaves:</b> runtime = identidad de la SA (ADC); deploy = WIF keyless. No se descargan claves JSON.</li>
+      <li><b>Menor privilegio:</b> runtime SA y deployer SA con solo los roles listados. WIF restringido a <span class="ph">&lt;OWNER/REPO&gt;</span> + rama <code>$PROD_BRANCH</code>.</li>
+      <li><b>Secretos:</b> solo en Secret Manager; el <code>DATABASE_URL</code> usa el socket del conector (no IP pública). Rote <code>GRAPH_CLIENT_SECRET</code> cuando Azure lo renueve.</li>
+      <li><b>Cloud SQL:</b> sin IP pública necesaria (se conecta por el conector). Habilite backups/PITR para prod.</li>
+      <li><b>Cloud Run:</b> ambos servicios son públicos (<code>--allow-unauthenticated</code>); el backend protege sus rutas con validación de JWT.</li>
+    </ul>
+    <h3>Checklist</h3>
+    <ul class="chk">
+      <li><input type="checkbox"/> APIs habilitadas</li>
+      <li><input type="checkbox"/> Cloud SQL creada + DB + password + connection name anotado</li>
+      <li><input type="checkbox"/> Migraciones cargadas (con el equipo de desarrollo)</li>
+      <li><input type="checkbox"/> Bucket GCS creado</li>
+      <li><input type="checkbox"/> Artifact Registry creado</li>
+      <li><input type="checkbox"/> 3 secretos creados (DATABASE_URL con socket, GRAPH_CLIENT_SECRET, RESEND_API_KEY)</li>
+      <li><input type="checkbox"/> Runtime SA + 4 roles (incl. tokenCreator para firmar)</li>
+      <li><input type="checkbox"/> Deployer SA + roles + WIF pool/provider/binding (repo AND rama)</li>
+      <li><input type="checkbox"/> Datos del CI entregados al equipo de desarrollo</li>
+      <li><input type="checkbox"/> Primer deploy OK + redirect URI registrado en Azure + smoke superado</li>
+    </ul>
+    <p class="small">Documento de referencia — incrementa-gestion · Producción · Google Cloud. Los valores concretos del cliente se definen en la sección 2. Refleja la misma arquitectura validada en pre-prod.</p>
+  </section>
+
+</main>
+</body>
+</html>
