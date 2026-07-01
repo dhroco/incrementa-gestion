@@ -28,7 +28,7 @@ const config = {
     CORS_ORIGIN: 'http://localhost:5173'
   },
   dev: {
-    PORT: 3000,
+    PORT: process.env.PORT || 3000,
     HOST: '0.0.0.0',
     DATABASE_URL: process.env.DATABASE_URL,
     OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || '',
@@ -41,7 +41,7 @@ const config = {
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
     LOG_LEVEL: 'info',
-    CORS_ORIGIN: 'https://dev.dlrt4e5spibmy.amplifyapp.com'
+    CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://dev.dlrt4e5spibmy.amplifyapp.com'
   },
   prod: {
     PORT: process.env.PORT || 3000,
@@ -57,7 +57,7 @@ const config = {
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'contratos@incrementa.la',
     LOG_LEVEL: 'error',
-    CORS_ORIGIN: 'https://gestion-contratos.com'
+    CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://gestion-contratos.com'
   }
 };
 

@@ -16,13 +16,13 @@ const config = {
     LOG_LEVEL: 'debug'
   },
   dev: {
-    API_BASE_URL: 'https://dev.gaf.lat',
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://dev.gaf.lat',
     APP_NAME: 'Sistema de Gestión de Contratos',
     DEBUG: true,
     LOG_LEVEL: 'info'
   },
   prod: {
-    API_BASE_URL: 'https://api.gestion-contratos.com',
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://api.gestion-contratos.com',
     APP_NAME: 'Sistema de Gestión de Contratos',
     DEBUG: false,
     LOG_LEVEL: 'error'

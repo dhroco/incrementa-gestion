@@ -1,13 +1,17 @@
-FROM node:22-alpine
+FROM node:22-slim
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY . .
 
-EXPOSE 3000
+RUN chown -R node:node /app
+
+USER node
+
+EXPOSE 8080
 
 CMD ["node", "index.js"]
