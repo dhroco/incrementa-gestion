@@ -134,6 +134,7 @@ jobs:
             --region "${{ env.GCP_REGION }}" \
             --platform=managed \
             --image "${{ env.AR_HOST }}/frontend:${{ github.sha }}" \
+            --service-account "${{ env.RUNTIME_SA }}" \
             --allow-unauthenticated \
             --quiet
 
