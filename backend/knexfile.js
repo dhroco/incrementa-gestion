@@ -7,6 +7,10 @@ function shouldUseSsl() {
 
 module.exports = {
   client: 'pg',
+  // Pasamos SIEMPRE un objeto { connectionString } (no el string crudo) porque el parser
+  // interno de knex no entiende la sintaxis de socket unix "?host=/cloudsql/INSTANCE"
+  // (la trata como filename de sqlite y pierde el host -> pg cae a localhost:5432).
+  // pg SÍ parsea esa forma correctamente cuando recibe { connectionString }.
   connection: shouldUseSsl()
     ? {
         connectionString: config.DATABASE_URL,
@@ -16,7 +20,7 @@ module.exports = {
           rejectUnauthorized: false,
         },
       }
-    : config.DATABASE_URL,
+    : { connectionString: config.DATABASE_URL },
   migrations: {
     directory: './migrations'
   },
