@@ -1,47 +1,6 @@
-import { createRequire } from 'node:module'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { registerMcpTools } from './mcpTools.mjs'
+import { createMcpServer } from './mcpServer.mjs'
 
-const require = createRequire(import.meta.url)
-
-const { db } = require('./db/knex')
-const { getUserProfileIdByUserId } = require('./services/profileService')
-const supplierService = require('./services/supplierService')
-const clientService = require('./services/clientService')
-const { createStandardTemplatesService } = require('./services/standardTemplatesService')
-const { createDocumentBuilderService } = require('./services/documentBuilderService')
-const { gcsService } = require('./services/gcsService')
-const { createContractsQueryService } = require('./services/contractsQueryService')
-const { createContractSigningService } = require('./services/contractSigningService')
-const emailService = require('./services/emailService')
-
-const standardTemplatesService = createStandardTemplatesService({ db })
-const contractsQueryService = createContractsQueryService({ db, gcsService })
-const contractSigningService = createContractSigningService({ db, gcsService, emailService })
-const documentBuilderService = createDocumentBuilderService({
-  db,
-  gcsService,
-  clientService,
-  getUserProfileIdByUserId
-})
-
-const server = new McpServer({
-  name: 'incrementa-gestion-mcp',
-  version: '1.0.0'
-})
-
-registerMcpTools(server, {
-  db,
-  supplierService,
-  clientService,
-  standardTemplatesService,
-  documentBuilderService,
-  contractsQueryService,
-  contractSigningService,
-  gcsService,
-  getUserProfileIdByUserId
-})
-
+const { server } = createMcpServer()
 const transport = new StdioServerTransport()
 await server.connect(transport)
