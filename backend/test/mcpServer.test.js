@@ -266,6 +266,107 @@ test('listar_plantillas passes supplier_type and status active to standardTempla
   assert.equal(result.data.items[0].status, 'active')
 })
 
+test('obtener_plantilla returns template metadata and plain text content', async () => {
+  const { registerMcpTools } = await import('../mcpTools.mjs')
+
+  const contentJson = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Contrato para ' },
+          { type: 'variable', attrs: { variableId: 'proveedor_nombre' } }
+        ]
+      }
+    ]
+  }
+
+  let getByIdArgs = null
+  let plainTextArgs = null
+  const standardTemplatesService = {
+    getStandardTemplateById: async (id) => {
+      getByIdArgs = id
+      return {
+        ok: true,
+        template: {
+          id: TEMPLATE_ID,
+          name: 'Plantilla PN',
+          code: 'PN-001',
+          supplier_type: 'persona_natural',
+          status: 'active',
+          description: 'Plantilla de prueba',
+          content_json: contentJson
+        }
+      }
+    }
+  }
+
+  const tipTapDocToPlainTextAsync = async (doc) => {
+    plainTextArgs = doc
+    return 'Contrato para {{proveedor_nombre}}'
+  }
+
+  const server = createMockServer()
+  registerMcpTools(server, {
+    db: () => ({ select() { return this }, orderBy() { return this }, then(r) { return Promise.resolve(r([])) } }),
+    supplierService: {},
+    clientService: stubClientService,
+    standardTemplatesService,
+    documentBuilderService: {},
+    contractsQueryService: stubContractsQueryService,
+    contractSigningService: stubContractSigningService,
+    gcsService: {},
+    getUserProfileIdByUserId: async () => PROFILE_ID,
+    tipTapDocToPlainTextAsync
+  })
+
+  const tool = server.getTool('obtener_plantilla')
+  assert.ok(tool)
+  assert.ok(tool.description.includes('listar_plantillas'))
+  assert.ok(tool.description.includes('{{'))
+
+  const result = parseToolJson(await tool.handler({ id: TEMPLATE_ID }))
+  assert.equal(getByIdArgs, TEMPLATE_ID)
+  assert.deepEqual(plainTextArgs, contentJson)
+  assert.equal(result.ok, true)
+  assert.equal(result.data.id, TEMPLATE_ID)
+  assert.equal(result.data.name, 'Plantilla PN')
+  assert.equal(result.data.code, 'PN-001')
+  assert.equal(result.data.supplier_type, 'persona_natural')
+  assert.equal(result.data.status, 'active')
+  assert.equal(result.data.description, 'Plantilla de prueba')
+  assert.equal(result.data.content, 'Contrato para {{proveedor_nombre}}')
+})
+
+test('obtener_plantilla returns NOT_FOUND for unknown template id', async () => {
+  const { registerMcpTools } = await import('../mcpTools.mjs')
+
+  const standardTemplatesService = {
+    getStandardTemplateById: async () => ({ ok: false, notFound: true })
+  }
+
+  const server = createMockServer()
+  registerMcpTools(server, {
+    db: () => ({ select() { return this }, orderBy() { return this }, then(r) { return Promise.resolve(r([])) } }),
+    supplierService: {},
+    clientService: stubClientService,
+    standardTemplatesService,
+    documentBuilderService: {},
+    contractsQueryService: stubContractsQueryService,
+    contractSigningService: stubContractSigningService,
+    gcsService: {},
+    getUserProfileIdByUserId: async () => PROFILE_ID,
+    tipTapDocToPlainTextAsync: async () => ''
+  })
+
+  const tool = server.getTool('obtener_plantilla')
+  const result = parseToolJson(await tool.handler({ id: TEMPLATE_ID }))
+  assert.equal(result.ok, false)
+  assert.equal(result.code, 'NOT_FOUND')
+  assert.equal(result.message, 'Plantilla no encontrada.')
+})
+
 test('MCP_USER_ID matches migration 019 technical user', async () => {
   const { MCP_USER_ID: exportedUserId } = await import('../mcpTools.mjs')
   assert.equal(exportedUserId, '00000000-0000-0000-0000-000000000001')

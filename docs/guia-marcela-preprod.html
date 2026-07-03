@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guía — Habilitar a Marcela Fuentes en Pre-Prod</title>
+<style>
+  :root{
+    --cyan:#14C8F0; --purple:#6425D0; --pink:#FF1F6E; --green:#0aa06e; --amber:#c98a00;
+    --azure:#0b6bcb; --grad:linear-gradient(135deg,#14C8F0 0%,#6425D0 55%,#FF1F6E 100%);
+    --ink:#17203a; --muted:#5b6577; --bg:#f5f7fb; --card:#fff; --line:#e2e6ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.6;
+       font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:0 22px}
+  header{background:var(--grad);color:#fff;padding:32px 0 34px}
+  header h1{margin:0;font-size:25px;letter-spacing:-.5px}
+  header p{margin:8px 0 0;opacity:.96}
+  .whobox{display:inline-flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .who{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:8px 13px;font-size:13px}
+  .who b{font-weight:700}
+  section{margin:24px 0}
+  h2{font-size:20px;margin:0 0 4px}
+  .part-tag{display:inline-block;color:#fff;border-radius:999px;padding:2px 12px;font-size:12px;font-weight:700;margin-right:8px}
+  .pa{background:var(--azure)} .pb{background:var(--purple)} .pc{background:var(--pink)}
+  .sub{color:var(--muted);margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:14px 0}
+  ol{margin:8px 0;padding-left:20px} ol li{margin:9px 0}
+  ul{margin:6px 0;padding-left:20px}
+  code{background:#eef1f5;padding:1px 6px;border-radius:5px;font-size:12.8px;font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+  .copy{display:block;background:#0f1720;color:#e6edf3;padding:10px 13px;border-radius:8px;font-size:12.8px;
+        font-family:ui-monospace,Menlo,monospace;margin:8px 0;word-break:break-all}
+  .note{background:#eef6ff;border:1px solid #cfe3fb;border-radius:10px;padding:11px 14px;margin:12px 0;font-size:13.5px}
+  .warn{background:#fdecea;border:1px solid #f3c9c4;border-radius:10px;padding:11px 14px;margin:12px 0;font-size:13.5px}
+  .ok{background:#e9f8f0;border:1px solid #bce6cf;border-radius:10px;padding:11px 14px;margin:12px 0;font-size:13.5px}
+  .stepnum{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--grad);color:#fff;
+           font-weight:700;font-size:13px;align-items:center;justify-content:center;margin-right:6px}
+  /* flow */
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .node{border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;background:#fbfcfe;text-align:center;min-width:120px}
+  .node .ic{font-size:20px} .node .lb{font-size:12.5px;font-weight:700;margin-top:2px} .node .sm{font-size:10.5px;color:var(--muted)}
+  .node.az{border-color:var(--azure);background:#e8f2fc}
+  .node.sys{border-color:var(--green);background:#eaf7f0}
+  .node.cl{border-color:var(--purple);background:#f3ecfd}
+  .arr{color:#aab2c0;font-size:18px;font-weight:700}
+  .chk{list-style:none;padding-left:0} .chk li{margin:7px 0} .chk input{margin-right:8px;transform:translateY(1px)}
+  .small{font-size:12px;color:var(--muted)}
+  @media print{header{-webkit-print-color-adjust:exact;print-color-adjust:exact}.card,section{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Habilitar a Marcela Fuentes en Pre-Producción</h1>
+    <p>Guía paso a paso: acceso a la aplicación web + uso del sistema desde Claude Desktop / Claude.ai.</p>
+    <div class="whobox">
+      <span class="who">👤 <b>Marcela Fuentes</b></span>
+      <span class="who">✉️ <b>marcela.fuentes@incrementa.la</b></span>
+      <span class="who">🌎 Ambiente <b>Pre-Prod</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- MAPA -->
+  <section>
+    <h2>Cómo queda el acceso de Marcela</h2>
+    <p class="sub">Hay <b>dos formas</b> de usar el sistema, y requieren cosas distintas. Esta guía cubre ambas.</p>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:6px">① Aplicación web (con su identidad y rol)</div>
+      <div class="flow">
+        <div class="node"><div class="ic">👤</div><div class="lb">Marcela</div></div>
+        <span class="arr">→</span>
+        <div class="node az"><div class="ic">🪟</div><div class="lb">Azure (invitada)</div><div class="sm">Parte A</div></div>
+        <span class="arr">+</span>
+        <div class="node sys"><div class="ic">🗂️</div><div class="lb">Perfil en el sistema</div><div class="sm">Parte B</div></div>
+        <span class="arr">→</span>
+        <div class="node"><div class="ic">🖥️</div><div class="lb">App web</div></div>
+      </div>
+      <div style="font-weight:700;margin:14px 0 6px">② Claude Desktop / Claude.ai (herramientas del sistema)</div>
+      <div class="flow">
+        <div class="node"><div class="ic">👤</div><div class="lb">Marcela</div></div>
+        <span class="arr">→</span>
+        <div class="node cl"><div class="ic">💬</div><div class="lb">Claude + conector</div><div class="sm">Parte C</div></div>
+        <span class="arr">→</span>
+        <div class="node sys"><div class="ic">🧩</div><div class="lb">MCP (abierto)</div></div>
+        <span class="arr">→</span>
+        <div class="node"><div class="ic">🗄️</div><div class="lb">Sistema</div></div>
+      </div>
+    </div>
+    <div class="note"><b>Diferencia importante:</b> en la <b>app web</b> Marcela entra con <b>su propia identidad y rol</b> (por eso necesita Azure + perfil). En <b>Claude</b>, el conector MCP hoy está <b>abierto (sin login)</b> y opera con un usuario técnico — solo necesita la URL. Son independientes: puedes hacer una, la otra, o ambas.</div>
+  </section>
+
+  <!-- PARTE A -->
+  <section>
+    <h2><span class="part-tag pa">Parte A</span>Invitar a Marcela en Azure (para la app web)</h2>
+    <p class="sub">Su correo es de otro dominio (<code>@incrementa.la</code>), así que entra como <b>invitada (Guest)</b> al tenant de pre-prod (<code>dvdrocogmail.onmicrosoft.com</code>). Lo haces tú, con permisos de admin.</p>
+    <div class="card">
+      <ol>
+        <li><span class="stepnum">1</span> Entra a <a href="https://portal.azure.com">portal.azure.com</a> → <b>Microsoft Entra ID</b> → <b>Usuarios</b>.</li>
+        <li><span class="stepnum">2</span> <b>+ Nuevo usuario</b> → elige <b>Invitar usuario externo</b> (NO "Crear usuario nuevo").</li>
+        <li><span class="stepnum">3</span> En <b>Correo electrónico</b> escribe:
+          <span class="copy">marcela.fuentes@incrementa.la</span>
+          Nombre para mostrar: <code>Marcela Fuentes</code>. Puedes agregar un mensaje de invitación (opcional).</li>
+        <li><span class="stepnum">4</span> <b>Revisar e invitar</b> / <b>Invitar</b>. Azure le envía un correo de invitación.</li>
+        <li><span class="stepnum">5</span> Marcela abre el correo y <b>acepta la invitación</b>. Como <code>@incrementa.la</code> es un dominio corporativo (Microsoft), iniciará sesión con <b>sus credenciales de Incrementa</b> (si fuera un correo común, recibiría un <b>código de un solo uso</b>).</li>
+      </ol>
+      <div class="note"><b>Consentimiento (opcional, recomendado):</b> para que a Marcela no le pida aprobar permisos al primer ingreso, ve a <b>Registros de aplicaciones → (app cliente <code>dc734f4a-…</code>) → Permisos de API → Conceder consentimiento de administrador</b>.</div>
+      <div class="warn"><b>Ojo:</b> usa <b>Invitar usuario externo</b> (Guest), no "Crear usuario nuevo". Con Guest, el sistema resuelve su identidad por su <b>correo real</b>, que es lo que registraremos en la Parte B.</div>
+    </div>
+  </section>
+
+  <!-- PARTE B -->
+  <section>
+    <h2><span class="part-tag pb">Parte B</span>Crear su perfil en el sistema (para la app web)</h2>
+    <p class="sub">Sin esto, Marcela entra a Microsoft pero la app dirá "sin perfil". Lo haces tú con tu cuenta admin, dentro de la app.</p>
+    <div class="card">
+      <ol>
+        <li><span class="stepnum">1</span> Abre la app web de pre-prod con tu cuenta admin (<code>dvd.roco@gmail.com</code>):
+          <span class="copy">https://incrementa-frontend-7yl7vz6hyq-uc.a.run.app</span></li>
+        <li><span class="stepnum">2</span> Ve al módulo <b>Usuarios de plataforma</b> → <b>agregar / nuevo usuario</b>.</li>
+        <li><span class="stepnum">3</span> Ingresa el <b>correo exacto</b> de Marcela:
+          <span class="copy">marcela.fuentes@incrementa.la</span>
+          (debe coincidir <b>exactamente</b> con el invitado de la Parte A).</li>
+        <li><span class="stepnum">4</span> Asígnale un <b>rol</b> (el que corresponda a lo que probará) y guarda.</li>
+      </ol>
+      <div class="ok"><b>Qué esperar:</b> debe crear el perfil <b>sin error</b>. El sistema valida contra Microsoft (Graph) que el correo exista en el directorio — por eso la Parte A va primero. Si diera error "no existe en el directorio", es que la invitación (Parte A) aún no se completó.</div>
+    </div>
+  </section>
+
+  <!-- PARTE C -->
+  <section>
+    <h2><span class="part-tag pc">Parte C</span>Conectar el MCP en Claude Desktop / Claude.ai</h2>
+    <p class="sub">Esto lo hace <b>Marcela en su computador</b>. El conector MCP está <b>abierto</b> (sin login), así que solo necesita la URL.</p>
+    <div class="card">
+      <div style="font-weight:700">URL del conector (con <code>/mcp</code> al final):</div>
+      <span class="copy">https://incrementa-mcp-7yl7vz6hyq-uc.a.run.app/mcp</span>
+
+      <div style="font-weight:700;margin-top:14px">🖥️ En Claude Desktop</div>
+      <ol>
+        <li><span class="stepnum">1</span> Abrir <b>Claude Desktop</b> → <b>Settings</b> (Configuración).</li>
+        <li><span class="stepnum">2</span> Ir a <b>Connectors</b> (Conectores).</li>
+        <li><span class="stepnum">3</span> Bajar y hacer clic en <b>Add custom connector</b> (Agregar conector personalizado).</li>
+        <li><span class="stepnum">4</span> Nombre: <code>Incrementa Gestión</code> · <b>URL:</b> la de arriba. → <b>Add</b>.</li>
+        <li><span class="stepnum">5</span> Debe conectar y mostrar las herramientas (no pide login). En un chat nuevo, escribir p.ej. <i>"lista las empresas"</i> o <i>"muéstrame los proveedores"</i>. La primera vez, <b>aceptar el permiso</b> para ejecutar la herramienta.</li>
+      </ol>
+
+      <div style="font-weight:700;margin-top:10px">🌐 En Claude.ai (web)</div>
+      <ol>
+        <li><span class="stepnum">1</span> En <b>claude.ai</b> → <b>Settings</b> → <b>Connectors</b> → <b>Add custom connector</b> → misma URL.</li>
+      </ol>
+      <div class="warn"><b>Requisitos:</b> los conectores personalizados suelen necesitar <b>plan pagado</b> (Pro/Max/Team). Si Marcela no ve "Add custom connector", puede ser por el plan o por un <b>Developer mode</b> a activar en Settings.</div>
+      <div class="note"><b>Nota de seguridad (interino):</b> el conector MCP está sin autenticación en pre-prod a propósito (datos de prueba). En Claude, las acciones se ejecutan como un usuario técnico, no como Marcela. La versión con login por usuario vendrá en la fase de autenticación.</div>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section>
+    <h2>✅ Checklist final</h2>
+    <div class="card">
+      <b>Parte A — Azure</b>
+      <ul class="chk">
+        <li><input type="checkbox"/> Marcela invitada como <b>Guest</b> con <code>marcela.fuentes@incrementa.la</code></li>
+        <li><input type="checkbox"/> Marcela aceptó la invitación</li>
+        <li><input type="checkbox"/> (Opcional) Consentimiento de admin concedido a la app</li>
+      </ul>
+      <b>Parte B — Sistema</b>
+      <ul class="chk">
+        <li><input type="checkbox"/> Perfil creado en <b>Usuarios de plataforma</b> con su correo + rol</li>
+        <li><input type="checkbox"/> Marcela inicia sesión en la app web y carga su perfil/menús</li>
+      </ul>
+      <b>Parte C — Claude</b>
+      <ul class="chk">
+        <li><input type="checkbox"/> Conector MCP agregado en su Claude Desktop (URL con <code>/mcp</code>)</li>
+        <li><input type="checkbox"/> Probó "lista las empresas" y obtuvo respuesta</li>
+        <li><input type="checkbox"/> (Opcional) Conector agregado también en Claude.ai web</li>
+      </ul>
+    </div>
+    <p class="small">Guía operativa — incrementa-gestion · Pre-Producción. URLs y correos corresponden al ambiente de pruebas.</p>
+  </section>
+
+</div>
+</body>
+</html>

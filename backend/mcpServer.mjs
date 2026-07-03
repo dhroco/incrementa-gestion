@@ -14,6 +14,7 @@ const { gcsService } = require('./services/gcsService')
 const { createContractsQueryService } = require('./services/contractsQueryService')
 const { createContractSigningService } = require('./services/contractSigningService')
 const emailService = require('./services/emailService')
+const { tipTapDocToPlainTextAsync } = require('./utils/tipTapPlainText')
 
 const standardTemplatesService = createStandardTemplatesService({ db })
 const contractsQueryService = createContractsQueryService({ db, gcsService })
@@ -34,7 +35,8 @@ const mcpDeps = {
   contractsQueryService,
   contractSigningService,
   gcsService,
-  getUserProfileIdByUserId
+  getUserProfileIdByUserId,
+  tipTapDocToPlainTextAsync
 }
 
 /**

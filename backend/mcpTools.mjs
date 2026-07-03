@@ -61,7 +61,8 @@ function formatCompanyRut(row) {
  *   contractsQueryService: object,
  *   contractSigningService: object,
  *   gcsService: object,
- *   getUserProfileIdByUserId: (userId: string) => Promise<string | null>
+ *   getUserProfileIdByUserId: (userId: string) => Promise<string | null>,
+ *   tipTapDocToPlainTextAsync: (doc: unknown) => Promise<string>
  * }} deps
  */
 export function registerMcpTools(server, deps) {
@@ -74,7 +75,8 @@ export function registerMcpTools(server, deps) {
     contractsQueryService,
     contractSigningService,
     gcsService,
-    getUserProfileIdByUserId
+    getUserProfileIdByUserId,
+    tipTapDocToPlainTextAsync
   } = deps
 
   server.tool(
@@ -99,6 +101,40 @@ export function registerMcpTools(server, deps) {
         status: 'active',
       })
       return jsonToolResult(mapServiceResult(result))
+    }
+  )
+
+  server.tool(
+    'obtener_plantilla',
+    'Obtiene el contenido legible (texto plano) de una plantilla estándar por su id (UUID). Úsala para ver el texto del contrato antes de validar o generar. El id se obtiene con listar_plantillas. Las variables de plantilla aparecen como marcadores {{variableId}} sin valores rellenados. Retorna id, name, code, supplier_type, status, description y content.',
+    {
+      id: z.string().uuid().describe('UUID de la plantilla estándar (ver listar_plantillas)')
+    },
+    async ({ id }) => {
+      const result = await standardTemplatesService.getStandardTemplateById(id)
+      if (!result?.ok || result.notFound) {
+        return jsonToolResult({
+          ok: false,
+          code: 'NOT_FOUND',
+          message: 'Plantilla no encontrada.'
+        })
+      }
+
+      const { template } = result
+      const content = await tipTapDocToPlainTextAsync(template.content_json)
+
+      return jsonToolResult({
+        ok: true,
+        data: {
+          id: template.id,
+          name: template.name,
+          code: template.code,
+          supplier_type: template.supplier_type,
+          status: template.status,
+          description: template.description,
+          content
+        }
+      })
     }
   )
 
