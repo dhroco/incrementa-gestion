@@ -83,12 +83,34 @@ function formatThousands(n) {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })
 }
 
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+]
+
+// Convierte una fecha ISO (YYYY-MM-DD, con hora opcional) al formato legal chileno
+// "13 de julio de 2026". Se parsean las partes directamente para evitar corrimientos
+// por zona horaria. Si el valor no es ISO, se devuelve tal cual (ya viene formateado).
+function formatContractDate(value) {
+  const raw = String(value ?? '').trim()
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return raw
+  const dia = parseInt(m[3], 10)
+  const mesIdx = parseInt(m[2], 10) - 1
+  if (mesIdx < 0 || mesIdx > 11 || dia < 1 || dia > 31) return raw
+  return `${dia} de ${MESES_ES[mesIdx]} de ${m[1]}`
+}
+
 function preprocessMissingFieldOverrides(overrides) {
   const out = { ...(overrides || {}) }
 
   if (out.cantidad_reels != null && String(out.cantidad_reels).trim() !== '') {
     const n = parseIntegerOverride(out.cantidad_reels)
     if (n != null) out.cantidad_reels = formatThousands(n)
+  }
+
+  if (out.fecha_contrato != null && String(out.fecha_contrato).trim() !== '') {
+    out.fecha_contrato = formatContractDate(out.fecha_contrato)
   }
 
   let priceParsed = null
