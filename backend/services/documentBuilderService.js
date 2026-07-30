@@ -133,7 +133,8 @@ function preprocessMissingFieldOverrides(overrides) {
   let priceParsed = null
   if (out.precio_numero != null && String(out.precio_numero).trim() !== '') {
     priceParsed = parseIntegerOverride(out.precio_numero)
-    if (priceParsed != null) out.precio_numero = formatThousands(priceParsed)
+    // Precio con signo '$' y separadores de miles (ej. "$1.000.000").
+    if (priceParsed != null) out.precio_numero = `$${formatThousands(priceParsed)}`
   }
 
   if (priceParsed != null) {
