@@ -194,6 +194,11 @@ export const VARIABLE_GROUPS = {
         description: 'Plazo de ejecución (ej: "1 mes" → "un (1) mes", "30 días", "12" → "doce (12) meses"). Sin unidad se asume meses.'
       },
       {
+        id: 'dias_cesion',
+        label: 'Días de cesión',
+        description: 'Días de cesión de derechos (ej: "30" → "treinta (30) días"). Se expresa en números y letras; sin unidad se asume días.'
+      },
+      {
         id: 'cantidad_reels',
         label: 'Cantidad de reels',
         description: 'Número de reels acordados en el contrato'

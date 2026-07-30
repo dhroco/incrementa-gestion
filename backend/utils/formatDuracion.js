@@ -7,7 +7,8 @@ const UNITS = [
   { test: /^a[ñn]os?$/, singular: 'año', plural: 'años', fem: false },
   { test: /^semanas?$/, singular: 'semana', plural: 'semanas', fem: true }
 ]
-const DEFAULT_UNIT = UNITS[1] // meses
+const UNIT_MES = UNITS[1] // meses
+const UNIT_DIA = UNITS[0] // días
 
 // Cardinal en palabras con apocopación ("uno"->"un"/"veintiún"/"...y un"; fem "una").
 function cardinal(n, fem) {
@@ -18,24 +19,33 @@ function cardinal(n, fem) {
 }
 
 /**
- * Formatea una duración ingresada por el usuario a la forma legal
- * "<palabras> (<n>) <unidad>". Si no hay unidad, se asume meses.
- * Ej: "1 mes"->"un (1) mes", "30 dias"->"treinta (30) días", "12"->"doce (12) meses".
- * Si el valor no empieza con un número, se devuelve tal cual (ya viene formateado).
+ * Formatea una cantidad "<palabras> (<n>) <unidad>". Si el usuario no indica unidad,
+ * se usa `defaultUnit`. Si el valor no empieza con número, se devuelve tal cual.
  * @param {unknown} value
+ * @param {{singular:string,plural:string,fem:boolean}} defaultUnit
  * @returns {string}
  */
-function formatDuracion(value) {
+function format(value, defaultUnit) {
   const raw = String(value ?? '').trim()
   if (raw === '') return raw
   const m = raw.match(/^(\d{1,4})\s*(.*)$/)
   if (!m) return raw
   const n = parseInt(m[1], 10)
   const unitRaw = m[2].trim().toLowerCase().replace(/\./g, '')
-  const unit = unitRaw === '' ? DEFAULT_UNIT : UNITS.find((u) => u.test.test(unitRaw))
+  const unit = unitRaw === '' ? defaultUnit : UNITS.find((u) => u.test.test(unitRaw))
   if (!unit) return raw // unidad desconocida → no arriesgar, dejar como está
   const unitWord = n === 1 ? unit.singular : unit.plural
   return `${cardinal(n, unit.fem)} (${n}) ${unitWord}`
 }
 
-module.exports = { formatDuracion }
+// Duración de ejecución: default meses. Ej "1 mes"->"un (1) mes", "12"->"doce (12) meses".
+function formatDuracion(value) {
+  return format(value, UNIT_MES)
+}
+
+// Días de cesión: default días. Ej "30"->"treinta (30) días", "1"->"un (1) día".
+function formatDias(value) {
+  return format(value, UNIT_DIA)
+}
+
+module.exports = { formatDuracion, formatDias }

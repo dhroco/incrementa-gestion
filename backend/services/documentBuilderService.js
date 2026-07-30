@@ -10,7 +10,7 @@ const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTap
 const supplierServiceDefault = require('./supplierService')
 const clientServiceDefault = require('./clientService')
 const { numberToWords } = require('../utils/numberToWords')
-const { formatDuracion } = require('../utils/formatDuracion')
+const { formatDuracion, formatDias } = require('../utils/formatDuracion')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -56,6 +56,7 @@ const VARIABLE_META = {
   lugar_contrato:  { label: 'Lugar del contrato',  type: 'text',   source: 'contract' },
   mes_ejecucion:   { label: 'Mes de ejecución',    type: 'text',   source: 'contract' },
   duracion_ejecucion: { label: 'Duración ejecución', type: 'text', source: 'contract' },
+  dias_cesion:     { label: 'Días de cesión',      type: 'text',   source: 'contract' },
   cantidad_reels:  { label: 'Cantidad de reels',   type: 'number', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
@@ -123,6 +124,10 @@ function preprocessMissingFieldOverrides(overrides) {
 
   if (out.duracion_ejecucion != null && String(out.duracion_ejecucion).trim() !== '') {
     out.duracion_ejecucion = formatDuracion(out.duracion_ejecucion)
+  }
+
+  if (out.dias_cesion != null && String(out.dias_cesion).trim() !== '') {
+    out.dias_cesion = formatDias(out.dias_cesion)
   }
 
   let priceParsed = null
