@@ -46,6 +46,31 @@ export const VARIABLE_GROUPS = {
         id: 'proveedor_cuenta_social',
         label: 'Cuenta Red Social',
         description: 'Handle o cuenta asociada a la red social del proveedor'
+      },
+      {
+        id: 'codigo_escritura',
+        label: 'Código CVE (Estatuto)',
+        description: 'Código de verificación electrónico del Certificado de Estatuto (solo empresas)'
+      },
+      {
+        id: 'fecha_estatuto',
+        label: 'Fecha Certificado Estatuto',
+        description: 'Fecha del Certificado de Estatuto Actualizado (solo empresas)'
+      },
+      {
+        id: 'fecha_escritura',
+        label: 'Fecha Escritura Pública',
+        description: 'Fecha de la escritura pública de personería (solo empresas)'
+      },
+      {
+        id: 'nombre_notaria',
+        label: 'Nombre Notaría',
+        description: 'Notaría donde se otorgó la escritura pública (solo empresas)'
+      },
+      {
+        id: 'nombre_notario',
+        label: 'Nombre Notario',
+        description: 'Notario ante quien se otorgó la escritura pública (solo empresas)'
       }
     ]
   },
@@ -162,6 +187,11 @@ export const VARIABLE_GROUPS = {
         id: 'mes_ejecucion',
         label: 'Mes de ejecución',
         description: 'Mes en que se ejecuta la campaña o servicio'
+      },
+      {
+        id: 'duracion_ejecucion',
+        label: 'Duración ejecución',
+        description: 'Plazo de ejecución (ej: "1 mes" → "un (1) mes", "30 días", "12" → "doce (12) meses"). Sin unidad se asume meses.'
       },
       {
         id: 'cantidad_reels',

@@ -8,6 +8,12 @@ const MARGIN = 48
 const BODY = 11
 /** En @react-pdf, `lineHeight` es un factor (1 = 100%), NO puntos. Nunca usar fontSize * ratio aquí. */
 const LINE_HEIGHT_RATIO = 1.35
+/**
+ * "Keep-with-next" de títulos: espacio mínimo (pt) que debe quedar bajo un título
+ * para renderizarlo en la página actual; si no cabe, el título salta a la página
+ * siguiente junto con su contenido. ≈ 3 líneas de cuerpo, para evitar títulos huérfanos.
+ */
+const HEADING_KEEP_AHEAD = Math.round(3 * BODY * LINE_HEIGHT_RATIO)
 
 let fontFamily = 'Helvetica'
 let fontRegistered = false
@@ -271,7 +277,7 @@ function renderBlock(node, listDepth, list) {
       : { ...baseStyles.paragraphBlock, marginTop: 4, marginBottom: 4, marginLeft: listDepth }
     return React.createElement(
       View,
-      { key: 'h', style: blockStyle },
+      { key: 'h', style: blockStyle, wrap: false, minPresenceAhead: HEADING_KEEP_AHEAD },
       React.createElement(TextFlow, { parts, fontSize: fs, align, inList })
     )
   }

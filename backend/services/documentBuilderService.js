@@ -10,6 +10,7 @@ const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTap
 const supplierServiceDefault = require('./supplierService')
 const clientServiceDefault = require('./clientService')
 const { numberToWords } = require('../utils/numberToWords')
+const { formatDuracion } = require('../utils/formatDuracion')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -26,6 +27,12 @@ const VARIABLE_META = {
   proveedor_rep_legal_rut: { label: 'RUT Rep. Legal',        type: 'text',   source: 'supplier' },
   proveedor_red_social:    { label: 'Red Social',            type: 'select', source: 'supplier' },
   proveedor_cuenta_social: { label: 'Cuenta Red Social',     type: 'text',   source: 'supplier' },
+  // Personería proveedor empresa (Certificado de Estatuto / Escritura pública)
+  codigo_escritura:        { label: 'Código CVE (Estatuto)',   type: 'text', source: 'supplier' },
+  fecha_estatuto:          { label: 'Fecha Certificado Estatuto', type: 'date', source: 'supplier' },
+  fecha_escritura:         { label: 'Fecha Escritura Pública', type: 'date', source: 'supplier' },
+  nombre_notaria:          { label: 'Nombre Notaría',          type: 'text', source: 'supplier' },
+  nombre_notario:          { label: 'Nombre Notario',          type: 'text', source: 'supplier' },
   // Empresa — source: 'company' → dato de la empresa emisora, raro que falte
   company_legal_name:     { label: 'Razón Social Empresa',      type: 'text', source: 'company' },
   company_nombre_comercial: { label: 'Nombre Comercial',        type: 'text', source: 'company' },
@@ -48,6 +55,7 @@ const VARIABLE_META = {
   fecha_contrato:  { label: 'Fecha del contrato',  type: 'date',   source: 'contract' },
   lugar_contrato:  { label: 'Lugar del contrato',  type: 'text',   source: 'contract' },
   mes_ejecucion:   { label: 'Mes de ejecución',    type: 'text',   source: 'contract' },
+  duracion_ejecucion: { label: 'Duración ejecución', type: 'text', source: 'contract' },
   cantidad_reels:  { label: 'Cantidad de reels',   type: 'number', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
@@ -111,6 +119,10 @@ function preprocessMissingFieldOverrides(overrides) {
 
   if (out.fecha_contrato != null && String(out.fecha_contrato).trim() !== '') {
     out.fecha_contrato = formatContractDate(out.fecha_contrato)
+  }
+
+  if (out.duracion_ejecucion != null && String(out.duracion_ejecucion).trim() !== '') {
+    out.duracion_ejecucion = formatDuracion(out.duracion_ejecucion)
   }
 
   let priceParsed = null

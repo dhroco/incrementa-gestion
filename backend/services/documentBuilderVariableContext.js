@@ -12,6 +12,23 @@ function companyRutDisplay(body, dv) {
   return formatRutDisplay(String(body).replace(/\D/g, ''), dv != null ? String(dv).trim().toUpperCase() : '')
 }
 
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+]
+
+// Fecha ISO (YYYY-MM-DD) -> "13 de julio de 2026". Parseo por partes para evitar
+// corrimientos por zona horaria; si no es ISO se devuelve tal cual.
+function formatDateEs(value) {
+  const raw = String(value ?? '').trim()
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return raw
+  const dia = parseInt(m[3], 10)
+  const mesIdx = parseInt(m[2], 10) - 1
+  if (mesIdx < 0 || mesIdx > 11 || dia < 1 || dia > 31) return raw
+  return `${dia} de ${MESES_ES[mesIdx]} de ${m[1]}`
+}
+
 /**
  * Build substitution map for one supplier row + company row.
  * @param {object} supplier — normalizeSupplier shape from supplierService
@@ -41,6 +58,12 @@ function buildSubstitutionMap(supplier, company, client = null, overrides = {}) 
     proveedor_rep_legal_rut: isEmpresa ? String(supplier?.rut_rep_legal_display || '').trim() : '',
     proveedor_red_social: '',
     proveedor_cuenta_social: '',
+    // Personería del proveedor empresa (Certificado de Estatuto / Escritura pública)
+    codigo_escritura: isEmpresa ? String(supplier?.codigo_cve || '').trim() : '',
+    fecha_estatuto: isEmpresa ? formatDateEs(supplier?.fecha_certificado_estatuto) : '',
+    fecha_escritura: isEmpresa ? formatDateEs(supplier?.fecha_escritura_publica) : '',
+    nombre_notaria: isEmpresa ? String(supplier?.nombre_notaria || '').trim() : '',
+    nombre_notario: isEmpresa ? String(supplier?.nombre_notario || '').trim() : '',
     company_legal_name: String(company?.business_name || '').trim(),
     company_nombre_comercial: String(company?.short_name || '').trim(),
     company_rut: companyRutDisplay(company?.rut_body, company?.rut_dv),
