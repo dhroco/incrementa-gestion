@@ -1,3 +1,7 @@
+// Variables cuyo valor (handle de cuenta de red social) nunca debe partirse al final
+// de una línea en el PDF: 'Cuenta Red Social' (proveedor) y 'Cuenta marca' (cliente).
+const NOBREAK_VARIABLE_IDS = new Set(['proveedor_cuenta_social', 'client_brand_account'])
+
 function formatRutDisplay(rutBody, rutDv) {
   if (!rutBody) return ''
   return `${rutBody}-${rutDv ?? ''}`
@@ -178,6 +182,10 @@ function applySubstitutionsToTipTapDoc(doc, map) {
       node.type = 'text'
       node.text = token
       const marks = variableAttrsToMarks(attrs, nodeMarks)
+      // Handles de cuentas de redes sociales: no deben partirse al final de línea
+      // (evita un guión que confunde con el nombre real). Se marca `nobreak` para
+      // que el PDF renderice el valor completo en una línea o lo mueva entero.
+      if (NOBREAK_VARIABLE_IDS.has(vid) && val.length > 0) marks.push({ type: 'nobreak' })
       if (marks.length > 0) node.marks = marks
       else delete node.marks
       delete node.attrs

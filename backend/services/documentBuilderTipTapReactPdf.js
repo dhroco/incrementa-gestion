@@ -51,16 +51,22 @@ function parseMarks(marks) {
   let italic = false
   let underline = false
   let uppercase = false
-  if (!Array.isArray(marks)) return { bold, italic, underline, uppercase }
+  let noBreak = false
+  if (!Array.isArray(marks)) return { bold, italic, underline, uppercase, noBreak }
   for (const m of marks) {
     const t = m?.type
     if (t === 'bold') bold = true
     if (t === 'italic') italic = true
     if (t === 'underline') underline = true
     if (t === 'uppercase') uppercase = true
+    if (t === 'nobreak') noBreak = true
   }
-  return { bold, italic, underline, uppercase }
+  return { bold, italic, underline, uppercase, noBreak }
 }
+
+// hyphenationCallback: sin puntos de corte -> la palabra no se parte (se mueve entera
+// a la línea siguiente). Se aplica solo a runs marcados `nobreak` (handles de cuentas).
+const NO_HYPHEN = (word) => [word]
 
 /**
  * @param {unknown} nodes
@@ -122,6 +128,7 @@ function flatToCoalescedParts(flat) {
     const italic = Boolean(f.italic)
     const underline = Boolean(f.underline)
     const uppercase = Boolean(f.uppercase)
+    const noBreak = Boolean(f.noBreak)
     const last = out[out.length - 1]
     if (
       last &&
@@ -130,11 +137,13 @@ function flatToCoalescedParts(flat) {
       last.bold === bold &&
       last.italic === italic &&
       last.underline === underline &&
-      last.uppercase === uppercase
+      last.uppercase === uppercase &&
+      last.noBreak === noBreak &&
+      !noBreak
     ) {
       last.text += f.text
     } else {
-      out.push({ text: f.text, bold, italic, underline, uppercase })
+      out.push({ text: f.text, bold, italic, underline, uppercase, noBreak })
     }
   }
   return out
@@ -218,7 +227,7 @@ function TextFlow({ parts, fontSize, align = 'left', inList = false }) {
     if (p == null || !('text' in p)) continue
     const t = sanitizeTextForWinAnsi(/** @type {string} */ (p.text))
     if (t.length === 0) continue
-    if (!p.bold && !p.italic && !p.underline) {
+    if (!p.bold && !p.italic && !p.underline && !p.noBreak) {
       ch.push(t)
       continue
     }
@@ -227,6 +236,8 @@ function TextFlow({ parts, fontSize, align = 'left', inList = false }) {
         Text,
         {
           key: `e${key++}`,
+          // Handles de cuentas: no partir la palabra (mover entera, sin guión)
+          ...(p.noBreak ? { hyphenationCallback: NO_HYPHEN } : {}),
           style: {
             fontWeight: p.bold ? 700 : 400,
             fontStyle: p.italic ? 'italic' : 'normal',
@@ -242,7 +253,12 @@ function TextFlow({ parts, fontSize, align = 'left', inList = false }) {
   if (ch.length === 0) {
     return React.createElement(View, { style: { minHeight: fontSize * 1, width: w } })
   }
-  return React.createElement(Text, { style: baseStyle }, ch)
+  // @react-pdf lee hyphenationCallback solo del <Text> de bloque. Si el párrafo contiene
+  // un handle de cuenta (noBreak), desactivamos el hifenado en TODO el párrafo para que
+  // el handle no se parta (los handles no llevan guión; el resto del texto rara vez se hifena).
+  const hasNoBreak = parts.some((p) => p && p.noBreak)
+  const textProps = hasNoBreak ? { style: baseStyle, hyphenationCallback: NO_HYPHEN } : { style: baseStyle }
+  return React.createElement(Text, textProps, ch)
 }
 
 /**
