@@ -22,4 +22,4 @@
 ## 4. Verificación
 
 - [x] 4.1 Local: registrar tools (stdio o `mcp-http`) y confirmar `obtener_plantilla` en listado
-- [ ] 4.2 Post-deploy pre-prod: `tools/call` con id válido de `listar_plantillas` retorna texto con `{{placeholders}}`
+- [x] 4.2 Post-deploy pre-prod: `tools/call` con id válido de `listar_plantillas` retorna texto con `{{placeholders}}`
