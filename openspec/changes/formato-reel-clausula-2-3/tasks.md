@@ -36,4 +36,4 @@
 
 - [x] 6.1 Local: las 17 plantillas activas renderizan `{{cantidad_reels}} {{formato_reel}}` en la cláusula 2.3
 - [x] 6.2 Local: pipeline completo (`preprocessMissingFieldOverrides` → `buildSubstitutionMap` → `applySubstitutionsToTipTapDoc`) produce "un (1) reel", "tres (3) videos" y "doce (12) historias"
-- [ ] 6.3 Post-deploy pre-prod: generar un contrato desde la UI eligiendo "Formato de reel" y confirmar el texto de la cláusula 2.3 en el PDF
+- [x] 6.3 Post-deploy pre-prod: `validar_contrato` ofrece `formato_reel` como `select` con las 7 opciones; dos contratos generados con el proveedor de prueba "Quijote ltda." confirman en el PDF "tres (3) videos" (CONTRATO_0001, borrador `bcb3b32a`) y "un (1) reel" (CONTRATO_0002, borrador `57e54335`)
