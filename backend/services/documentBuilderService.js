@@ -16,6 +16,7 @@ const {
   formatFormatoReel,
   FORMATO_REEL_OPTIONS
 } = require('../utils/formatReels')
+const { formatFechaEs } = require('../utils/formatFechaEs')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -98,23 +99,10 @@ function formatThousands(n) {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })
 }
 
-const MESES_ES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-]
-
-// Convierte una fecha ISO (YYYY-MM-DD, con hora opcional) al formato legal chileno
-// "13 de julio de 2026". Se parsean las partes directamente para evitar corrimientos
-// por zona horaria. Si el valor no es ISO, se devuelve tal cual (ya viene formateado).
-function formatContractDate(value) {
-  const raw = String(value ?? '').trim()
-  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return raw
-  const dia = parseInt(m[3], 10)
-  const mesIdx = parseInt(m[2], 10) - 1
-  if (mesIdx < 0 || mesIdx > 11 || dia < 1 || dia > 31) return raw
-  return `${dia} de ${MESES_ES[mesIdx]} de ${m[1]}`
-}
+// Variables de tipo fecha: el override llega en ISO (YYYY-MM-DD) desde el
+// formulario o el MCP y debe escribirse como "15 de marzo de 2024" en el contrato.
+// Sin esto el override pisa el valor ya formateado por `buildSubstitutionMap`.
+const DATE_OVERRIDE_KEYS = ['fecha_contrato', 'fecha_escritura', 'fecha_estatuto']
 
 function preprocessMissingFieldOverrides(overrides) {
   const out = { ...(overrides || {}) }
@@ -132,8 +120,10 @@ function preprocessMissingFieldOverrides(overrides) {
     out.cantidad_reels = formatCantidadReels(out.cantidad_reels)
   }
 
-  if (out.fecha_contrato != null && String(out.fecha_contrato).trim() !== '') {
-    out.fecha_contrato = formatContractDate(out.fecha_contrato)
+  for (const key of DATE_OVERRIDE_KEYS) {
+    if (out[key] != null && String(out[key]).trim() !== '') {
+      out[key] = formatFechaEs(out[key])
+    }
   }
 
   if (out.duracion_ejecucion != null && String(out.duracion_ejecucion).trim() !== '') {
