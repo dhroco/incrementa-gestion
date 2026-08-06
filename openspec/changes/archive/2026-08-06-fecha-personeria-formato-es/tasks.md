@@ -29,4 +29,4 @@
 
 - [x] 5.1 Local, camino BD: proveedor con `fecha_certificado_estatuto` guardada rinde "27 de mayo de 2025" (antes, el texto inglés de `Date`)
 - [x] 5.2 Local, camino override: `fecha_escritura: '2024-03-15'` rinde "15 de marzo de 2024"; `fecha_contrato` sigue correcto
-- [ ] 5.3 Post-deploy pre-prod: generar un contrato con plantilla de escritura pública (CONTRATO_0004–0006) y confirmar la fecha en la cláusula PERSONERÍA del PDF
+- [x] 5.3 Post-deploy pre-prod, ambos caminos confirmados en el PDF: CONTRATO_0004 con `fecha_escritura` por override rinde "consta en Escritura pública de fecha 15 de marzo de 2024"; CONTRATO_0001 con proveedor que tiene la fecha en BD rinde "de fecha 27 de mayo de 2025". Borradores de prueba eliminados tras verificar.
