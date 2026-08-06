@@ -31,11 +31,15 @@ context: |
   ## Autenticación y Seguridad
 
   **Autenticación de usuarios (frontend)**
-  - Keycloak 26 como proveedor OIDC
+  - Microsoft Entra ID como proveedor OIDC, vía MSAL (`@azure/msal-browser` / `@azure/msal-react`)
+  - Flujo Authorization Code + PKCE; configuración en `frontend/src/config/msalConfig.js`
   - El perfil/alcance del usuario se resuelve automáticamente tras el login
 
   **Validación en API (backend)**
-  - Cada endpoint protegido valida JWT emitido por Keycloak
+  - Cada endpoint protegido valida el JWT emitido por Entra ID (firma/issuer/audience por OIDC discovery)
+  - La identidad interna se resuelve por **email**, no por `sub`, contra la tabla `user_profile`
+  - El alta de usuarios valida existencia en el tenant vía Microsoft Graph app-only (`User.Read.All`)
+  - Autorización con CASL: reglas empaquetadas por perfil, entregadas al frontend en la sesión
   - Rutas públicas se declaran explícitamente; el resto requiere autenticación por defecto
 
   ## Entornos

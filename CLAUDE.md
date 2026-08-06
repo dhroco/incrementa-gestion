@@ -114,4 +114,4 @@ GCP Cloud Run (backend Express + frontend nginx), Cloud SQL (PostgreSQL 16), GCS
 
 - **Gestión de cambios con OpenSpec:** los cambios se proponen y aplican bajo `openspec/changes/` (`propose` → `apply`), con specs en `openspec/specs/`. El contexto, reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
 - Reglas de Cursor/skills OpenSpec en `.cursor/`.
-- Roles de colaboración y estado histórico de la migración a GCP en `HANDOFF-CONTEXT.md` (Claude = arquitecto/PM y revisor; Cursor = implementa el código de producto vía OpenSpec).
+- **Roles de colaboración:** Claude = arquitecto/PM y revisor (propone, especifica, revisa); Cursor = implementa el código de producto vía OpenSpec.
