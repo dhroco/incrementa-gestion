@@ -201,7 +201,12 @@ export const VARIABLE_GROUPS = {
       {
         id: 'cantidad_reels',
         label: 'Cantidad de reels',
-        description: 'Número de reels acordados en el contrato'
+        description: 'Cantidad acordada, en números y letras (ej: "3" → "tres (3)"). Se usa junto a "Formato de reel", que aporta el sustantivo.'
+      },
+      {
+        id: 'formato_reel',
+        label: 'Formato de reel',
+        description: 'Formato de la publicación (Reel, Video, Historia, Story, Post, Carrusel, Short). Se escribe en minúsculas y concuerda en número con "Cantidad de reels" (ej: "Video" con 3 → "videos").'
       },
       {
         id: 'precio_numero',

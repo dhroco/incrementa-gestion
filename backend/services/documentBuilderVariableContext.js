@@ -90,6 +90,7 @@ function buildSubstitutionMap(supplier, company, client = null, overrides = {}) 
     lugar_contrato: '',
     mes_ejecucion: '',
     cantidad_reels: '',
+    formato_reel: '',
     precio_numero: '',
     precio_texto: '',
     client_name: client ? String(client.name || '').trim() : '',

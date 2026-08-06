@@ -11,6 +11,11 @@ const supplierServiceDefault = require('./supplierService')
 const clientServiceDefault = require('./clientService')
 const { numberToWords } = require('../utils/numberToWords')
 const { formatDuracion, formatDias } = require('../utils/formatDuracion')
+const {
+  formatCantidadReels,
+  formatFormatoReel,
+  FORMATO_REEL_OPTIONS
+} = require('../utils/formatReels')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -58,6 +63,7 @@ const VARIABLE_META = {
   duracion_ejecucion: { label: 'Duración ejecución', type: 'text', source: 'contract' },
   dias_cesion:     { label: 'Días de cesión',      type: 'text',   source: 'contract' },
   cantidad_reels:  { label: 'Cantidad de reels',   type: 'number', source: 'contract' },
+  formato_reel:    { label: 'Formato de reel',     type: 'select', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
 }
@@ -113,9 +119,17 @@ function formatContractDate(value) {
 function preprocessMissingFieldOverrides(overrides) {
   const out = { ...(overrides || {}) }
 
+  // Cláusula 2.3: "{{cantidad_reels}} {{formato_reel}}" se escribe como
+  // "un (1) reel" / "tres (3) videos". El formato concuerda en número con la
+  // cantidad, por lo que se resuelve antes de reescribir `cantidad_reels`.
+  const reelsCount = parseIntegerOverride(out.cantidad_reels)
+
+  if (out.formato_reel != null && String(out.formato_reel).trim() !== '') {
+    out.formato_reel = formatFormatoReel(out.formato_reel, reelsCount)
+  }
+
   if (out.cantidad_reels != null && String(out.cantidad_reels).trim() !== '') {
-    const n = parseIntegerOverride(out.cantidad_reels)
-    if (n != null) out.cantidad_reels = formatThousands(n)
+    out.cantidad_reels = formatCantidadReels(out.cantidad_reels)
   }
 
   if (out.fecha_contrato != null && String(out.fecha_contrato).trim() !== '') {
@@ -151,6 +165,10 @@ function buildMissingFields(missingKeys, { clientRow, supplierRow } = {}) {
     const pairField = getPairFieldForPrimary(key)
     const field = { key, label: meta.label, type: meta.type, source: meta.source ?? 'contract' }
     if (pairField) field.pairField = pairField
+
+    if (key === 'formato_reel') {
+      field.options = [...FORMATO_REEL_OPTIONS]
+    }
 
     if (key === 'client_product_campaign' && clientRow?.product_campaigns?.length > 0) {
       field.type = 'select'

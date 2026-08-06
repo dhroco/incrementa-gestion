@@ -48,4 +48,4 @@ function formatDias(value) {
   return format(value, UNIT_DIA)
 }
 
-module.exports = { formatDuracion, formatDias }
+module.exports = { formatDuracion, formatDias, cardinal }
