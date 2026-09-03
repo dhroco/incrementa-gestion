@@ -499,6 +499,53 @@ label.clause-field,
   gap: 10px;
 }
 
+.legal-rep-signature-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.legal-rep-signature-field__hint {
+  margin: 0;
+  font-size: 12px;
+  color: #000;
+  opacity: 0.75;
+}
+
+.legal-rep-signature-field__preview-wrap {
+  max-width: 220px;
+}
+
+.legal-rep-signature-field__preview {
+  display: block;
+  max-width: 100%;
+  max-height: 72px;
+  object-fit: contain;
+}
+
+.legal-rep-signature-field__empty {
+  font-size: 13px;
+  color: #000;
+  opacity: 0.7;
+}
+
+.legal-rep-signature-field__error {
+  font-size: 12px;
+  color: #000;
+}
+
+.legal-rep-signature-field__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.legal-rep-signature-field__file-input {
+  display: none;
+}
+
 .company-form-rep-vrule {
   width: 0;
   align-self: stretch;

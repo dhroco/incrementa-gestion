@@ -63,10 +63,10 @@ function chainable(endValue, hooks = {}) {
       if (hooks.onFirst) hooks.onFirst()
       return endValue
     },
-    insert() {
+    insert(payload) {
       return {
         returning: async () => {
-          if (hooks.onInsert) hooks.onInsert()
+          if (hooks.onInsert) hooks.onInsert(payload)
           return [
             {
               id: '77777777-7777-7777-7777-777777777777',
@@ -253,6 +253,72 @@ test('generateAndPersist overwrites duplicate when overwrite is true', async () 
     assert.equal(deleteCalled, true)
     assert.equal(insertCalled, true)
     assert.equal(result.data.documents[0].status, 'draft')
+  })
+})
+
+test('generateAndPersist inserts draft_document.content_snapshot on generate', async () => {
+  let insertedPayload = null
+
+  await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
+    const service = createDocumentBuilderService({
+      db: createGenerateDb({
+        duplicateRow: null,
+        hooks: {
+          onInsert: (payload) => {
+            insertedPayload = payload
+          }
+        }
+      }),
+      supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
+      gcsService: {
+        uploadBuffer: async () => {},
+        downloadBuffer: async () => Buffer.alloc(0),
+        deleteFile: async () => {}
+      },
+      getUserProfileIdByUserId: async () => PROFILE_ID
+    })
+
+    const result = await service.generateAndPersist(baseGenerateArgs())
+
+    assert.equal(result.ok, true)
+    assert.ok(insertedPayload, 'expected INSERT payload to be captured')
+    assert.equal(insertedPayload.content_snapshot?.content?.[0]?.content?.[0]?.text, 'Contrato sin variables.')
+  })
+})
+
+test('generateAndPersist inserts draft_document.content_snapshot on overwrite', async () => {
+  const duplicate = {
+    id: '88888888-8888-8888-8888-888888888888',
+    file_name: 'prev.pdf',
+    gcs_path: 'contratos/prev.pdf',
+    created_at: new Date('2026-05-15T12:00:00.000Z'),
+    status: 'draft'
+  }
+  let insertedPayload = null
+
+  await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
+    const service = createDocumentBuilderService({
+      db: createGenerateDbWithTransaction({
+        duplicateRow: duplicate,
+        hooks: {
+          onInsert: (payload) => {
+            insertedPayload = payload
+          }
+        }
+      }),
+      supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
+      gcsService: {
+        uploadBuffer: async () => {},
+        downloadBuffer: async () => Buffer.alloc(0),
+        deleteFile: async () => {}
+      },
+      getUserProfileIdByUserId: async () => PROFILE_ID
+    })
+
+    const result = await service.generateAndPersist(baseGenerateArgs({ overwrite: true }))
+    assert.equal(result.ok, true)
+    assert.ok(insertedPayload, 'expected INSERT payload to be captured')
+    assert.equal(insertedPayload.content_snapshot?.content?.[0]?.content?.[0]?.text, 'Contrato sin variables.')
   })
 })
 

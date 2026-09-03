@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import { VariableNode } from './VariableNode'
+import { SignatureBlockNode } from './SignatureBlockNode'
 import { UppercaseMark } from './UppercaseMark'
 import {
   toggleBoldFormatting,
@@ -91,6 +92,7 @@ const RichTextEditor = ({
       }),
       UppercaseMark,
       VariableNode,
+      SignatureBlockNode,
     ],
     []
   )

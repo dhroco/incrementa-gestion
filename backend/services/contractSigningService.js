@@ -4,6 +4,7 @@ const { db: defaultDb } = require('../db/knex')
 const { gcsService: defaultGcsService } = require('./gcsService')
 const emailServiceDefault = require('./emailService')
 const { yearMonthInSantiago } = require('./documentBuilderService')
+const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTapReactPdf')
 
 function sanitizeFilePart(s) {
   return (
@@ -68,7 +69,34 @@ function buildSignedGcsPath({ companyId, supplierId, templateCode, docId }) {
   return `contratos-firmados/${companyId}/${supplierId}/${codePart}/${year}/${month}/${docId}_firmado.pdf`
 }
 
-async function appendSignaturePage(originalBuffer, { signerName, company, signedAtFormatted, hash }) {
+function sha256Hex(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+function collectCompanyRepIndexesFromSnapshot(snapshotDoc) {
+  const out = new Set()
+
+  function walk(node) {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
+    if (node.type === 'signatureBlock' && node.attrs?.party === 'company') {
+      const n = node.attrs?.repIndex == null ? null : Number(node.attrs.repIndex)
+      if (n === 1 || n === 2) out.add(n)
+    }
+    if (node.content) walk(node.content)
+  }
+
+  walk(snapshotDoc)
+  return Array.from(out)
+}
+
+async function appendSignaturePage(
+  originalBuffer,
+  { signerName, company, signedAtFormatted, draftHash, signedHash, stampInjected = false, reRendered = false, hash }
+) {
   const pdfDoc = await PDFDocument.load(originalBuffer)
   const page = pdfDoc.addPage()
   const { width, height } = page.getSize()
@@ -77,6 +105,9 @@ async function appendSignaturePage(originalBuffer, { signerName, company, signed
   const margin = 50
   let y = height - 72
   const lineGap = 20
+
+  const draftSha = draftHash ?? hash ?? '—'
+  const signedSha = signedHash ?? draftSha
 
   const drawLine = (text, { bold = false, size = 11 } = {}) => {
     page.drawText(text, {
@@ -89,7 +120,7 @@ async function appendSignaturePage(originalBuffer, { signerName, company, signed
     y -= size + (size >= 14 ? 10 : lineGap - size)
   }
 
-  drawLine('FIRMA ELECTRÓNICA SIMPLE', { bold: true, size: 16 })
+  drawLine('CONSTANCIA DE FIRMA ELECTRÓNICA SIMPLE', { bold: true, size: 16 })
   drawLine('Ley N° 19.799 sobre Firma Electrónica', { size: 10 })
   y -= 4
   page.drawLine({
@@ -101,11 +132,23 @@ async function appendSignaturePage(originalBuffer, { signerName, company, signed
   y -= lineGap
 
   const repShort = company.short_name ? ` (${company.short_name})` : ''
-  drawLine(`Firmante: ${signerName}`)
-  drawLine(`En representación de: ${company.business_name}${repShort}`)
+  drawLine(`Usuario plataforma: ${signerName}`)
+  drawLine(`Empresa: ${company.business_name}${repShort}`)
   drawLine(`RUT Empresa: ${formatCompanyRut(company)}`)
-  drawLine(`Fecha y hora de firma: ${signedAtFormatted}`)
-  drawLine(`Hash documento original (SHA-256): ${hash}`, { size: 9 })
+  drawLine(`Fecha y hora: ${signedAtFormatted}`)
+  drawLine(`Hash SHA-256 del borrador revisado: ${draftSha}`, { size: 9 })
+  drawLine(`Hash SHA-256 del cuerpo del contrato (sin esta constancia): ${signedSha}`, {
+    size: 8
+  })
+
+  if (stampInjected) {
+    drawLine('La rúbrica reproducida es una imagen registrada por la empresa.')
+  } else if (reRendered) {
+    drawLine('No se pudo estampar una rúbrica registrada de la empresa.')
+  } else {
+    drawLine('No se pudo estampar una rúbrica registrada de la empresa.')
+    drawLine('El cuerpo del documento no fue re-renderizado.')
+  }
 
   return Buffer.from(await pdfDoc.save())
 }
@@ -218,17 +261,65 @@ function createContractSigningService({
       }
     }
 
-    const hash = crypto.createHash('sha256').update(originalBuffer).digest('hex')
+    const draft_sha256 = sha256Hex(originalBuffer)
     const signedAt = new Date()
     const signedAtFormatted = formatTimestampSantiago(signedAt)
 
+    let bodyBuffer = originalBuffer
+    let signed_sha256 = draft_sha256
+    let stampInjected = false
+    let reRendered = false
+
+    // Si el borrador tiene snapshot materializado, intentamos re-renderizar para inyectar
+    // la rúbrica de la empresa (solo para el bloque de firma de representante, mitad 1).
+    if (draft.content_snapshot) {
+      try {
+        const repIndexes = collectCompanyRepIndexesFromSnapshot(draft.content_snapshot)
+        const signatureRows = repIndexes.length
+          ? await db('legal_rep_signature')
+              .select('rep_index', 'gcs_path')
+              .where({ company_id: draft.company_id })
+          : []
+
+        const signatureImages = {}
+        for (const row of signatureRows) {
+          if (!repIndexes.includes(row.rep_index)) continue
+          const key = row.rep_index === 1 ? 'company:1' : row.rep_index === 2 ? 'company:2' : null
+          if (!key) continue
+
+          try {
+            const buf = await gcsService.downloadBuffer({ gcsPath: row.gcs_path })
+            if (buf) {
+              signatureImages[key] = buf
+              stampInjected = true
+            }
+          } catch (err) {
+            console.error('[contractSigningService] Signature image download failed:', err)
+          }
+        }
+
+        bodyBuffer = await buildPdfBytesFromTipTapWithReactPdf(draft.content_snapshot, { signatureImages })
+        signed_sha256 = sha256Hex(bodyBuffer)
+        reRendered = true
+      } catch (err) {
+        console.error('[contractSigningService] Re-render failed, falling back to legacy body:', err)
+        bodyBuffer = originalBuffer
+        signed_sha256 = draft_sha256
+        stampInjected = false
+        reRendered = false
+      }
+    }
+
     let signedBuffer
     try {
-      signedBuffer = await appendSignaturePage(originalBuffer, {
+      signedBuffer = await appendSignaturePage(bodyBuffer, {
         signerName: signer.full_name || 'Firmante',
         company,
         signedAtFormatted,
-        hash
+        draftHash: draft_sha256,
+        signedHash: signed_sha256,
+        stampInjected,
+        reRendered
       })
     } catch (err) {
       console.error('[contractSigningService] PDF signing failed:', err)
@@ -236,7 +327,7 @@ function createContractSigningService({
         ok: false,
         status: 500,
         code: 'PDF_SIGN_FAILED',
-        message: 'No se pudo generar la página de firma del documento.'
+        message: 'No se pudo generar la constancia de firma del documento.'
       }
     }
 
@@ -285,7 +376,9 @@ function createContractSigningService({
           source: 'generated',
           signed_at: signedAt,
           signed_by: signer.full_name || 'Firmante',
-          uploaded_by: signerUserProfileId
+          uploaded_by: signerUserProfileId,
+          draft_sha256,
+          signed_sha256
         })
 
         await trx('draft_document').where({ id: draftDocumentId }).update({ status: 'signed' })

@@ -2,6 +2,7 @@ const { db } = require('../db/knex')
 const { parseRut } = require('../utils/rut')
 const { isValidEmail } = require('../utils/validation')
 const { resolveCompanyScopeByUserId } = require('./companyScopeService')
+const { gcsService: gcsServiceDefault } = require('./gcsService')
 
 /**
  * @param {import('knex').Knex.QueryBuilder} qb
@@ -162,7 +163,22 @@ async function getCompanyDetail({ userId, companyId }) {
   const row = await qb.first()
   if (!row) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
 
-  return { ok: true, data: row }
+  // Transparencias: nunca devolvemos `gcs_path` al cliente; solo URLs V4 de corta duración.
+  const signatureRows = await db('legal_rep_signature')
+    .select('rep_index', 'gcs_path')
+    .where({ company_id: companyId })
+
+  const legal_rep_signatures = []
+  for (const s of signatureRows) {
+    try {
+      const url = await gcsServiceDefault.getSignedUrl({ gcsPath: s.gcs_path, expiresInMinutes: 60 })
+      legal_rep_signatures.push({ rep_index: s.rep_index, url })
+    } catch {
+      // best-effort: si falla la URL firmada, omitimos esa firma
+    }
+  }
+
+  return { ok: true, data: { ...row, legal_rep_signatures } }
 }
 
 async function createCompany({ userId, payload }) {

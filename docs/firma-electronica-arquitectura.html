@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Firma Electrónica de Contratos — Hoy, Pre-Prod y Producción</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --hoy:#b42318;      --hoybg:#fdecea;
+    --pre:#1f6feb;      --prebg:#e7f0ff;
+    --prod:#0a7d33;     --prodbg:#e6f6ec;
+    --adobe:#d1410c;    --adobebg:#fdeee7;
+    --ink:#1a1a1a; --muted:#5a6370; --border:#E3E6E8; --card:#fff;
+    --accent:#657A8A; --link:#F62D84;
+    --warn:#b42318; --warnbg:#fdecea;
+    --ok:#0a7d33; --okbg:#e6f6ec;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+       margin:0;background:#f6f7f9;line-height:1.55;font-size:14px}
+  header{background:#000;color:#fff;padding:22px 32px}
+  header h1{margin:0;font-size:22px;letter-spacing:-.5px}
+  header p{margin:6px 0 0;color:#c9ccd1;font-size:13px}
+  main{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:10px;
+          padding:20px 24px;margin:18px 0}
+  h2{font-size:18px;margin:0 0 4px;border-left:4px solid var(--accent);padding-left:10px}
+  h3{font-size:15px;margin:22px 0 6px}
+  h4{font-size:13px;margin:16px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:13px}
+  .mermaid{background:#fbfcfd;border:1px dashed var(--border);border-radius:8px;padding:14px;overflow-x:auto;text-align:center;margin:12px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f2f4f6;font-weight:600}
+  code{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  a{color:var(--link)}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);
+        border-radius:999px;padding:4px 12px;font-size:12px;background:#fff}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+  .done{background:var(--okbg);color:var(--ok)}
+  .pend{background:#fff4e5;color:#8a5a00}
+  .miss{background:var(--warnbg);color:var(--warn)}
+  .note{background:#f0f6ff;border:1px solid #cfe1ff;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px}
+  .warn{background:var(--warnbg);border:1px solid #f3c9c4;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px}
+  .good{background:var(--okbg);border:1px solid #b9e0c6;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px}
+  .toc{columns:2;font-size:13px}
+  .toc a{text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  ul,ol{margin:6px 0;padding-left:20px}
+  li{margin:3px 0}
+  .small{font-size:12px;color:var(--muted)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+  @media (max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.toc{columns:1}}
+  .box{border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:#fbfcfd}
+  .box h4{margin-top:0}
+  .svgwrap{background:#fff;border:1px dashed var(--border);border-radius:8px;padding:10px;overflow-x:auto}
+  .capa{border-left:4px solid var(--accent);padding:2px 0 2px 12px;margin:12px 0}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+       border-radius:50%;background:#000;color:#fff;font-size:12px;font-weight:700;margin-right:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Firma Electrónica de Contratos — Hoy, Pre-Prod y Producción</h1>
+  <p>incrementa-gestion · Cómo firma hoy el sistema, qué pide la usuaria, y cómo se llega ahí en dos etapas &nbsp;|&nbsp; Documento de arquitectura y diseño</p>
+</header>
+<main>
+
+  <!-- ============ 0. CÓMO LEER ============ -->
+  <section id="leer">
+    <h2>0. Cómo leer este documento</h2>
+    <p class="sub">Está escrito para alguien que <b>no sabe nada de firma electrónica</b>. Los primeros dos capítulos explican el problema y los conceptos; recién en el capítulo 4 aparece la arquitectura.</p>
+
+    <div class="legend">
+      <span class="chip"><span class="dot" style="background:var(--hoy)"></span> HOY · lo que existe y corre en pre-prod</span>
+      <span class="chip"><span class="dot" style="background:var(--pre)"></span> PRE-PROD · lo que vamos a construir y probar</span>
+      <span class="chip"><span class="dot" style="background:var(--prod)"></span> PRODUCCIÓN · el destino final, nube del cliente</span>
+      <span class="chip"><span class="dot" style="background:var(--adobe)"></span> Adobe Acrobat Sign · servicio externo</span>
+    </div>
+
+    <p><b>Convención de flechas en los diagramas:</b> línea continua = llamada directa entre sistemas; línea punteada = identidad, credencial, notificación asíncrona o dato de configuración.</p>
+
+    <p><b>Estado de cada pieza:</b> <span class="pill done">verde = ya construido</span> · <span class="pill pend">ámbar = por construir</span> · <span class="pill miss">rojo = no existe hoy y es bloqueante</span></p>
+
+    <h3>Índice</h3>
+    <div class="toc">
+      <a href="#problema">1. El problema, en dos dibujos</a><br/>
+      <a href="#curso">2. Curso rápido: qué es una firma electrónica</a><br/>
+      <a href="#muestra">3. Qué es exactamente la muestra que envió la usuaria</a><br/>
+      <a href="#hoy">4. HOY — cómo funciona el sistema</a><br/>
+      <a href="#brecha">5. La brecha — los cinco huecos</a><br/>
+      <a href="#rutas">6. Las dos rutas posibles y por qué elegimos una</a><br/>
+      <a href="#preprod">7. PRE-PROD — cómo va a quedar</a><br/>
+      <a href="#produccion">8. PRODUCCIÓN — cómo va a quedar</a><br/>
+      <a href="#datos">9. Modelo de datos y estados del documento</a><br/>
+      <a href="#plan">10. Plan de construcción por etapas</a><br/>
+      <a href="#riesgos">11. Decisiones abiertas y riesgos</a><br/>
+      <a href="#glosario">12. Glosario</a>
+    </div>
+  </section>
+
+  <!-- ============ 1. EL PROBLEMA ============ -->
+  <section id="problema">
+    <h2>1. El problema, en dos dibujos</h2>
+    <p class="sub">La usuaria pidió que "la firma quede escrita". Esto es lo que produce el sistema hoy, al lado de lo que ella espera.</p>
+
+    <div class="svgwrap">
+    <svg viewBox="0 0 1120 430" width="100%" role="img" aria-label="Comparación entre el documento que produce el sistema hoy y el documento esperado">
+      <!-- ===== LADO IZQUIERDO: HOY ===== -->
+      <text x="20" y="24" font-size="15" font-weight="700" fill="#b42318">✗ LO QUE PRODUCE EL SISTEMA HOY</text>
+
+      <!-- hoja 1 -->
+      <rect x="20" y="40" width="220" height="300" rx="4" fill="#fff" stroke="#c9ccd1"/>
+      <text x="30" y="60" font-size="9" fill="#5a6370">…última página del contrato</text>
+      <g stroke="#dfe3e7" stroke-width="4" stroke-linecap="round">
+        <line x1="32" y1="76" x2="228" y2="76"/><line x1="32" y1="88" x2="228" y2="88"/>
+        <line x1="32" y1="100" x2="200" y2="100"/>
+      </g>
+      <text x="30" y="126" font-size="9" font-weight="700" fill="#1a1a1a">PERSONERÍA.</text>
+      <g stroke="#dfe3e7" stroke-width="4" stroke-linecap="round">
+        <line x1="32" y1="140" x2="228" y2="140"/><line x1="32" y1="152" x2="190" y2="152"/>
+      </g>
+      <!-- bloque de firma vacío -->
+      <line x1="70" y1="204" x2="200" y2="204" stroke="#1a1a1a" stroke-width="1.2"/>
+      <text x="135" y="216" font-size="8" text-anchor="middle" fill="#1a1a1a">Yerko Andrés Reckmann</text>
+      <text x="135" y="226" font-size="8" text-anchor="middle" fill="#1a1a1a">p.p. DYNAMICS CORP. SpA</text>
+      <line x1="70" y1="278" x2="200" y2="278" stroke="#1a1a1a" stroke-width="1.2"/>
+      <text x="135" y="290" font-size="8" text-anchor="middle" fill="#1a1a1a">Catalina Paz Maya</text>
+      <!-- señaladores de vacío -->
+      <text x="248" y="196" font-size="10" fill="#b42318" font-weight="700">← vacío</text>
+      <text x="248" y="270" font-size="10" fill="#b42318" font-weight="700">← vacío</text>
+      <text x="20" y="356" font-size="9" fill="#5a6370">Página 5 · las dos rayas quedan en blanco</text>
+
+      <!-- hoja anexa -->
+      <rect x="320" y="40" width="220" height="300" rx="4" fill="#fff" stroke="#c9ccd1"/>
+      <text x="332" y="70" font-size="11" font-weight="700" fill="#1a1a1a">FIRMA ELECTRÓNICA SIMPLE</text>
+      <text x="332" y="84" font-size="8" fill="#5a6370">Ley N° 19.799 sobre Firma Electrónica</text>
+      <line x1="332" y1="92" x2="528" y2="92" stroke="#d9dde1"/>
+      <text x="332" y="112" font-size="8.5" fill="#1a1a1a">Firmante: David Roco</text>
+      <text x="332" y="128" font-size="8.5" fill="#1a1a1a">En representación de: DYNAMICS…</text>
+      <text x="332" y="144" font-size="8.5" fill="#1a1a1a">RUT Empresa: 76.123.456-7</text>
+      <text x="332" y="160" font-size="8.5" fill="#1a1a1a">Fecha y hora: 2 de septiembre…</text>
+      <text x="332" y="176" font-size="7" fill="#5a6370">Hash SHA-256: 9f2c1ab4e5…</text>
+      <text x="332" y="230" font-size="9" fill="#b42318" font-weight="700">Firma un usuario interno del ERP.</text>
+      <text x="332" y="244" font-size="9" fill="#b42318" font-weight="700">La influencer nunca firmó nada.</text>
+      <text x="320" y="356" font-size="9" fill="#5a6370">Página 6 · hoja de texto anexa, sin garabato</text>
+
+      <!-- divisor -->
+      <line x1="575" y1="30" x2="575" y2="400" stroke="#E3E6E8" stroke-width="2" stroke-dasharray="6 5"/>
+
+      <!-- ===== LADO DERECHO: OBJETIVO ===== -->
+      <text x="600" y="24" font-size="15" font-weight="700" fill="#0a7d33">✓ LO QUE SE ESPERA</text>
+
+      <rect x="600" y="40" width="220" height="300" rx="4" fill="#fff" stroke="#c9ccd1"/>
+      <text x="610" y="60" font-size="9" fill="#5a6370">…última página del contrato</text>
+      <g stroke="#dfe3e7" stroke-width="4" stroke-linecap="round">
+        <line x1="612" y1="76" x2="808" y2="76"/><line x1="612" y1="88" x2="808" y2="88"/>
+        <line x1="612" y1="100" x2="780" y2="100"/>
+      </g>
+      <text x="610" y="126" font-size="9" font-weight="700" fill="#1a1a1a">PERSONERÍA.</text>
+      <g stroke="#dfe3e7" stroke-width="4" stroke-linecap="round">
+        <line x1="612" y1="140" x2="808" y2="140"/><line x1="612" y1="152" x2="770" y2="152"/>
+      </g>
+      <!-- firma 1: imagen almacenada -->
+      <path d="M 90 196 c 10 -14 18 6 26 -4 c 8 -10 14 8 22 -2 c 8 -10 16 6 24 -6"
+            transform="translate(590,0)" fill="none" stroke="#12245c" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="650" y1="204" x2="780" y2="204" stroke="#1a1a1a" stroke-width="1.2"/>
+      <text x="715" y="216" font-size="8" text-anchor="middle" fill="#1a1a1a">Yerko Andrés Reckmann</text>
+      <text x="715" y="226" font-size="8" text-anchor="middle" fill="#1a1a1a">p.p. DYNAMICS CORP. SpA</text>
+      <text x="828" y="200" font-size="9" fill="#0a7d33" font-weight="700">imagen guardada</text>
+      <text x="828" y="211" font-size="9" fill="#0a7d33" font-weight="700">del rep. legal</text>
+
+      <!-- firma 2: dibujada remotamente + etiqueta -->
+      <path d="M 90 268 c 6 -10 12 4 16 -6 c 6 -12 10 10 18 -2 c 6 -9 12 4 20 -8 c 5 -7 10 4 14 0"
+            transform="translate(590,0)" fill="none" stroke="#12245c" stroke-width="1.6" stroke-linecap="round"/>
+      <rect x="648" y="262" width="134" height="9" fill="none" stroke="#4a90d9" stroke-width="0.6"/>
+      <text x="651" y="269" font-size="5.5" fill="#2f6fad">Catalina A. Paz Maya (Jul 30, 2026 15:43 EDT)</text>
+      <line x1="650" y1="278" x2="780" y2="278" stroke="#1a1a1a" stroke-width="1.2"/>
+      <text x="715" y="290" font-size="8" text-anchor="middle" fill="#1a1a1a">Catalina Paz Maya</text>
+      <text x="828" y="272" font-size="9" fill="#0a7d33" font-weight="700">dibujada por ella</text>
+      <text x="828" y="283" font-size="9" fill="#0a7d33" font-weight="700">desde su celular</text>
+      <text x="600" y="356" font-size="9" fill="#5a6370">Página 5 · las firmas van sobre la línea, en el contrato</text>
+
+      <!-- hoja auditoría -->
+      <rect x="900" y="40" width="200" height="300" rx="4" fill="#fff" stroke="#c9ccd1"/>
+      <rect x="900" y="40" width="200" height="300" rx="4" fill="none" stroke="#29b6e8" stroke-width="2.5"/>
+      <text x="912" y="66" font-size="10" font-weight="700" fill="#29b6e8">Contrato servicios…</text>
+      <text x="912" y="80" font-size="8" fill="#1a1a1a">Final Audit Report</text>
+      <rect x="912" y="88" width="176" height="46" fill="#f2f4f6" stroke="#d9dde1"/>
+      <text x="918" y="100" font-size="6.5" fill="#1a1a1a">Created: 2026-07-30</text>
+      <text x="918" y="111" font-size="6.5" fill="#1a1a1a">By: Yerko Reckmann</text>
+      <text x="918" y="122" font-size="6.5" fill="#1a1a1a">Status: Signed</text>
+      <text x="918" y="131" font-size="6.5" fill="#1a1a1a">Transaction ID: CBJCHBCAAB…</text>
+      <text x="912" y="152" font-size="8" font-weight="700" fill="#1a1a1a">History</text>
+      <circle cx="917" cy="166" r="3" fill="#d1410c"/><text x="926" y="169" font-size="6.5" fill="#1a1a1a">Documento creado</text>
+      <circle cx="917" cy="184" r="3" fill="#4a90d9"/><text x="926" y="187" font-size="6.5" fill="#1a1a1a">Enviado por email a Catalina</text>
+      <circle cx="917" cy="202" r="3" fill="#d1410c"/><text x="926" y="205" font-size="6.5" fill="#1a1a1a">Email visto por Catalina</text>
+      <circle cx="917" cy="220" r="3" fill="#0a7d33"/><text x="926" y="223" font-size="6.5" fill="#1a1a1a">Documento e-firmado</text>
+      <text x="926" y="232" font-size="6" fill="#5a6370">Appearance: MOBILE_DRAW</text>
+      <circle cx="917" cy="248" r="3" fill="#0a7d33"/><text x="926" y="251" font-size="6.5" fill="#1a1a1a">Agreement completed</text>
+      <text x="900" y="356" font-size="9" fill="#5a6370">Página 6 · bitácora de auditoría</text>
+    </svg>
+    </div>
+
+    <div class="warn">
+      <b>La conclusión que importa:</b> lo que falta no es "dibujar un garabato en el PDF". Es que <b>la contraparte nunca participa</b> del proceso. Hoy el sistema deja constancia de que un empleado de Incrementa apretó un botón; la muestra deja constancia de que <b>la influencer aceptó el contrato</b>. Son cosas distintas, y solo la segunda sirve como prueba frente a un tercero.
+    </div>
+  </section>
+
+  <!-- ============ 2. CURSO RÁPIDO ============ -->
+  <section id="curso">
+    <h2>2. Curso rápido: qué es realmente una firma electrónica</h2>
+    <p class="sub">Cinco minutos de conceptos. Sin esto, las decisiones de los capítulos siguientes parecen arbitrarias.</p>
+
+    <h3>2.1 Una firma electrónica tiene tres capas independientes</h3>
+    <p>El error más común es creer que "firmar" es una sola cosa. En realidad son tres capas que se apilan, y se pueden tener por separado:</p>
+
+    <div class="mermaid">
+flowchart TB
+  subgraph C3["CAPA 3 · INTEGRIDAD — ¿lo alteraron después?"]
+    I1["Sello criptográfico dentro del PDF<br/>Si alguien cambia una coma, el visor avisa<br/><i>Es el candado</i>"]
+  end
+  subgraph C2["CAPA 2 · EVIDENCIA — ¿quién firmó y cuándo?"]
+    E1["Bitácora: email, IP, fecha, dispositivo<br/>Es lo que se muestra si el firmante lo niega<br/><i>Es la prueba</i>"]
+  end
+  subgraph C1["CAPA 1 · APARIENCIA — ¿qué se ve?"]
+    A1["El garabato dibujado sobre la línea<br/>Por sí solo NO tiene valor legal<br/><i>Es la foto</i>"]
+  end
+  C1 --> C2 --> C3
+  classDef c1 fill:#fff4e5,stroke:#c98a00,color:#5a3d00;
+  classDef c2 fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef c3 fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  class A1 c1; class E1 c2; class I1 c3;
+    </div>
+
+    <div class="note">
+      <b>Idea clave para no perderse:</b> la capa 1 es la que <i>ve</i> la usuaria y la que motivó su comentario. Pero la capa 2 es la que <i>vale</i> si el contrato termina en disputa. Un garabato sin bitácora es un dibujo; una bitácora sin garabato es válida pero nadie la entiende. Hay que construir las tres.
+    </div>
+
+    <h4>Dónde estamos parados en cada capa</h4>
+    <table>
+      <tr><th style="width:120px">Capa</th><th>Qué tenemos hoy</th><th>Estado</th></tr>
+      <tr>
+        <td><b>1 · Apariencia</b></td>
+        <td>Nada. Las líneas del contrato quedan en blanco y se anexa una hoja de texto plano en Helvetica.</td>
+        <td><span class="pill miss">ausente</span></td>
+      </tr>
+      <tr>
+        <td><b>2 · Evidencia</b></td>
+        <td>Parcial y del actor equivocado: registra el nombre del <i>usuario interno</i> del ERP y la hora. No hay ningún dato de la contraparte porque la contraparte no interviene.</td>
+        <td><span class="pill miss">insuficiente</span></td>
+      </tr>
+      <tr>
+        <td><b>3 · Integridad</b></td>
+        <td>A medias: se calcula e imprime un hash SHA-256 del PDF original, lo cual permite <i>verificar a mano</i> si alguien guardó el original. Pero el PDF no está sellado: se puede editar sin que ningún visor lo note.</td>
+        <td><span class="pill pend">a medias</span></td>
+      </tr>
+    </table>
+
+    <h3>2.2 Firma "simple" vs firma "avanzada" — y por qué nos basta la simple</h3>
+
+    <div class="grid2">
+      <div class="box">
+        <h4>Firma Electrónica Simple (FES)</h4>
+        <p>Cualquier mecanismo electrónico que permita identificar al firmante: un clic en "acepto", un garabato dibujado en el celular, un código enviado por email.</p>
+        <p><b>Es plenamente válida</b> para contratos entre privados como estos. Pero si el firmante la niega, <b>quien la invoca debe probar que es confiable</b> — con la bitácora, el sello de tiempo y la trazabilidad.</p>
+        <p class="small">Es lo que usan Acrobat Sign, DocuSign y prácticamente toda la industria.</p>
+      </div>
+      <div class="box">
+        <h4>Firma Electrónica Avanzada (FEA)</h4>
+        <p>Requiere un certificado digital emitido por una entidad acreditada ante el Estado chileno (e-Certchile, Acepta, etc.), normalmente con token o clave personal del firmante.</p>
+        <p><b>Goza de presunción legal</b>: se asume auténtica salvo prueba en contrario. Es obligatoria solo para ciertos actos solemnes.</p>
+        <p class="small">Exigirle FEA a una influencer para publicar un reel sería inviable en la práctica.</p>
+      </div>
+    </div>
+
+    <div class="good">
+      <b>Decisión ya tomada de hecho por el cliente:</b> la muestra que envió la usuaria es Acrobat Sign, que es <b>FES</b>. O sea, el estándar legal que Incrementa ya considera aceptable para estos contratos es el simple. No necesitamos subir a FEA — necesitamos hacer <i>bien</i> la simple, que es exactamente donde está la Ley 19.799: es tecnológicamente neutra y admite cualquier mecanismo, siempre que se pueda acreditar identidad e integridad.
+    </div>
+
+    <h3>2.3 El vocabulario mínimo</h3>
+    <table>
+      <tr><th style="width:170px">Término</th><th>En español simple</th></tr>
+      <tr><td><b>Borrador</b> (<code>draft_document</code>)</td><td>El PDF generado desde una plantilla, todavía sin firmar. Ya existe en el sistema.</td></tr>
+      <tr><td><b>Documento</b> (<code>document</code>)</td><td>El contrato ya firmado y archivado. Ya existe en el sistema.</td></tr>
+      <tr><td><b>Hash SHA-256</b></td><td>Una "huella digital" del archivo: 64 caracteres que cambian por completo si se modifica un solo byte. Sirve para demostrar que dos archivos son idénticos.</td></tr>
+      <tr><td><b>Bitácora / audit trail</b></td><td>La lista cronológica de todo lo que pasó: creado, enviado, visto, firmado. Es la página final de la muestra.</td></tr>
+      <tr><td><b>Text tag</b></td><td>Un marcador escrito dentro del texto del documento, tipo <code>&#123;&#123;Sig_es_:signer1:signature&#125;&#125;</code>, que Acrobat Sign reconoce y convierte automáticamente en un recuadro de firma. Nos evita tener que calcular coordenadas.</td></tr>
+      <tr><td><b>Webhook</b></td><td>Una llamada que el servicio externo le hace <i>a nuestro backend</i> para avisarle que algo pasó ("ya firmaron"). Es al revés de lo normal: en vez de preguntar, nos avisan.</td></tr>
+      <tr><td><b>Shard</b></td><td>El centro de datos donde Adobe aloja una cuenta (NA1, EU1, etc.). Determina a qué URL hay que hablarle.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 3. LA MUESTRA ============ -->
+  <section id="muestra">
+    <h2>3. Qué es exactamente la muestra que envió la usuaria</h2>
+    <p class="sub">Análisis forense del PDF <code>Contrato servicios Influencer Solbiot Catalina Paz Maya - agosto 2026 - firmado.pdf</code>. Esto no es interpretación: son los metadatos del archivo.</p>
+
+    <div class="grid2">
+      <div class="box">
+        <h4>Lo que dicen los metadatos</h4>
+        <table style="margin:0">
+          <tr><td style="width:130px"><b>Creator / Producer</b></td><td>Acrobat Sign</td></tr>
+          <tr><td><b>Transaction ID</b></td><td><code>CBJCHBCAABAApC4OVOPV…</code></td></tr>
+          <tr><td><b>Cifrado</b></td><td>AES · <code>change:no</code> <code>addNotes:no</code></td></tr>
+          <tr><td><b>Firma criptográfica</b></td><td><code>Adobe.PPKLite</code> / <code>adbe.pkcs7.detached</code> / DocMDP</td></tr>
+          <tr><td><b>Páginas</b></td><td>5 de contrato + 1 de auditoría</td></tr>
+          <tr><td><b>Zona horaria</b></td><td>EDT / GMT → cuenta alojada en shard norteamericano</td></tr>
+        </table>
+      </div>
+      <div class="box">
+        <h4>Lo que revela la bitácora</h4>
+        <p>Hay <b>un solo evento de e-firma</b> en todo el reporte, y es el de Catalina. El de Yerko no existe.</p>
+        <p>Eso significa que <b>los dos firmantes tienen mecanismos distintos</b>:</p>
+        <ul>
+          <li><b>Yerko (empresa):</b> su firma manuscrita ya venía incrustada como imagen en el documento fuente. Nunca "firmó" en Adobe.</li>
+          <li><b>Catalina (contraparte):</b> firmó de verdad, remotamente, dibujando en su celular — el reporte lo dice literal: <code>Signature Appearance Selected: MOBILE_DRAW</code>.</li>
+        </ul>
+        <p class="small">Este detalle es el que define toda la arquitectura de la solución: no son dos firmas iguales, son dos mecanismos distintos.</p>
+      </div>
+    </div>
+
+    <h3>El flujo completo que registra la muestra</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Y as Yerko · Incrementa
+  participant ADO as Acrobat Sign
+  actor C as Catalina · influencer
+  Note over Y: El PDF ya trae la firma<br/>manuscrita de Yerko como imagen
+  Y->>ADO: Crea el acuerdo y sube el PDF
+  ADO->>C: Email "tienes un documento para firmar"
+  Note over ADO,C: 2026-07-30 02:44 GMT
+  C->>ADO: Abre el email
+  Note over ADO,C: 2026-07-30 19:40 GMT · queda registrado
+  C->>ADO: Dibuja su firma con el dedo (MOBILE_DRAW)
+  Note over ADO,C: 2026-07-30 19:43 GMT
+  ADO->>ADO: Estampa la firma + etiqueta con nombre y hora
+  ADO->>ADO: Agrega página de auditoría y sella el PDF
+  ADO-->>Y: Notifica "Agreement completed"
+  ADO-->>C: Envía copia firmada
+    </div>
+
+    <p><b>Los tres momentos que hoy no tenemos:</b> el paso 2 (enviar a la contraparte), los pasos 4-5 (que ella acepte y firme) y el paso 7 (la bitácora). Sin esos, no hay proceso de firma — hay una constancia interna.</p>
+  </section>
+
+  <!-- ============ 4. HOY ============ -->
+  <section id="hoy">
+    <h2>4. HOY — cómo funciona el sistema</h2>
+    <p class="sub">Estado real de lo desplegado en pre-prod al 2 de septiembre de 2026.</p>
+
+    <h3>4.1 Arquitectura actual</h3>
+    <div class="mermaid">
+flowchart LR
+  subgraph USR["👤 Usuario interno · Incrementa"]
+    OP["Operador del ERP<br/>con permiso sign Contract"]
+  end
+  subgraph GCP["☁️ GCP Pre-Prod · incrementa-gestion-dev"]
+    FE["Cloud Run · Frontend<br/>ContractSigningPage.jsx"]
+    BE["Cloud Run · Backend Express"]
+    SVC["contractSigningService.js<br/>appendSignaturePage con pdf-lib"]
+    SQL[("Cloud SQL PostgreSQL<br/>draft_document · document")]
+    GCS[("Cloud Storage<br/>borradores y firmados")]
+  end
+  subgraph EXT["📧 Externo"]
+    RS["Resend<br/>envío de email"]
+  end
+  OP -->|"clic en Firmar"| FE
+  FE -->|"POST /api/contracts/:id/sign"| BE
+  BE --> SVC
+  SVC -->|"descarga el borrador"| GCS
+  SVC -->|"sube el PDF firmado"| GCS
+  SVC -->|"INSERT document<br/>UPDATE draft a signed"| SQL
+  SVC -.->|"adjunta el PDF"| RS
+  RS -.->|"email SOLO a la empresa"| USR
+  classDef hoy fill:#fdecea,stroke:#b42318,color:#5c1512;
+  classDef cloud fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef ext fill:#f5f5f5,stroke:#999,color:#333;
+  class OP hoy; class FE,BE,SVC,SQL,GCS cloud; class RS ext;
+    </div>
+
+    <div class="warn">
+      <b>Lo que salta a la vista en el diagrama:</b> la influencer no aparece por ninguna parte. El correo con el contrato firmado va a <code>company.email</code> — es decir, Incrementa se manda el contrato a sí misma.
+    </div>
+
+    <h3>4.2 Secuencia actual, paso a paso</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor OP as Operador ERP
+  participant FE as Frontend
+  participant API as Backend
+  participant GCS as Cloud Storage
+  participant DB as PostgreSQL
+  participant RS as Resend
+  OP->>FE: Entra a "Firma de documento"
+  FE->>API: GET /api/contracts/pending-signature
+  API->>DB: Borradores con status distinto de signed y rejected
+  DB-->>FE: Lista de contratos pendientes
+  OP->>FE: Marca el checkbox de autorización y confirma
+  FE->>API: POST /api/contracts/:id/sign
+  API->>GCS: Descarga el PDF del borrador
+  API->>API: Calcula hash SHA-256 del original
+  API->>API: Agrega una PÁGINA NUEVA con texto plano
+  Note right of API: Título, ley, nombre del operador,<br/>RUT empresa, fecha y hash
+  API->>GCS: Sube el PDF a contratos-firmados/…
+  API->>DB: INSERT en document + UPDATE draft a signed
+  API-->>RS: Envía el PDF adjunto
+  RS-->>OP: Email a la casilla de la EMPRESA
+  API-->>FE: ok true · la fila desaparece de la tabla
+    </div>
+
+    <h3>4.3 Dónde vive cada cosa en el código</h3>
+    <table>
+      <tr><th style="width:330px">Archivo</th><th>Rol</th></tr>
+      <tr><td><code>backend/services/contractSigningService.js</code></td><td>Toda la lógica. La función <code>appendSignaturePage</code> es la que dibuja la hoja anexa.</td></tr>
+      <tr><td><code>backend/controllers/contractSigningController.js</code></td><td>Resuelve quién es el firmante desde el token y llama al servicio.</td></tr>
+      <tr><td><code>frontend/src/pages/ContractSigningPage.jsx</code></td><td>La tabla de pendientes y el modal de confirmación.</td></tr>
+      <tr><td><code>backend/services/documentBuilderTipTapReactPdf.js</code></td><td>Genera el PDF del contrato desde la plantilla. <b>No importa <code>Image</code></b> — por eso hoy no puede dibujar una firma.</td></tr>
+      <tr><td><code>openspec/specs/contract-signing/spec.md</code></td><td>La especificación vigente de todo lo anterior.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 5. LA BRECHA ============ -->
+  <section id="brecha">
+    <h2>5. La brecha — los cinco huecos</h2>
+    <p class="sub">Qué falta concretamente para pasar del dibujo de la izquierda al de la derecha. Cuatro de los cinco huecos hay que taparlos <b>sin importar qué tecnología elijamos</b>.</p>
+
+    <div class="mermaid">
+flowchart TB
+  START["Contrato generado<br/>desde plantilla"] --> H1
+  H1["🔴 HUECO 1<br/>El proveedor no tiene email en la BD<br/>No hay a quién enviarle"]
+  H1 --> H2["🔴 HUECO 2<br/>No hay dónde anclar la firma<br/>El bloque son guiones bajos, no un elemento"]
+  H2 --> H3["🟡 HUECO 3<br/>Faltan estados y bitácora<br/>Solo existe draft, signed, rejected"]
+  H3 --> H4["🟡 HUECO 4<br/>No hay imagen de firma del rep. legal<br/>Nadie la subió nunca"]
+  H4 --> H5["🟡 HUECO 5<br/>El PDF no queda sellado<br/>Editable sin dejar rastro"]
+  H5 --> END["Contrato firmado<br/>como la muestra"]
+  classDef bloq fill:#fdecea,stroke:#b42318,color:#5c1512;
+  classDef med fill:#fff4e5,stroke:#c98a00,color:#5a3d00;
+  classDef ok fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  class H1,H2 bloq; class H3,H4,H5 med; class START,END ok;
+    </div>
+
+    <table>
+      <tr><th style="width:40px">#</th><th style="width:200px">Hueco</th><th>Detalle técnico verificado</th><th style="width:110px">¿Común a ambas rutas?</th></tr>
+      <tr>
+        <td><span class="num">1</span></td>
+        <td><b>Email del proveedor</b> <span class="pill miss">bloqueante</span></td>
+        <td>Revisadas las tablas <code>supplier</code>, <code>supplier_persona_natural</code> y <code>supplier_empresa</code>: <b>no existe columna de email ni de teléfono</b>, y tampoco está en el formulario del frontend. Sin dirección de correo no se le puede enviar nada a firmar a nadie.</td>
+        <td><b>Sí</b> — es el primer trabajo, pase lo que pase</td>
+      </tr>
+      <tr>
+        <td><span class="num">2</span></td>
+        <td><b>Ancla de la firma</b> <span class="pill miss">bloqueante</span></td>
+        <td>El renderizador solo soporta párrafos, listas, saltos de línea y variables. <b>No importa <code>Image</code> de <code>@react-pdf/renderer</code></b>. En las 17 plantillas activas, el bloque de firma son párrafos de guiones bajos: no es un elemento posicionable, es texto decorativo.</td>
+        <td><b>Sí</b> — cambia solo <i>qué</i> se ancla</td>
+      </tr>
+      <tr>
+        <td><span class="num">3</span></td>
+        <td><b>Estados y bitácora</b></td>
+        <td><code>draft_document.status</code> maneja <code>draft</code>, <code>signed</code> y <code>rejected</code>. Un flujo real necesita además <code>sent</code>, <code>viewed</code>, <code>partially_signed</code> y <code>expired</code>, más una tabla de eventos para poder emitir la página de auditoría.</td>
+        <td><b>Sí</b></td>
+      </tr>
+      <tr>
+        <td><span class="num">4</span></td>
+        <td><b>Firma del rep. legal</b></td>
+        <td>Hay que subirla y guardarla una vez por representante. <b>Ya existe el patrón</b>: el upload de avatar en <code>meController.js</code> hace exactamente esto con multer + GCS.</td>
+        <td><b>Sí</b></td>
+      </tr>
+      <tr>
+        <td><span class="num">5</span></td>
+        <td><b>Sello de integridad</b></td>
+        <td>El PDF actual se puede editar sin rastro. La muestra tiene <code>change:no</code> y firma PKCS#7.</td>
+        <td>No — Adobe lo trae incluido</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============ 6. LAS RUTAS ============ -->
+  <section id="rutas">
+    <h2>6. Las dos rutas posibles y por qué elegimos una</h2>
+
+    <div class="mermaid">
+flowchart TB
+  Q{"¿Cómo firma<br/>la contraparte?"}
+  Q -->|"RUTA A"| A1["Integrar la API de<br/>Adobe Acrobat Sign"]
+  Q -->|"RUTA B"| B1["Construir nuestro propio<br/>portal de firma"]
+  A1 --> A2["Adobe envía el email,<br/>hospeda la pantalla de firma,<br/>estampa, audita y sella"]
+  A2 --> A3["Nosotros: subir el PDF,<br/>recibir el webhook,<br/>archivar el resultado"]
+  A3 --> A4["✅ Idéntico a la muestra<br/>✅ Evidencia respaldada por un tercero<br/>⚠️ Requiere plan enterprise<br/>⚠️ Costo por transacción"]
+  B1 --> B2["Link con token por email,<br/>canvas para dibujar,<br/>estampado con pdf-lib,<br/>bitácora propia, sello PAdES"]
+  B2 --> B3["✅ Sin costo por firma<br/>✅ Todo dentro del ERP<br/>⚠️ Es construir un producto entero<br/>⚠️ Nosotros defendemos la evidencia"]
+  classDef a fill:#fdeee7,stroke:#d1410c,color:#6b2106;
+  classDef b fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef q fill:#f2f4f6,stroke:#657A8A,color:#1a1a1a;
+  class A1,A2,A3,A4 a; class B1,B2,B3 b; class Q q;
+    </div>
+
+    <h3>Comparación</h3>
+    <table>
+      <tr><th style="width:190px">Criterio</th><th>RUTA A · Acrobat Sign</th><th>RUTA B · Desarrollo propio</th></tr>
+      <tr><td><b>Resultado visual</b></td><td>Idéntico a la muestra, porque <i>es</i> la muestra</td><td>Muy parecido, pero lo diseñamos nosotros</td></tr>
+      <tr><td><b>Ubicación de la firma</b></td><td>Resuelto con <b>text tags</b> en la plantilla: Adobe los detecta y coloca el campo solo</td><td>Hay que construir el nodo de bloque de firma y posicionarlo nosotros</td></tr>
+      <tr><td><b>Evidencia legal</b></td><td>La genera y respalda Adobe, un tercero independiente</td><td>La generamos y debemos sostenerla nosotros</td></tr>
+      <tr><td><b>Esfuerzo de desarrollo</b></td><td>Moderado: OAuth, subir documento, webhook, archivar</td><td>Alto: portal público, captura de firma, reintentos, recordatorios, expiración, custodia de evidencia</td></tr>
+      <tr><td><b>Costo recurrente</b></td><td>Licencia enterprise + costo por transacción</td><td>Solo infraestructura propia</td></tr>
+      <tr><td><b>Dependencia externa</b></td><td>Alta — si Adobe cae, no se firma</td><td>Ninguna</td></tr>
+      <tr><td><b>Datos personales</b></td><td>Pasan por servidores de Adobe en EE.UU.</td><td>No salen de GCP</td></tr>
+    </table>
+
+    <div class="good">
+      <h4 style="margin-top:0">Recomendación: RUTA A</h4>
+      <p>El argumento decisivo no es técnico sino de alcance. La ruta B implica construirle a Incrementa <b>un producto de firma electrónica completo</b> —portal, captura, recordatorios, expiración, entregabilidad de correo, custodia de evidencia— y hacerse cargo de defenderlo legalmente. Eso es un proyecto en sí mismo, no una funcionalidad del ERP.</p>
+      <p>Incrementa <b>ya paga Acrobat Sign, ya lo usa y ya confía en su salida</b>. Lo que falta no es la firma: es que el ERP deje de estar fuera del circuito. Hoy alguien exporta el contrato del ERP, lo sube a Adobe a mano, y después archiva el resultado a mano. La integración elimina esos dos pasos manuales.</p>
+    </div>
+
+    <div class="note">
+      <b>Sobre la duda de disponibilidad regional:</b> se verificó que <b>no hay bloqueo geográfico</b>. Probado desde una máquina en <code>America/Santiago</code>: <code>api.adobesign.com</code> y los shards NA1–NA4 y EU1 responden <code>401 INVALID_ACCESS_TOKEN</code>, es decir, procesan la petición y rechazan la credencial. Un bloqueo por región cortaría antes, con <code>403</code> o timeout. La única restricción real es <b>por plan</b>: la API requiere Acrobat Sign Solutions / enterprise, no está en los planes individuales. Eso se confirma con un solo comando desde la cuenta de Incrementa (ver capítulo 11).
+    </div>
+  </section>
+
+  <!-- ============ 7. PRE-PROD ============ -->
+  <section id="preprod">
+    <h2>7. PRE-PROD — cómo va a quedar</h2>
+    <p class="sub">Pre-producción es donde se construye y se prueba todo, con datos de prueba y el <b>Sandbox gratuito</b> de Adobe. Nada de esto toca la cuenta productiva del cliente.</p>
+
+    <h3>7.1 Se construye en dos etapas, y la primera no depende de Adobe</h3>
+    <div class="mermaid">
+flowchart LR
+  E1["ETAPA 1<br/>Firma escrita de la empresa<br/><br/>· Nodo de bloque de firma<br/>· Imagen del rep. legal<br/>· Migrar 17 plantillas<br/>· Constancia decente<br/><br/>NO depende de Adobe"]
+  E0["ETAPA 0<br/>Datos de contacto del proveedor<br/><br/>· Columna email y teléfono<br/>· Formulario y validación<br/>· Tool MCP actualizada<br/><br/>Bloqueante para todo"]
+  E2["ETAPA 2<br/>Firma remota del proveedor<br/><br/>· Text tags en plantillas<br/>· Estados y bitácora<br/>· Integración Acrobat Sign<br/>· Webhook y archivado<br/><br/>Requiere plan con API"]
+  E0 --> E1 --> E2
+  E1 -.->|"si Adobe resulta inviable,<br/>la Etapa 1 igual sirve<br/>como base de la Ruta B"| ALT["Plan alterno:<br/>portal propio de firma"]
+  classDef e fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef alt fill:#f5f5f5,stroke:#999,color:#333,stroke-dasharray:4 3;
+  class E0,E1,E2 e; class ALT alt;
+    </div>
+
+    <div class="note">
+      <b>Por qué este orden importa:</b> la Etapa 1 entrega valor visible —la usuaria ve la firma escrita en el contrato, no una hoja suelta— <b>sin depender de ninguna decisión comercial</b>. Si la respuesta de Adobe demora, o el plan resulta caro, no quedamos bloqueados con las manos vacías. Y si al final vamos por la Ruta B, la Etapa 1 es exactamente la base que esa ruta necesita.
+    </div>
+
+    <h3>7.2 Arquitectura objetivo en pre-prod</h3>
+    <div class="mermaid">
+flowchart TB
+  subgraph USR["👤 Personas"]
+    OP["Operador ERP"]
+    INF["Influencer<br/>desde su celular"]
+  end
+  subgraph GCP["☁️ GCP Pre-Prod · incrementa-gestion-dev"]
+    FE["Cloud Run · Frontend"]
+    BE["Cloud Run · Backend"]
+    NEW1["signatureService<br/>NUEVO"]
+    NEW2["adobeSignClient<br/>NUEVO"]
+    HOOK["POST /api/webhooks/adobe-sign<br/>ruta PÚBLICA · NUEVO"]
+    SQL[("Cloud SQL<br/>+ signature_request<br/>+ signature_event")]
+    GCS[("Cloud Storage<br/>firmas · borradores · firmados")]
+    SM["Secret Manager<br/>ADOBE_INTEGRATION_KEY"]
+  end
+  subgraph ADOBE["🔶 Adobe Acrobat Sign · SANDBOX gratuito · shard NA3"]
+    AAPI["API REST v6"]
+    APAGE["Pantalla de firma<br/>hospedada por Adobe"]
+  end
+  OP -->|"1 Generar y enviar a firma"| FE
+  FE --> BE
+  BE --> NEW1
+  NEW1 -->|"2 sube el PDF"| NEW2
+  NEW2 -->|"transientDocuments<br/>+ agreements"| AAPI
+  NEW2 -.->|"lee la llave"| SM
+  AAPI -->|"3 email con link"| INF
+  INF -->|"4 dibuja su firma"| APAGE
+  APAGE --> AAPI
+  AAPI -.->|"5 webhook: firmado"| HOOK
+  HOOK -->|"6 descarga PDF firmado<br/>+ reporte de auditoría"| AAPI
+  HOOK -->|"7 archiva"| GCS
+  HOOK -->|"8 INSERT document"| SQL
+  NEW1 --> GCS
+  classDef cloud fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef nuevo fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66,stroke-width:2px;
+  classDef adobe fill:#fdeee7,stroke:#d1410c,color:#6b2106;
+  classDef per fill:#f2f4f6,stroke:#657A8A,color:#1a1a1a;
+  class FE,BE,SQL,GCS,SM cloud; class NEW1,NEW2,HOOK nuevo;
+  class AAPI,APAGE adobe; class OP,INF per;
+    </div>
+
+    <p class="small">Los bloques con borde azul grueso son <b>código nuevo</b>. Todo lo demás ya existe y no se toca.</p>
+
+    <h3>7.3 Secuencia completa del flujo nuevo</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor OP as Operador ERP
+  participant FE as Frontend
+  participant API as Backend
+  participant GCS as Cloud Storage
+  participant DB as PostgreSQL
+  participant ADO as Acrobat Sign
+  actor INF as Influencer
+
+  rect rgb(240,246,255)
+  Note over OP,GCS: ETAPA 1 — el borrador se genera SIN rúbrica
+  OP->>FE: Genera contrato desde plantilla
+  FE->>API: POST generar documento
+  API->>API: Renderiza el PDF con las líneas de firma vacías<br/>y el text tag de la contraparte
+  API->>GCS: Guarda el borrador
+  API->>DB: INSERT draft_document status draft<br/>+ content_snapshot del documento materializado
+  Note over OP,API: La rúbrica NO se estampa aquí: un borrador con la firma<br/>del representante sería indistinguible de un contrato ejecutado
+  OP->>FE: Clic en "Firmar"
+  FE->>API: POST /api/contracts/:id/sign
+  API->>GCS: Lee la imagen de firma del rep. legal
+  API->>API: Re-renderiza desde content_snapshot<br/>con la rúbrica estampada + constancia
+  end
+
+  rect rgb(253,238,231)
+  Note over OP,INF: ETAPA 2 — la contraparte firma remotamente
+  OP->>FE: Clic en "Enviar a firma"
+  FE->>API: POST /api/contracts/:id/send-for-signature
+  API->>DB: INSERT signature_request status sent
+  API->>ADO: POST /transientDocuments con el PDF
+  ADO-->>API: transientDocumentId
+  API->>ADO: POST /agreements con el email de la influencer
+  ADO-->>API: agreementId
+  API->>DB: Guarda agreementId + evento "enviado"
+  ADO->>INF: 📧 Email con link de firma
+  INF->>ADO: Abre el link
+  ADO-->>API: webhook "visto"
+  API->>DB: Evento "visto" con fecha
+  INF->>ADO: Dibuja su firma y confirma
+  ADO->>ADO: Estampa firma + etiqueta,<br/>agrega auditoría y sella el PDF
+  ADO-->>API: webhook "firmado"
+  API->>ADO: GET documento firmado + audit report
+  API->>GCS: Archiva en contratos-firmados/…
+  API->>DB: INSERT document · UPDATE draft a signed
+  API-->>OP: 🔔 Notificación "contrato firmado"
+  end
+    </div>
+
+    <div class="note"><b>Momento del estampado:</b> la rúbrica de la empresa se inyecta al <b>firmar</b>, nunca al generar. Un borrador que ya la trajera sería indistinguible de un contrato ejecutado, y los borradores circulan por correo antes de aprobarse. Por eso el borrador guarda <code>content_snapshot</code>: permite volver a renderizar el mismo texto con la firma incluida, sin depender de que la plantilla no haya cambiado.</div>
+
+    <h3>7.4 Diagrama de colaboración — quién le habla a quién</h3>
+    <div class="mermaid">
+flowchart LR
+  OP(("Operador"))
+  INF(("Influencer"))
+  ERP["ERP incrementa-gestion"]
+  ADO["Acrobat Sign"]
+  MAIL["Email"]
+  OP -->|"a. genera y envía"| ERP
+  ERP -->|"b. delega la firma"| ADO
+  ADO -->|"c. invita"| MAIL
+  MAIL -->|"d. link"| INF
+  INF -->|"e. firma"| ADO
+  ADO -->|"f. avisa por webhook"| ERP
+  ERP -->|"g. archiva y notifica"| OP
+  classDef n fill:#fff,stroke:#657A8A,color:#1a1a1a;
+  classDef a fill:#fdeee7,stroke:#d1410c,color:#6b2106;
+  classDef e fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  class OP,INF,MAIL n; class ADO a; class ERP e;
+    </div>
+
+    <div class="note">
+      <b>El detalle que hace todo esto viable:</b> el paso donde Adobe sabe <i>dónde</i> poner la firma. No hay que calcular coordenadas ni adivinar en qué página quedó el bloque. Se escribe un <b>text tag</b> dentro del texto de la plantilla, en el lugar exacto de la línea de la contraparte:
+      <br/><br/>
+      <code>&#123;&#123;Sig_es_:signer1:signature&#125;&#125;</code>
+      <br/><br/>
+      Adobe lo detecta al recibir el PDF, lo borra del texto y lo reemplaza por un campo de firma real. Como nuestro sistema ya genera contratos desde plantillas con variables, esto encaja de forma natural en el motor que ya tenemos.
+    </div>
+
+    <h3>7.5 Qué se prueba en pre-prod antes de pasar a producción</h3>
+    <table>
+      <tr><th style="width:40px">#</th><th>Verificación</th></tr>
+      <tr><td>1</td><td>La firma del representante legal aparece sobre la línea correcta, en las 17 plantillas, sin desalinear el texto.</td></tr>
+      <tr><td>2</td><td>El text tag desaparece del PDF final (no debe quedar texto suelto visible).</td></tr>
+      <tr><td>3</td><td>El email llega efectivamente a una casilla real de prueba y el link abre en celular.</td></tr>
+      <tr><td>4</td><td>El webhook llega y es procesado aunque el backend haya sido reiniciado en el intertanto.</td></tr>
+      <tr><td>5</td><td>El PDF firmado y el reporte de auditoría quedan archivados en GCS y visibles en "Consulta contratos".</td></tr>
+      <tr><td>6</td><td>Un contrato rechazado o expirado deja el borrador en un estado coherente, no colgado.</td></tr>
+      <tr><td>7</td><td>Se prueba el caso de dos envíos al mismo proveedor para el mismo contrato.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 8. PRODUCCIÓN ============ -->
+  <section id="produccion">
+    <h2>8. PRODUCCIÓN — cómo va a quedar</h2>
+    <p class="sub">Producción vive en la nube del cliente, con su propio proyecto GCP y su propio tenant de Microsoft Entra ID. Hoy <b>ese entorno todavía no existe</b>: falta el workflow de despliegue y las definiciones del cliente.</p>
+
+    <h3>8.1 Arquitectura objetivo en producción</h3>
+    <div class="mermaid">
+flowchart TB
+  subgraph CLI["🏢 Nube del CLIENTE · proyecto GCP propio"]
+    PFE["Cloud Run · Frontend"]
+    PBE["Cloud Run · Backend"]
+    PMCP["Cloud Run · MCP<br/>CON OAuth"]
+    PSQL[("Cloud SQL PostgreSQL")]
+    PGCS[("Cloud Storage")]
+    PSM["Secret Manager<br/>llave Adobe productiva"]
+  end
+  subgraph ENTRA["🔷 Microsoft Entra ID · tenant del cliente"]
+    EID["Login de usuarios<br/>+ validación por Graph"]
+  end
+  subgraph ADOBE["🔶 Acrobat Sign · cuenta PRODUCTIVA de Incrementa"]
+    PAAPI["API REST v6"]
+  end
+  subgraph CI["🐙 GitHub Actions"]
+    WF["deploy-prod.yml<br/>POR CREAR"]
+  end
+  PFE --> PBE
+  PBE --> PSQL
+  PBE --> PGCS
+  PBE -.->|"llave"| PSM
+  PBE <-->|"agreements + webhook firmado"| PAAPI
+  PFE -.->|"login"| EID
+  PBE -.->|"valida JWT"| EID
+  PMCP --> PSQL
+  WF -.->|"despliega los 3 servicios"| CLI
+  classDef prod fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef adobe fill:#fdeee7,stroke:#d1410c,color:#6b2106;
+  classDef az fill:#e3f0fb,stroke:#0b6bcb,color:#08375f;
+  classDef pend fill:#fff4e5,stroke:#c98a00,color:#5a3d00,stroke-dasharray:4 3;
+  class PFE,PBE,PSQL,PGCS,PSM prod; class PAAPI adobe; class EID az;
+  class WF,PMCP pend;
+    </div>
+
+    <h3>8.2 Lo que cambia respecto de pre-prod</h3>
+    <table>
+      <tr><th style="width:200px">Aspecto</th><th>Pre-Prod</th><th>Producción</th></tr>
+      <tr><td><b>Cuenta Adobe</b></td><td>Sandbox gratuito (NA3), sin costo por firma</td><td>Cuenta productiva de Incrementa, con transacciones reales facturadas</td></tr>
+      <tr><td><b>Emails</b></td><td>A casillas de prueba controladas</td><td>A influencers reales — un error aquí es visible para terceros</td></tr>
+      <tr><td><b>Webhook</b></td><td>Endpoint público sin verificación estricta</td><td><b>Obligatorio</b> validar la firma del webhook para que nadie pueda falsificar un "ya firmó"</td></tr>
+      <tr><td><b>Llave de Adobe</b></td><td>Secret Manager de pre-prod</td><td>Secret Manager del proyecto del cliente, sin acceso del equipo de desarrollo</td></tr>
+      <tr><td><b>Datos</b></td><td>Proveedores ficticios</td><td>RUT, domicilio y correo de personas reales → aplica Ley 19.628</td></tr>
+      <tr><td><b>Retención</b></td><td>Se puede borrar todo</td><td>Los contratos firmados son el registro legal: no se borran</td></tr>
+    </table>
+
+    <h3>8.3 Requisitos previos que hoy están pendientes</h3>
+    <div class="grid2">
+      <div class="box">
+        <h4>Del proyecto (nosotros)</h4>
+        <ul>
+          <li><b>Workflow <code>deploy-prod.yml</code></b> — hoy solo existe <code>deploy-preprod.yml</code>. Bloqueado por definiciones del cliente.</li>
+          <li><b>Autenticación del MCP</b> — el servidor MCP hoy está abierto sin auth en pre-prod. <span class="pill miss">no puede ir así a producción</span> El propio <code>mcp-http.mjs</code> tiene una salvaguarda que impide arrancar si <code>ENVIRONMENT=prod</code>.</li>
+          <li><b>Verificación de firma del webhook</b> de Adobe.</li>
+          <li><b>Política de reintentos</b> si Adobe no responde.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4>Del cliente</h4>
+        <ul>
+          <li>Proyecto GCP propio y tenant de Entra ID.</li>
+          <li>Plan de Acrobat Sign con acceso a API confirmado.</li>
+          <li>Definición de quién firma por la empresa y su imagen de firma.</li>
+          <li>Aceptación explícita de que los datos de las influencers pasen por servidores de Adobe en EE.UU.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="warn">
+      <b>Advertencia de secuencia:</b> no tiene sentido llevar la firma a producción antes de resolver la autenticación del MCP. Hoy el servidor MCP permite <b>generar contratos</b> sin credenciales; si además esos contratos salieran automáticamente a firma de terceros, un endpoint abierto podría enviarle un contrato a cualquier persona. Las dos cosas se cruzan.
+    </div>
+  </section>
+
+  <!-- ============ 9. DATOS ============ -->
+  <section id="datos">
+    <h2>9. Modelo de datos y estados del documento</h2>
+
+    <h3>9.1 Qué se agrega a la base de datos</h3>
+    <div class="mermaid">
+erDiagram
+  supplier ||--o{ draft_document : "tiene"
+  supplier ||--|| supplier_persona_natural : "es"
+  supplier ||--|| supplier_empresa : "es"
+  draft_document ||--o| signature_request : "genera"
+  signature_request ||--o{ signature_event : "registra"
+  draft_document ||--o| document : "produce"
+  company ||--o{ legal_rep_signature : "guarda"
+
+  supplier_persona_natural {
+    text full_name
+    text rut_body
+    text address
+    text email "NUEVO - bloqueante"
+    text phone "NUEVO - para SMS futuro"
+  }
+  signature_request {
+    uuid id "NUEVO"
+    uuid draft_document_id
+    text provider "adobe_sign o interno"
+    text external_agreement_id
+    text signer_email
+    text status
+    timestamp sent_at
+    timestamp completed_at
+    timestamp expires_at
+  }
+  signature_event {
+    uuid id "NUEVO"
+    uuid signature_request_id
+    text event_type "sent viewed signed declined"
+    text actor_email
+    text ip_address
+    text user_agent
+    timestamp occurred_at
+  }
+  legal_rep_signature {
+    uuid id "NUEVO"
+    uuid company_id
+    text full_name
+    text gcs_path "imagen PNG"
+  }
+  document {
+    uuid id
+    text gcs_path
+    timestamp signed_at
+    text audit_report_gcs_path "NUEVO"
+  }
+    </div>
+
+    <p class="small">En blanco lo que ya existe; marcado <b>NUEVO</b> lo que se agrega. La tabla <code>signature_event</code> es la que permite imprimir la página de bitácora — sin ella no hay capa 2.</p>
+
+    <h3>9.2 Ciclo de vida de un contrato</h3>
+    <div class="mermaid">
+stateDiagram-v2
+  [*] --> draft: se genera desde plantilla
+  draft --> sent: operador envía a firma
+  sent --> viewed: la contraparte abre el link
+  viewed --> signed: firma y confirma
+  sent --> declined: la contraparte rechaza
+  viewed --> declined: rechaza tras leer
+  sent --> expired: vence el plazo
+  viewed --> expired: vence el plazo
+  signed --> [*]: archivado en document
+  declined --> [*]: queda registrado el motivo
+  expired --> draft: se puede reenviar
+
+  note right of draft
+    HOY solo existen
+    draft, signed y rejected
+  end note
+  note right of signed
+    Aquí se archiva el PDF
+    firmado + el reporte
+    de auditoría
+  end note
+    </div>
+
+    <div class="note">
+      <b>Por qué importan los estados intermedios:</b> hoy un contrato está firmado o no lo está. Con el flujo nuevo, el operador necesita saber si la influencer <i>ya lo vio pero no ha firmado</i> — es la diferencia entre "hay que recordarle" y "hay que llamarla por teléfono". Esa información solo existe si la modelamos.
+    </div>
+  </section>
+
+  <!-- ============ 10. PLAN ============ -->
+  <section id="plan">
+    <h2>10. Plan de construcción por etapas</h2>
+    <p class="sub">Cada etapa se propone y aplica como un <i>change</i> de OpenSpec, siguiendo el flujo del proyecto.</p>
+
+    <div class="grid3">
+      <div class="box" style="border-top:3px solid #c98a00">
+        <h4>ETAPA 0 · Datos de contacto</h4>
+        <p><b>Change:</b> <code>proveedor-datos-contacto</code></p>
+        <ul>
+          <li>Migración: <code>email</code> y <code>phone</code> en persona natural y empresa</li>
+          <li>Formulario de proveedor + validación</li>
+          <li>Tools MCP <code>crear_proveedor</code> y <code>actualizar_proveedor</code></li>
+          <li>Backfill de los proveedores existentes</li>
+        </ul>
+        <p class="small"><b>Independiente de todo lo demás.</b> Se puede empezar hoy.</p>
+      </div>
+      <div class="box" style="border-top:3px solid #1f6feb">
+        <h4>ETAPA 1 · Firma escrita empresa</h4>
+        <p><b>Change:</b> <code>firma-escrita-bloque-firma</code></p>
+        <ul>
+          <li>Nodo <code>signature-block</code> en el renderizador (soporte de <code>Image</code>)</li>
+          <li>Subida y almacenamiento de la firma del rep. legal</li>
+          <li>Migración de las 17 plantillas activas</li>
+          <li>Reemplazo de la hoja anexa por una constancia decente</li>
+        </ul>
+        <p class="small"><b>No depende de Adobe.</b> Entrega valor visible por sí sola.</p>
+      </div>
+      <div class="box" style="border-top:3px solid #d1410c">
+        <h4>ETAPA 2 · Firma remota</h4>
+        <p><b>Change:</b> <code>firma-remota-proveedor</code></p>
+        <ul>
+          <li>Text tags en las plantillas</li>
+          <li>Tablas <code>signature_request</code> y <code>signature_event</code></li>
+          <li>Cliente de Acrobat Sign + webhook público</li>
+          <li>UI de seguimiento de estado</li>
+        </ul>
+        <p class="small"><b>Requiere</b> confirmar el plan con API.</p>
+      </div>
+    </div>
+
+    <div class="mermaid">
+flowchart LR
+  P0["ETAPA 0<br/>Datos de contacto"] --> P1["ETAPA 1<br/>Firma escrita empresa"]
+  P1 --> P2["ETAPA 2<br/>Firma remota vía Adobe"]
+  P2 --> P3["ETAPA 3<br/>Paso a producción"]
+  V{"¿Plan Adobe<br/>con API?"}
+  P1 --> V
+  V -->|"sí"| P2
+  V -->|"no"| PB["Ruta B<br/>portal propio de firma"]
+  PB --> P3
+  P3 -.->|"prerequisito"| MCP["Autenticación del MCP<br/>deuda existente"]
+  classDef a fill:#e7f0ff,stroke:#1f6feb,color:#0b2c66;
+  classDef b fill:#fdeee7,stroke:#d1410c,color:#6b2106;
+  classDef c fill:#e6f6ec,stroke:#0a7d33,color:#083d1a;
+  classDef d fill:#fff4e5,stroke:#c98a00,color:#5a3d00,stroke-dasharray:4 3;
+  class P0,P1 a; class P2,PB b; class P3 c; class MCP,V d;
+    </div>
+  </section>
+
+  <!-- ============ 11. RIESGOS ============ -->
+  <section id="riesgos">
+    <h2>11. Decisiones abiertas y riesgos</h2>
+
+    <h3>11.1 Lo que hay que preguntarle al cliente</h3>
+    <table>
+      <tr><th style="width:40px">#</th><th>Pregunta</th><th>Por qué bloquea</th></tr>
+      <tr><td><span class="num">1</span></td><td><b>¿Qué plan de Acrobat Sign tienen?</b></td><td>Define si la Ruta A es viable. Se responde con un solo comando (abajo).</td></tr>
+      <tr><td><span class="num">2</span></td><td><b>¿Cuántos contratos firman al mes?</b></td><td>Define si el costo por transacción es irrelevante o cambia la ecuación.</td></tr>
+      <tr><td><span class="num">3</span></td><td><b>¿La firma por la empresa es siempre la misma persona?</b></td><td>Si rota, el modelo de datos necesita varias firmas por empresa.</td></tr>
+      <tr><td><span class="num">4</span></td><td><b>¿Aceptan que los datos pasen por Adobe en EE.UU.?</b></td><td>Formalmente ya ocurre en su uso manual, pero conviene dejarlo por escrito.</td></tr>
+      <tr><td><span class="num">5</span></td><td><b>¿Qué pasa si la influencer no firma?</b></td><td>Define plazos de expiración, recordatorios y quién hace seguimiento.</td></tr>
+    </table>
+
+    <h3>11.2 El comando que zanja la pregunta 1</h3>
+    <p>Lo debe ejecutar quien administre la cuenta de Acrobat Sign de Incrementa. La llave se genera en <b>Cuenta → Adobe Acrobat Sign API → Integration Key</b>, con permisos <code>agreement_read</code> y <code>agreement_send</code>:</p>
+    <pre style="background:#111;color:#e6e6e6;padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px"><code style="background:none;color:inherit">curl -s -H "Authorization: Bearer &lt;INTEGRATION_KEY&gt;" \
+  https://api.adobesign.com/api/rest/v6/baseUris</code></pre>
+    <table>
+      <tr><th style="width:280px">Respuesta</th><th>Significa</th></tr>
+      <tr><td><code>{"apiAccessPoint": "https://api.naX…"}</code></td><td>✅ API habilitada. Ruta A confirmada, y sabemos el shard.</td></tr>
+      <tr><td><code>{"code": "INVALID_ACCESS_TOKEN"}</code></td><td>La llave está mal copiada o mal generada.</td></tr>
+      <tr><td>Error de permisos, o la opción no aparece en el menú</td><td>❌ El plan no incluye API. Toca decidir: subir de plan o Ruta B.</td></tr>
+    </table>
+    <div class="warn"><b>Cuidado con esa llave:</b> da acceso completo a los contratos de la cuenta. Debe viajar por canal privado, nunca por email ni chat grupal. Idealmente el administrador solo comparte <i>el resultado</i> del comando, no la llave.</div>
+
+    <h3>11.3 Riesgos técnicos identificados</h3>
+    <table>
+      <tr><th style="width:220px">Riesgo</th><th>Impacto</th><th>Mitigación</th></tr>
+      <tr><td><b>Migrar 17 plantillas</b></td><td>Un error de posición del bloque de firma se replica en todos los contratos</td><td>Migración por script + revisión visual de las 17 antes de activar</td></tr>
+      <tr><td><b>Webhooks perdidos</b></td><td>Un contrato queda firmado en Adobe pero sin archivar en el ERP</td><td>Job de reconciliación que consulta por <code>agreementId</code> los pendientes antiguos</td></tr>
+      <tr><td><b>Webhook falsificado</b></td><td>Alguien marca un contrato como firmado sin que lo esté</td><td>Verificación de la firma del webhook, obligatoria en producción</td></tr>
+      <tr><td><b>Email incorrecto del proveedor</b></td><td>El contrato se envía a un tercero — fuga de datos personales</td><td>Validación de formato + confirmación explícita del operador antes de enviar</td></tr>
+      <tr><td><b>Dependencia de Adobe</b></td><td>Si cambian precios o condiciones, quedamos atados</td><td>El cliente de Adobe se aísla tras una interfaz propia, de modo que la Ruta B siga siendo implementable sin rehacer el resto</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 12. GLOSARIO ============ -->
+  <section id="glosario">
+    <h2>12. Glosario</h2>
+    <table>
+      <tr><th style="width:220px">Término</th><th>Definición</th></tr>
+      <tr><td><b>Acrobat Sign</b></td><td>El servicio de firma electrónica de Adobe. Incrementa ya lo usa manualmente.</td></tr>
+      <tr><td><b>Agreement</b></td><td>En vocabulario de Adobe, un documento enviado a firma con sus destinatarios y su estado.</td></tr>
+      <tr><td><b>Audit trail / bitácora</b></td><td>Registro cronológico de eventos: creado, enviado, visto, firmado. Es la prueba de la firma.</td></tr>
+      <tr><td><b>DocMDP</b></td><td>Mecanismo del formato PDF que declara qué modificaciones se permiten tras firmar. En la muestra: ninguna.</td></tr>
+      <tr><td><b>FEA</b></td><td>Firma Electrónica Avanzada. Con certificado acreditado; goza de presunción legal.</td></tr>
+      <tr><td><b>FES</b></td><td>Firma Electrónica Simple. Válida para estos contratos; la prueba recae en quien la invoca.</td></tr>
+      <tr><td><b>Ley 19.799</b></td><td>Ley chilena de firma electrónica. Tecnológicamente neutra: acepta cualquier mecanismo que permita acreditar identidad e integridad.</td></tr>
+      <tr><td><b>PAdES</b></td><td>Estándar europeo de firma avanzada dentro de PDF. Relevante solo si vamos por la Ruta B y queremos sellar el documento nosotros.</td></tr>
+      <tr><td><b>pdf-lib</b></td><td>Librería que ya usa el backend para manipular PDFs ya generados. Es la que hoy agrega la hoja anexa.</td></tr>
+      <tr><td><b>PKCS#7</b></td><td>Formato del sello criptográfico incrustado en un PDF firmado.</td></tr>
+      <tr><td><b>Sandbox</b></td><td>Entorno de pruebas gratuito de Acrobat Sign, separado del productivo. Vive en el shard NA3.</td></tr>
+      <tr><td><b>Text tag</b></td><td>Marcador de texto que Adobe convierte automáticamente en campo de firma. Resuelve el problema de dónde poner la firma.</td></tr>
+      <tr><td><b>Tiptap</b></td><td>El editor con que se escriben las plantillas. Su contenido se guarda como JSON en <code>template.content_json</code>.</td></tr>
+      <tr><td><b>transientDocument</b></td><td>Archivo subido temporalmente a Adobe (válido 7 días) que luego se usa para crear el agreement.</td></tr>
+    </table>
+
+    <p class="small" style="margin-top:18px">Documento vivo. Refleja el estado del repositorio al 2 de septiembre de 2026 (rama <code>preprod</code>, commit <code>45e02f0</code>) y el análisis de la muestra enviada por la usuaria. Las decisiones de los capítulos 6 a 8 están sujetas a las respuestas del capítulo 11. Ningún valor de secreto aparece en este documento.</p>
+  </section>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis' }, securityLevel: 'loose' });
+</script>
+</body>
+</html>

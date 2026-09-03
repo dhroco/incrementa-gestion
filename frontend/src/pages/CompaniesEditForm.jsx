@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { FormSection } from '../components/CompanyFormSections'
 import { RutInput } from '../components/RutInput'
+import { LegalRepSignatureField } from '../components/LegalRepSignatureField'
 import { updateCompany } from '../api/companiesApi'
 import {
   buildCompanyMutationPayload,
@@ -58,7 +59,9 @@ export function CompaniesEditForm() {
     nameLegal2,
     setNameLegal2,
     rutLegal2,
-    setRutLegal2
+    setRutLegal2,
+    legalRepSignatures,
+    handleLegalRepSignatureChange
   } = ctx
 
   const [submitting, setSubmitting] = useState(false)
@@ -152,6 +155,11 @@ export function CompaniesEditForm() {
   )
 
   const displayError = error || loadError
+
+  function signatureUrlForRep(repIndex) {
+    const row = (legalRepSignatures || []).find((s) => s.rep_index === repIndex)
+    return row?.url ?? null
+  }
 
   return (
     <PageShell breadcrumb={breadcrumb} actions={subActions} hideHeader>
@@ -255,6 +263,13 @@ export function CompaniesEditForm() {
                       ) : null}
                     </div>
                   </div>
+                  <LegalRepSignatureField
+                    companyId={id}
+                    repIndex={1}
+                    signatureUrl={signatureUrlForRep(1)}
+                    canMutate={allowedToEdit}
+                    onSignatureChange={(next) => handleLegalRepSignatureChange(1, next)}
+                  />
                 </div>
                 <div className="company-form-rep-vrule" role="separator" aria-orientation="vertical" />
                 <div className="company-form-rep-col">
@@ -272,6 +287,13 @@ export function CompaniesEditForm() {
                       ) : null}
                     </div>
                   </div>
+                  <LegalRepSignatureField
+                    companyId={id}
+                    repIndex={2}
+                    signatureUrl={signatureUrlForRep(2)}
+                    canMutate={allowedToEdit}
+                    onSignatureChange={(next) => handleLegalRepSignatureChange(2, next)}
+                  />
                 </div>
               </div>
             </>

@@ -8,6 +8,10 @@ const { authorize, authorizeAny } = require('./middleware/authorize')
 const { getCurrentUserProfile } = require('./services/profileService')
 const { getUserProfileIdByUserId } = require('./services/profileService')
 const { createCompanyController } = require('./controllers/companyController')
+const {
+  createLegalRepSignatureController,
+  createSignatureUploadRouteHandler
+} = require('./controllers/legalRepSignatureController')
 const { sendOk } = require('./http/responses')
 const { db } = require('./db/knex')
 const {
@@ -38,6 +42,7 @@ const { createContractsController } = require('./controllers/contractsController
 const { createContractSigningService } = require('./services/contractSigningService')
 const { createContractSigningController } = require('./controllers/contractSigningController')
 const emailService = require('./services/emailService')
+const { createLegalRepSignatureService } = require('./services/legalRepSignatureService')
 
 function createApp({
   corsOrigin = config.CORS_ORIGIN,
@@ -57,6 +62,7 @@ function createApp({
   dashboardService: dashboardServiceInjected = null,
   contractsQueryService: contractsQueryServiceInjected = null,
   contractSigningService: contractSigningServiceInjected = null,
+  legalRepSignatureService: legalRepSignatureServiceInjected = null,
   emailService: emailServiceInjected = emailService,
   gcsService: gcsServiceInjected = gcsService,
   meController: meControllerInjected = null
@@ -297,6 +303,26 @@ function createApp({
   app.get('/api/companies/:id', authorize('read', 'Company'), companyController.getDetail)
   app.post('/api/companies', authorize('create', 'Company'), companyController.postCreate)
   app.put('/api/companies/:id', authorize('update', 'Company'), companyController.putUpdate)
+
+  const legalRepSignatureService =
+    legalRepSignatureServiceInjected ?? createLegalRepSignatureService({ db, gcsService })
+  const legalRepSignatureController = createLegalRepSignatureController({
+    service: legalRepSignatureService,
+    userProfileIdResolver
+  })
+  const signatureUpload = createSignatureUploadRouteHandler()
+
+  app.post(
+    '/api/companies/:id/legal-rep-signatures/:repIndex',
+    authorize('update', 'Company'),
+    signatureUpload,
+    legalRepSignatureController.postSignature
+  )
+  app.delete(
+    '/api/companies/:id/legal-rep-signatures/:repIndex',
+    authorize('update', 'Company'),
+    legalRepSignatureController.deleteSignature
+  )
 
   app.get('/api/platform/users', authorize('read', 'PlatformUser'), platformUsersController.getList)
   app.get('/api/platform/users/roles', authorize('read', 'PlatformUser'), platformUsersController.getRoleOptions)

@@ -530,7 +530,9 @@ function createDocumentBuilderService({
         file_name,
         status: 'draft',
         created_by: createdBy,
-        contract_overrides: overrides
+        contract_overrides: overrides,
+        // Snapshot materializado (variables ya sustituidas) para re-render determinista al firmar.
+        content_snapshot: resolvedDoc
       })
       .returning(['id', 'file_name', 'gcs_path', 'status'])
 

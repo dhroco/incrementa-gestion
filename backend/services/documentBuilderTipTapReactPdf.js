@@ -1,6 +1,6 @@
 const path = require('path')
 const React = require('react')
-const { Document, Page, View, Text, StyleSheet, Font, renderToBuffer } = require('@react-pdf/renderer')
+const { Document, Page, View, Text, StyleSheet, Font, Image, renderToBuffer } = require('@react-pdf/renderer')
 const { sanitizeTextForWinAnsi, normalizeTextForPdfTokenization } = require('./documentBuilderPdfTextUtils')
 
 const PAGE = { W: 595.28, H: 841.89 }
@@ -265,8 +265,9 @@ function TextFlow({ parts, fontSize, align = 'left', inList = false }) {
  * @param {unknown} node
  * @param {number} listDepth
  * @param {{ index?: number, ordered?: boolean }} [list]
+ * @param {Record<string, Buffer>|undefined} [signatureImages]
  */
-function renderBlock(node, listDepth, list) {
+function renderBlock(node, listDepth, list, signatureImages) {
   if (!node || typeof node !== 'object') return null
   const t = node.type
   if (t === 'paragraph') {
@@ -306,7 +307,7 @@ function renderBlock(node, listDepth, list) {
         .filter((it) => it && it.type === 'listItem')
         .map((it) => {
           idx += 1
-          return renderListItem(it, listDepth, '• ', idx, false)
+          return renderListItem(it, listDepth, '• ', idx, false, signatureImages)
         })
     )
   }
@@ -320,8 +321,59 @@ function renderBlock(node, listDepth, list) {
         .filter((it) => it && it.type === 'listItem')
         .map((it) => {
           n += 1
-          return renderListItem(it, listDepth, `${start + n - 1}. `, n, true)
+          return renderListItem(it, listDepth, `${start + n - 1}. `, n, true, signatureImages)
         })
+    )
+  }
+  if (t === 'signatureBlock') {
+    const attrs = node.attrs && typeof node.attrs === 'object' ? node.attrs : {}
+    const party = attrs.party
+    const repIndex = attrs.repIndex
+    const inner = Array.isArray(node.content) ? node.content : []
+
+    if (inner.length === 0) return null
+
+    const firstChild = inner[0]
+    const align = firstChild && firstChild.type === 'paragraph' ? blockAlign(firstChild.attrs) : 'left'
+    const alignSelf =
+      align === 'center'
+        ? 'center'
+        : align === 'right'
+          ? 'flex-end'
+          : 'flex-start'
+
+    let imageKey = null
+    if (party === 'company') {
+      const n = repIndex == null ? null : Number(repIndex)
+      if (n === 1 || n === 2) imageKey = `company:${n}`
+    } else if (party === 'supplier') {
+      imageKey = 'supplier'
+    }
+
+    const buf = imageKey && signatureImages ? signatureImages[imageKey] : undefined
+    const hasImage = Buffer.isBuffer(buf) && buf.length > 0
+    const imgSrc = hasImage ? `data:image/png;base64,${buf.toString('base64')}` : null
+
+    const signatureViewStyle = { width: CONTENT_W, flexDirection: 'column' }
+    const imageStyle = hasImage
+      ? {
+          height: 38,
+          objectFit: 'contain',
+          maxWidth: 160,
+          alignSelf,
+          marginBottom: 0,
+        }
+      : null
+
+    return React.createElement(
+      View,
+      { key: 'sb', style: signatureViewStyle, wrap: false },
+      hasImage
+        ? React.createElement(Image, { key: 'sbimg', src: imgSrc, style: imageStyle })
+        : null,
+      inner.map((ch, i) =>
+        React.createElement(React.Fragment, { key: `sb${i}` }, renderBlock(ch, listDepth, list, signatureImages))
+      )
     )
   }
   if (t === 'blockquote') {
@@ -329,7 +381,13 @@ function renderBlock(node, listDepth, list) {
       View,
       { key: 'bq', style: { borderLeftWidth: 2, borderLeftColor: '#cccccc', paddingLeft: 8, marginLeft: 8, marginBottom: 4 } },
       ...((node.content || [])
-        .map((ch, j) => React.createElement(React.Fragment, { key: `bq${j}` }, renderBlock(ch, listDepth + 12, undefined)))
+        .map((ch, j) =>
+          React.createElement(
+            React.Fragment,
+            { key: `bq${j}` },
+            renderBlock(ch, listDepth + 12, undefined, signatureImages)
+          )
+        )
         .filter(Boolean))
     )
   }
@@ -341,12 +399,12 @@ function renderBlock(node, listDepth, list) {
   }
   if (t === 'doc' && Array.isArray(node.content)) {
     return (node.content || []).map((ch, i) =>
-      React.createElement(React.Fragment, { key: `d${i}` }, renderBlock(ch, listDepth, undefined))
+      React.createElement(React.Fragment, { key: `d${i}` }, renderBlock(ch, listDepth, undefined, signatureImages))
     )
   }
   if (Array.isArray(node.content) && t !== 'text') {
     return (node.content || []).map((ch, i) =>
-      React.createElement(React.Fragment, { key: `a${i}` }, renderBlock(ch, listDepth, list))
+      React.createElement(React.Fragment, { key: `a${i}` }, renderBlock(ch, listDepth, list, signatureImages))
     )
   }
   if (t && !warnedTypes.has(t)) {
@@ -364,7 +422,7 @@ function renderBlock(node, listDepth, list) {
  * @param {number} k
  * @param {boolean} _ordered
  */
-function renderListItem(item, listDepth, marker, k, _ordered) {
+function renderListItem(item, listDepth, marker, k, _ordered, signatureImages) {
   const children = item && Array.isArray(item.content) ? item.content : []
   return React.createElement(
     View,
@@ -378,7 +436,11 @@ function renderListItem(item, listDepth, marker, k, _ordered) {
       View,
       { style: { ...baseStyles.bulletText } },
       children.map((ch, i) =>
-        React.createElement(React.Fragment, { key: `c${i}` }, renderBlock(ch, 0, { ordered: _ordered, index: k }))
+        React.createElement(
+          React.Fragment,
+          { key: `c${i}` },
+          renderBlock(ch, 0, { ordered: _ordered, index: k }, signatureImages)
+        )
       )
     )
   )
@@ -387,12 +449,12 @@ function renderListItem(item, listDepth, marker, k, _ordered) {
 /**
  * @param {unknown} doc
  */
-function TipTapPdfDocument({ doc }) {
+function TipTapPdfDocument({ doc, signatureImages }) {
   const root = doc && typeof doc === 'object' && doc.type === 'doc' ? doc : { type: 'doc', content: [] }
   const pageStyle = [baseStyles.page, { fontFamily }]
   const content = (root.content || [])
     .map((b, i) => {
-      const inner = renderBlock(b, 0, undefined)
+      const inner = renderBlock(b, 0, undefined, signatureImages)
       if (inner == null) return null
       return React.createElement(React.Fragment, { key: `b${i}` }, inner)
     })
@@ -412,10 +474,10 @@ function TipTapPdfDocument({ doc }) {
  * @param {unknown} doc
  * @returns {Promise<Buffer>}
  */
-async function buildPdfBytesFromTipTapWithReactPdf(doc) {
+async function buildPdfBytesFromTipTapWithReactPdf(doc, { signatureImages } = {}) {
   tryRegisterLora()
   warnedTypes.clear()
-  const el = React.createElement(TipTapPdfDocument, { doc })
+  const el = React.createElement(TipTapPdfDocument, { doc, signatureImages })
   const buffer = await renderToBuffer(el)
   return buffer
 }

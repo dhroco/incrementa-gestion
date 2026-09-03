@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { FormSection } from '../components/CompanyFormSections'
+import { LegalRepSignatureField } from '../components/LegalRepSignatureField'
 import { fetchCompanyDetail } from '../api/companiesApi'
 import { selectEnrichedCompany, selectEnrichedProfile } from '../store/authSlice'
 import { AbilityContext } from '../lib/ability'
@@ -49,6 +50,11 @@ export function CompaniesViewPage() {
   const rutDisplay = entity ? formatRut(entity.rut_body, entity.rut_dv) : '—'
   const rutLegal1 = entity ? formatRut(entity.rut_body_legal_representative_1, entity.rut_dv_legal_representative_1) : ''
   const rutLegal2 = entity ? formatRut(entity.rut_body_legal_representative_2, entity.rut_dv_legal_representative_2) : ''
+
+  function signatureUrlForRep(repIndex) {
+    const rows = Array.isArray(entity?.legal_rep_signatures) ? entity.legal_rep_signatures : []
+    return rows.find((s) => s.rep_index === repIndex)?.url ?? null
+  }
 
   const breadcrumb = useMemo(
     () => [
@@ -146,6 +152,12 @@ export function CompaniesViewPage() {
                       <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={rutLegal1} />
                     </div>
                   </div>
+                  <LegalRepSignatureField
+                    companyId={id}
+                    repIndex={1}
+                    signatureUrl={signatureUrlForRep(1)}
+                    canMutate={false}
+                  />
                 </div>
                 <div className="company-form-rep-vrule" role="separator" aria-orientation="vertical" />
                 <div className="company-form-rep-col">
@@ -165,6 +177,12 @@ export function CompaniesViewPage() {
                       <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={rutLegal2} />
                     </div>
                   </div>
+                  <LegalRepSignatureField
+                    companyId={id}
+                    repIndex={2}
+                    signatureUrl={signatureUrlForRep(2)}
+                    canMutate={false}
+                  />
                 </div>
               </div>
 
