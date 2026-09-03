@@ -48,7 +48,7 @@
 - [x] 7.2 Detectar el patrón canónico (párrafo de guiones + párrafo con `company_legal_rep1_name` | `company_legal_rep2_name` | `proveedor_nombre` + `p.p.` opcional). Attrs: `company_legal_rep1_name` → company/1; `company_legal_rep2_name` → company/2; `proveedor_nombre` → supplier/null. Si ya es `signatureBlock`, no-op
 - [x] 7.3 Las que no calzan (chilenas/mexicanas/persona natural/empresa con otra forma) se **reportan** (`code` + motivo) y **no se adivinan**. Entregar la lista de las que quedaron fuera para wrap manual
 - [x] 7.4 Wrap manual de las reportadas en 7.3; segundo run del script sin duplicar wraps ni backups (`manualTemplateSignatureWraps.js`; agregar entradas según informe del dry-run)
-- [ ] 7.5 Revisión visual de las 17 activas (PDF generado sin imagen = líneas como hoy; PDF firmado de prueba con PNG = rúbrica sobre la línea de la empresa, supplier vacío) **antes de dar esta sección por cerrada**
+- [x] 7.5 Revisión visual de las 17 activas (PDF generado sin imagen = líneas como hoy; PDF firmado de prueba con PNG = rúbrica sobre la línea de la empresa, supplier vacío) **antes de dar esta sección por cerrada**
 
 ## 8. Cierre
 
