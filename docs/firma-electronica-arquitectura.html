@@ -779,12 +779,16 @@ erDiagram
   draft_document ||--o| document : "produce"
   company ||--o{ legal_rep_signature : "guarda"
 
+  supplier {
+    uuid id
+    text supplier_type
+    text email "NUEVO - bloqueante"
+    text phone "NUEVO - para SMS futuro"
+  }
   supplier_persona_natural {
     text full_name
     text rut_body
     text address
-    text email "NUEVO - bloqueante"
-    text phone "NUEVO - para SMS futuro"
   }
   signature_request {
     uuid id "NUEVO"
@@ -819,6 +823,8 @@ erDiagram
     text audit_report_gcs_path "NUEVO"
   }
     </div>
+
+    <div class="note"><b>Dónde va el contacto:</b> <code>email</code> y <code>phone</code> viven en la tabla <b>base <code>supplier</code></b>, no en los subtipos. El refactor CTI dejó lo común en la base y lo específico en <code>supplier_persona_natural</code> / <code>supplier_empresa</code>; duplicarlos en ambos subtipos obligaría a resolver cuál gana en cada consulta. Una versión previa de este diagrama los ubicaba en el subtipo de persona natural — era un error, y además dejaba sin contacto a los proveedores empresa.</div>
 
     <p class="small">En blanco lo que ya existe; marcado <b>NUEVO</b> lo que se agrega. La tabla <code>signature_event</code> es la que permite imprimir la página de bitácora — sin ella no hay capa 2.</p>
 

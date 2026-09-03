@@ -1,5 +1,6 @@
 const { db } = require('../db/knex')
 const { parseRut } = require('../utils/rut')
+const { isValidEmail } = require('../utils/validation')
 const { gcsService } = require('./gcsService')
 
 const SUPPLIER_TYPES = new Set(['persona_natural', 'empresa'])
@@ -60,6 +61,38 @@ function trimOrNull(v) {
   return String(v).trim()
 }
 
+function parseEmailField(raw, { required }) {
+  const trimmed = raw == null ? '' : String(raw).trim()
+  if (!trimmed) {
+    if (required) return { ok: false, message: 'El correo es obligatorio.' }
+    return { ok: true, value: null }
+  }
+  if (!isValidEmail(trimmed)) {
+    return { ok: false, message: 'El correo no tiene un formato válido.' }
+  }
+  return { ok: true, value: trimmed.toLowerCase() }
+}
+
+function parsePhoneField(raw) {
+  const trimmed = trimOrNull(raw)
+  if (trimmed == null) return { ok: true, value: null }
+  if (trimmed.length > 32 || !/^[+\d\s().-]+$/.test(trimmed)) {
+    return { ok: false, message: 'El teléfono no tiene un formato válido.' }
+  }
+  const digits = trimmed.replace(/\D/g, '')
+  if (digits.length < 7 || digits.length > 15) {
+    return { ok: false, message: 'El teléfono no tiene un formato válido.' }
+  }
+  return { ok: true, value: trimmed }
+}
+
+function splitBaseFields(d) {
+  const base = {}
+  if (d.email !== undefined) base.email = d.email
+  if (d.phone !== undefined) base.phone = d.phone
+  return base
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function validateSocialNetworks(raw, trxOrDb = db) {
@@ -111,6 +144,17 @@ function validatePayload(body, { partial = false, existingType = null } = {}) {
   }
 
   const type = out.supplier_type ?? existingType
+
+  if (!partial || body?.email !== undefined) {
+    const email = parseEmailField(body?.email, { required: !partial })
+    if (!email.ok) errors.push(email.message)
+    else out.email = email.value
+  }
+  if (!partial || body?.phone !== undefined) {
+    const phone = parsePhoneField(body?.phone)
+    if (!phone.ok) errors.push(phone.message)
+    else out.phone = phone.value
+  }
 
   if (type === 'persona_natural') {
     if (!partial || body?.full_name !== undefined) {
@@ -229,6 +273,8 @@ function supplierJoinQuery(trxOrDb = db) {
     .select(
       's.id',
       's.supplier_type',
+      's.email',
+      's.phone',
       's.created_at',
       's.updated_at',
       's.created_by',
@@ -302,6 +348,8 @@ function normalizeSupplier(row, socialNetworks = []) {
     supplier_type: row.supplier_type,
     display_name: displayName,
     rut,
+    email: row.email ?? null,
+    phone: row.phone ?? null,
     full_name: row.full_name ?? null,
     rut_body: row.rut_body ?? null,
     rut_dv: row.rut_dv ?? null,
@@ -366,6 +414,7 @@ async function listSuppliers({ search = '' } = {}) {
         .orWhereILike('spn.rut_body', t)
         .orWhereILike('se.razon_social', t)
         .orWhereILike('se.rut_empresa_body', t)
+        .orWhereILike('s.email', t)
       if (digits.length) {
         w.orWhereILike('spn.rut_body', `%${digits}%`).orWhereILike('se.rut_empresa_body', `%${digits}%`)
       }
@@ -472,6 +521,8 @@ async function createSupplier({ payload, userId }) {
     const [ins] = await trx('supplier')
       .insert({
         supplier_type: supplierType,
+        email: d.email ?? null,
+        phone: d.phone ?? null,
         created_by: userId ?? null,
         updated_by: userId ?? null,
         updated_at: trx.fn.now()
@@ -596,15 +647,18 @@ async function updateSupplier(id, { payload, userId }) {
   }
 
   const childFields = splitChildFields(d, existing.supplier_type)
+  const baseFields = splitBaseFields(d)
   const hasChildUpdate = Object.keys(childFields).length > 0
+  const hasBaseUpdate = Object.keys(baseFields).length > 0
   const hasSocialUpdate = socialNetworks !== undefined
 
-  if (!hasChildUpdate && !hasSocialUpdate) {
+  if (!hasChildUpdate && !hasSocialUpdate && !hasBaseUpdate) {
     return getSupplierById(id)
   }
 
   await db.transaction(async (trx) => {
     await trx('supplier').where({ id }).update({
+      ...baseFields,
       updated_by: userId ?? null,
       updated_at: trx.fn.now()
     })
@@ -630,5 +684,7 @@ module.exports = {
   updateSupplier,
   normalizeSupplier,
   _formatRutDisplay: formatRutDisplay,
-  _validateSocialNetworks: validateSocialNetworks
+  _validateSocialNetworks: validateSocialNetworks,
+  _validatePayload: validatePayload,
+  _splitBaseFields: splitBaseFields
 }

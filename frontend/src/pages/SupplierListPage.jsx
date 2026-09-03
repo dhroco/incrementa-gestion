@@ -101,6 +101,7 @@ export function SupplierListPage() {
                   <th>Tipo</th>
                   <th>Nombre</th>
                   <th>RUT</th>
+                  <th>Correo</th>
                   <th>Redes sociales</th>
                   <th className="clause-list-col-actions">Acciones</th>
                 </tr>
@@ -108,7 +109,7 @@ export function SupplierListPage() {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="clause-list-empty">
+                    <td colSpan={6} className="clause-list-empty">
                       No hay proveedores que coincidan.
                     </td>
                   </tr>
@@ -120,6 +121,13 @@ export function SupplierListPage() {
                       </td>
                       <td>{row.display_name || '—'}</td>
                       <td>{formatRutDisplay(row.rut)}</td>
+                      <td>
+                        {row.email ? (
+                          row.email
+                        ) : (
+                          <span className="clause-list-missing">Sin correo</span>
+                        )}
+                      </td>
                       <td>{row.social_network_count ?? 0}</td>
                       <td className="clause-list-col-actions">
                         <span className="clause-list-actions-group">

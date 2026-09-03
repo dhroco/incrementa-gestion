@@ -26,6 +26,7 @@ test('buildSubstitutionMap maps persona natural supplier', () => {
   assert.equal(map.proveedor_rut, '12345678-5')
   assert.equal(map.proveedor_red_social, '')
   assert.equal(map.custom_key, 'valor')
+  assert.equal(map.proveedor_email, undefined)
 })
 
 test('buildSubstitutionMap maps company commercial name', () => {

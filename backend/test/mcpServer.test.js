@@ -183,7 +183,7 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
   const createTool = server.getTool('crear_proveedor')
   const createResult = parseToolJson(
     await createTool.handler({
-      payload: { supplier_type: 'persona_natural', full_name: 'Ana', rut: '11.111.111-1' }
+      payload: { supplier_type: 'persona_natural', full_name: 'Ana', rut: '11.111.111-1', email: 'ana@agencia.cl' }
     })
   )
   assert.equal(createResult.ok, true)
@@ -522,8 +522,82 @@ test('crear_proveedor description documents catalog_id for social networks', asy
   const updateTool = server.getTool('actualizar_proveedor')
   assert.ok(createTool.description.includes('listar_catalogo_redes'))
   assert.ok(updateTool.description.includes('listar_catalogo_redes'))
-  assert.ok(createTool.description.includes('catalog_id') || createTool.description.includes('social_networks'))
-  assert.ok(updateTool.description.includes('catalog_id') || updateTool.description.includes('social_networks'))
+  assert.ok(createTool.description.includes('email'))
+  assert.ok(updateTool.description.includes('email'))
+  assert.ok(createTool.description.includes('phone'))
+  assert.ok(updateTool.description.includes('phone'))
+  assert.ok(createTool.description.includes('representante legal'))
+  assert.ok(updateTool.description.includes('representante legal'))
+})
+
+test('MCP supplier tools document and validate contact fields', async () => {
+  const { registerMcpTools } = await import('../mcpTools.mjs')
+
+  const server = createMockServer()
+  registerMcpTools(server, {
+    db: () => ({ select() { return this }, orderBy() { return this }, then(r) { return Promise.resolve(r([])) } }),
+    supplierService: {
+      listSuppliers: async () => ({
+        ok: true,
+        data: { items: [{ id: SUPPLIER_ID, email: null, phone: null }] }
+      }),
+      getSupplierById: async (id) => ({
+        ok: true,
+        data: { supplier: { id, email: null, phone: null } }
+      }),
+      createSupplier: async ({ payload }) => {
+        if (payload?.email == null || String(payload.email).trim() === '') {
+          return { ok: false, code: 'VALIDATION_ERROR', message: 'El correo es obligatorio.' }
+        }
+        return { ok: true, data: { supplier: { id: SUPPLIER_ID, email: payload.email } } }
+      },
+      updateSupplier: async (id, { payload }) => ({
+        ok: true,
+        data: { supplier: { id, email: payload?.email ?? null } }
+      })
+    },
+    clientService: stubClientService,
+    standardTemplatesService: {},
+    documentBuilderService: {},
+    contractsQueryService: stubContractsQueryService,
+    contractSigningService: stubContractSigningService,
+    gcsService: {},
+    getUserProfileIdByUserId: async () => PROFILE_ID
+  })
+
+  const listTool = server.getTool('listar_proveedores')
+  const getTool = server.getTool('obtener_proveedor')
+  const createTool = server.getTool('crear_proveedor')
+  const updateTool = server.getTool('actualizar_proveedor')
+
+  assert.ok(listTool.description.includes('email'))
+  assert.ok(listTool.description.includes('phone'))
+  assert.ok(getTool.description.includes('email'))
+  assert.ok(getTool.description.includes('phone'))
+
+  const listResult = parseToolJson(await listTool.handler({}))
+  assert.equal(listResult.data.items[0].email, null)
+
+  const getResult = parseToolJson(await getTool.handler({ id: SUPPLIER_ID }))
+  assert.equal(getResult.data.supplier.email, null)
+  assert.equal(getResult.data.supplier.phone, null)
+
+  const missingEmail = parseToolJson(
+    await createTool.handler({
+      payload: { supplier_type: 'persona_natural', full_name: 'Ana', rut: '12.345.678-5' }
+    })
+  )
+  assert.equal(missingEmail.ok, false)
+  assert.match(String(missingEmail.message), /correo es obligatorio/)
+
+  const legacyUpdate = parseToolJson(
+    await updateTool.handler({
+      id: SUPPLIER_ID,
+      payload: { address: 'Calle 1' }
+    })
+  )
+  assert.equal(legacyUpdate.ok, true)
+  assert.equal(legacyUpdate.data.supplier.email, null)
 })
 
 test('obtener_url_contrato returns GCS_PATH_MISSING when draft has no gcs_path', async () => {

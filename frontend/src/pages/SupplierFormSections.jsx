@@ -47,6 +47,34 @@ export function validateSocialNetworksForForm(list) {
   return null
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_CHAR_RE = /^[+\d\s().-]+$/
+
+/** Same format rule as backend `isValidEmail`. */
+export function validateSupplierEmail(value, { required } = { required: false }) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) {
+    if (required) return 'El correo es obligatorio.'
+    return null
+  }
+  if (!EMAIL_RE.test(trimmed)) return 'El correo no tiene un formato válido.'
+  return null
+}
+
+/** Lax shape, same as backend parsePhoneField. Empty is valid. */
+export function validateSupplierPhone(value) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return null
+  if (trimmed.length > 32 || !PHONE_CHAR_RE.test(trimmed)) {
+    return 'El teléfono no tiene un formato válido.'
+  }
+  const digits = trimmed.replace(/\D/g, '')
+  if (digits.length < 7 || digits.length > 15) {
+    return 'El teléfono no tiene un formato válido.'
+  }
+  return null
+}
+
 export function socialNetworksForSubmit(list) {
   return (Array.isArray(list) ? list : [])
     .map((sn) => ({
@@ -60,6 +88,8 @@ export function socialNetworksForSubmit(list) {
 const SUPPLIER_FIELD_ERROR_TAB = {
   full_name: 'datos_basicos',
   rut: 'datos_basicos',
+  email: 'datos_basicos',
+  phone: 'datos_basicos',
   razon_social: 'datos_basicos',
   rut_empresa: 'datos_basicos',
   rut_rep_legal: 'datos_basicos',
@@ -98,7 +128,8 @@ export function SupplierBasicDataSection({
   onChange,
   readOnly = false,
   typeLocked = false,
-  fieldErrors = {}
+  fieldErrors = {},
+  emailRequired = false
 }) {
   const c = inputClass(readOnly)
   const isEmpresa = form.supplier_type === 'empresa'
@@ -195,23 +226,6 @@ export function SupplierBasicDataSection({
               {fieldErrors.rut && !readOnly ? <div className="clause-field-error">{fieldErrors.rut}</div> : null}
             </div>
           </div>
-          <div className="clause-form-row">
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-address">
-                Dirección
-              </label>
-              {readOnly ? (
-                <input id="sup-address" className={c} readOnly value={displayText(form.address)} />
-              ) : (
-                <input
-                  id="sup-address"
-                  className={c}
-                  value={form.address ?? ''}
-                  onChange={(e) => onChange('address', e.target.value)}
-                />
-              )}
-            </div>
-          </div>
         </>
       ) : null}
 
@@ -257,6 +271,81 @@ export function SupplierBasicDataSection({
               ) : null}
             </div>
           </div>
+        </>
+      ) : null}
+
+      {isPersona || isEmpresa ? (
+        <>
+          <h3 className="clause-form-section-title">Contacto</h3>
+          <div className="clause-form-row clause-form-row--two-col">
+            <div className="clause-form-col">
+              <label className="clause-form-label" htmlFor="sup-email">
+                {isEmpresa ? 'Correo del representante legal' : 'Correo'}
+                {!readOnly && emailRequired ? <span className="clause-form-required"> *</span> : null}
+              </label>
+              {readOnly ? (
+                <input id="sup-email" className={c} readOnly value={displayText(form.email)} />
+              ) : (
+                <input
+                  id="sup-email"
+                  className={c}
+                  type="email"
+                  autoComplete="off"
+                  value={form.email ?? ''}
+                  onChange={(e) => onChange('email', e.target.value)}
+                />
+              )}
+              {isEmpresa ? (
+                <p className="clause-form-hint">
+                  Casilla de quien firmará el contrato, no un correo general de la empresa.
+                </p>
+              ) : null}
+              {fieldErrors.email && !readOnly ? <div className="clause-field-error">{fieldErrors.email}</div> : null}
+            </div>
+            <div className="clause-form-col">
+              <label className="clause-form-label" htmlFor="sup-phone">
+                Teléfono
+              </label>
+              {readOnly ? (
+                <input id="sup-phone" className={c} readOnly value={displayText(form.phone)} />
+              ) : (
+                <input
+                  id="sup-phone"
+                  className={c}
+                  type="tel"
+                  autoComplete="off"
+                  value={form.phone ?? ''}
+                  onChange={(e) => onChange('phone', e.target.value)}
+                />
+              )}
+              {fieldErrors.phone && !readOnly ? <div className="clause-field-error">{fieldErrors.phone}</div> : null}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {isPersona ? (
+        <div className="clause-form-row">
+          <div className="clause-form-col">
+            <label className="clause-form-label" htmlFor="sup-address">
+              Dirección
+            </label>
+            {readOnly ? (
+              <input id="sup-address" className={c} readOnly value={displayText(form.address)} />
+            ) : (
+              <input
+                id="sup-address"
+                className={c}
+                value={form.address ?? ''}
+                onChange={(e) => onChange('address', e.target.value)}
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {isEmpresa ? (
+        <>
           <div className="clause-form-row clause-form-row--two-equal">
             <div className="clause-form-col">
               <label className="clause-form-label" htmlFor="sup-giro">
@@ -517,7 +606,8 @@ export function SupplierFormSections({
   readOnly = false,
   typeLocked = false,
   fieldErrors = {},
-  onSocialNetworksChange = null
+  onSocialNetworksChange = null,
+  emailRequired = false
 }) {
   return (
     <>
@@ -527,6 +617,7 @@ export function SupplierFormSections({
         readOnly={readOnly}
         typeLocked={typeLocked}
         fieldErrors={fieldErrors}
+        emailRequired={emailRequired}
       />
       <SupplierSocialNetworksSection
         form={form}
@@ -545,6 +636,8 @@ export function supplierToForm(s) {
     supplier_type: s.supplier_type ?? 'persona_natural',
     full_name: s.full_name ?? '',
     rut: isEmpresa ? '' : s.rut_display || formatRut(s.rut_body, s.rut_dv),
+    email: s.email ?? '',
+    phone: s.phone ?? '',
     address: s.address ?? '',
     razon_social: s.razon_social ?? '',
     rut_empresa: isEmpresa ? s.rut_empresa_display || formatRut(s.rut_empresa_body, s.rut_empresa_dv) : '',
@@ -574,6 +667,8 @@ export function emptySupplierForm() {
     supplier_type: 'persona_natural',
     full_name: '',
     rut: '',
+    email: '',
+    phone: '',
     address: '',
     razon_social: '',
     rut_empresa: '',

@@ -200,7 +200,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'listar_proveedores',
-    'Lista los proveedores registrados en el sistema de back office de Incrementa. Llama esta herramienta ANTES de crear un proveedor nuevo para verificar si ya existe uno con el mismo RUT o nombre y evitar duplicados. Retorna la lista con id, tipo, nombre/razón social y RUT.',
+    'Lista los proveedores registrados en el sistema de back office de Incrementa. Llama esta herramienta ANTES de crear un proveedor nuevo para verificar si ya existe uno con el mismo RUT o nombre y evitar duplicados. Retorna la lista con id, tipo, nombre/razón social, RUT, email y phone (null si no hay dato).',
     {
       search: z
         .string()
@@ -215,7 +215,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'obtener_proveedor',
-    'Obtiene el detalle completo de un proveedor por su id (UUID), incluyendo redes sociales y campos según tipo Persona Natural o Empresa.',
+    'Obtiene el detalle completo de un proveedor por su id (UUID), incluyendo email, phone, redes sociales y campos según tipo Persona Natural o Empresa.',
     {
       id: z.string().uuid().describe('UUID del proveedor')
     },
@@ -245,13 +245,13 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'crear_proveedor',
-    'Crea un nuevo proveedor global. Requiere supplier_type (persona_natural o empresa) y los campos obligatorios del tipo. Usa listar_proveedores primero para evitar duplicados. Si incluye social_networks, llama listar_catalogo_redes antes para obtener catalog_id válidos. Retorna el proveedor creado con su id.',
+    'Crea un nuevo proveedor global. Requiere supplier_type (persona_natural o empresa), email (correo válido; se guarda en minúsculas) y los campos obligatorios del tipo. Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa. phone es opcional y se guarda como se escribe (sin normalizar a E.164). Usa listar_proveedores primero para evitar duplicados. Si incluye social_networks, llama listar_catalogo_redes antes para obtener catalog_id válidos. Retorna el proveedor creado con su id.',
     {
       payload: z
         .object({})
         .passthrough()
         .describe(
-          'Datos del proveedor: supplier_type, full_name/rut (persona natural) o razon_social/rut_empresa (empresa). social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
+          'Datos del proveedor: supplier_type, email (obligatorio), phone (opcional), full_name/rut (persona natural) o razon_social/rut_empresa (empresa). social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
         )
     },
     async ({ payload }) => {
@@ -267,14 +267,14 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'actualizar_proveedor',
-    'Actualiza un proveedor existente por id. Acepta campos parciales; social_networks reemplaza la lista completa si se envía (llama listar_catalogo_redes antes para obtener catalog_id válidos). No permite cambiar supplier_type.',
+    'Actualiza un proveedor existente por id. Acepta campos parciales; email y phone son opcionales (omitirlos no cambia el valor; un proveedor sin email se puede actualizar sin enviar email). Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa. social_networks reemplaza la lista completa si se envía (llama listar_catalogo_redes antes para obtener catalog_id válidos). No permite cambiar supplier_type.',
     {
       id: z.string().uuid().describe('UUID del proveedor a actualizar'),
       payload: z
         .object({})
         .passthrough()
         .describe(
-          'Campos parciales a actualizar. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
+          'Campos parciales a actualizar. email y phone opcionales. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
         )
     },
     async ({ id, payload }) => {

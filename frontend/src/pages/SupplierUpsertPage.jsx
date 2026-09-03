@@ -13,7 +13,9 @@ import {
   getFirstSupplierFormTabWithErrors,
   socialNetworksForSubmit,
   supplierToForm,
-  validateSocialNetworksForForm
+  validateSocialNetworksForForm,
+  validateSupplierEmail,
+  validateSupplierPhone
 } from './SupplierFormSections'
 import { SupplierDocumentHistoryPanel } from './SupplierDocumentHistoryPanel'
 import '../styles/shared-form.css'
@@ -66,6 +68,8 @@ function SupplierUpsertContent({ mode }) {
     const firstMessage =
       fe.full_name ||
       fe.rut ||
+      fe.email ||
+      fe.phone ||
       fe.razon_social ||
       fe.rut_empresa ||
       fe.rut_rep_legal ||
@@ -134,7 +138,8 @@ function SupplierUpsertContent({ mode }) {
     onChange: setF,
     typeLocked: mode === 'edit',
     fieldErrors,
-    onSocialNetworksChange
+    onSocialNetworksChange,
+    emailRequired: mode === 'create'
   }
 
   function buildPayload() {
@@ -157,6 +162,11 @@ function SupplierUpsertContent({ mode }) {
       else if (!rut.ok) fe.rut = rut.message
     }
 
+    const emailError = validateSupplierEmail(form.email, { required: mode === 'create' })
+    if (emailError) fe.email = emailError
+    const phoneError = validateSupplierPhone(form.phone)
+    if (phoneError) fe.phone = phoneError
+
     if (Object.keys(fe).length) return failValidation(fe)
 
     const socialNetworkError = validateSocialNetworksForForm(form.social_networks)
@@ -166,6 +176,8 @@ function SupplierUpsertContent({ mode }) {
 
     const payload = {
       supplier_type: form.supplier_type,
+      email: String(form.email || '').trim() || null,
+      phone: String(form.phone || '').trim() || null,
       social_networks
     }
 

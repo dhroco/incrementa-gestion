@@ -506,7 +506,8 @@ label.clause-field,
   margin-top: 4px;
 }
 
-.legal-rep-signature-field__hint {
+.legal-rep-signature-field__hint,
+.clause-form-hint {
   margin: 0;
   font-size: 12px;
   color: #000;
@@ -872,6 +873,10 @@ label.clause-field,
   text-align: center;
   color: #666;
   padding: 24px 12px !important;
+}
+
+.clause-list-missing {
+  color: #5a6370;
 }
 
 .clause-list-col-actions {

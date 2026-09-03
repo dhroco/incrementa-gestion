@@ -77,6 +77,7 @@ test('POST /api/suppliers creates persona natural', async () => {
     .send({
       supplier_type: 'persona_natural',
       full_name: 'Juan Pérez',
+      email: 'juan.perez@agencia.cl',
       rut: '12.345.678-5',
       social_networks: [{ catalog_id: '11111111-1111-4111-8111-111111111111', account_name: '@juan' }]
     })
