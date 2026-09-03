@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **incrementa-gestion** — ERP para gestión de contratos (proveedores, clientes, plantillas, documentos) de una empresa chilena. Monorepo:
 
-- `frontend/` — React 19 + Vite + Redux Toolkit + React Router 7 + MUI. Auth con MSAL (`@azure/msal-*`).
+- `frontend/` — React 19 + Vite + Redux Toolkit + React Router 7. UI con CSS propio (`src/styles/`); MUI se usa exclusivamente como librería de íconos (`@mui/icons-material`, variante Outlined), nunca como componentes. Auth con MSAL (`@azure/msal-*`).
 - `backend/` — Node + Express + Knex.js + PostgreSQL. Valida JWT OIDC. Genera PDFs (`@react-pdf/renderer`), envía email (Resend), expone un **MCP Server** (`backend/mcp.mjs`).
 - `infra/` — IaC/scripts GCP. `docs/` — documentación (arquitectura, manuales de producción).
 - `openspec/` — gestión de cambios spec-driven (ver más abajo).
@@ -113,5 +113,5 @@ GCP Cloud Run (backend Express + frontend nginx), Cloud SQL (PostgreSQL 16), GCS
 ## Flujo de trabajo del proyecto
 
 - **Gestión de cambios con OpenSpec:** los cambios se proponen y aplican bajo `openspec/changes/` (`propose` → `apply`), con specs en `openspec/specs/`. El contexto, reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
-- Reglas de Cursor/skills OpenSpec en `.cursor/`.
+- Cursor lee `.cursor/rules/*.mdc` (contexto de proyecto, sistema de diseño frontend, convenciones de backend y gotchas). No lee `CLAUDE.md`. Comandos y skills OpenSpec en `.cursor/commands/` y `.cursor/skills/`.
 - **Roles de colaboración:** Claude = arquitecto/PM y revisor (propone, especifica, revisa); Cursor = implementa el código de producto vía OpenSpec.

@@ -3,7 +3,10 @@ const BACKUP_NOTE = 'pre-firma-escrita-bloque-firma'
 const SIGNATURE_VARIABLES = {
   company_legal_rep1_name: { party: 'company', repIndex: 1 },
   company_legal_rep2_name: { party: 'company', repIndex: 2 },
+  // Persona natural: la línea la encabeza el nombre del proveedor.
   proveedor_nombre: { party: 'supplier', repIndex: null },
+  // Empresa: la encabeza su representante legal, y debajo va "p.p. {{proveedor_nombre}}".
+  proveedor_rep_legal: { party: 'supplier', repIndex: null },
 }
 
 function isPlainObject(value) {
@@ -81,19 +84,10 @@ function analyzeNonCanonicalSignatureGroups(content) {
     if (node.type === 'signatureBlock') continue
 
     if (node.type === 'paragraph') {
-      const variableId = findSignatureVariableInParagraph(node)
-      if (variableId) {
-        const prev = content[i - 1]
-        const canonical =
-          prev &&
-          prev.type === 'paragraph' &&
-          isUnderscoreParagraph(prev) &&
-          tryMatchCanonicalGroup(content, i - 1)?.consumed >= 2
-        if (!canonical) {
-          issues.push(`Variable ${variableId} sin patrón canónico (línea de guiones + nombre)`)
-        }
-      }
-
+      // Solo se analiza la REGIÓN DE FIRMA, anclada en las líneas de guiones. Las variables de
+      // firma también aparecen en el cuerpo del contrato (comparecencia, PERSONERÍA, cláusulas
+      // de precio), y marcarlas ahí producía un falso positivo por plantilla que abortaba el
+      // wrap de las 17.
       if (isUnderscoreParagraph(node)) {
         const next = content[i + 1]
         const nextVar = next && next.type === 'paragraph' ? findSignatureVariableInParagraph(next) : null
