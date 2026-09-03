@@ -1,0 +1,22 @@
+---
+description: Trampas ya resueltas del proyecto — no volver a romperlas
+globs:
+alwaysApply: true
+---
+
+# Gotchas resueltos — no re-romper
+
+- **Cloud SQL por socket:** `knexfile.js` pasa `{ connectionString }` a knex,
+  no el string crudo. El parser de knex no entiende `?host=/cloudsql/INSTANCE`
+  (lo trata como filename sqlite y cae a localhost:5432); `pg` sí lo entiende
+  cuando recibe el objeto.
+- **PGSSLMODE va sin setear**, tanto en local (Cloud SQL Auth Proxy) como en
+  Cloud Run (socket). Setearlo rompe la conexión.
+- **Cloud Run:** el servicio de frontend también necesita `--service-account`.
+  Sin él usa la SA de compute por defecto y el deploy falla por falta de `actAs`.
+- **Firma de URLs GCS:** el ADC de usuario no puede firmar. Local usa key JSON;
+  la runtime SA en Cloud Run necesita `roles/iam.serviceAccountTokenCreator`
+  sobre sí misma.
+- **Orden de despliegue (5 pasos, por dependencia de URLs):** build+push backend
+  → deploy backend → build+push frontend con `VITE_API_BASE_URL` = URL del
+  backend → deploy frontend → update backend `CORS_ORIGIN` = URL del frontend.

@@ -1,0 +1,58 @@
+---
+description: Sistema de diseño y convenciones de UI del frontend
+globs: frontend/**/*.{jsx,js,css}
+alwaysApply: false
+---
+
+# Frontend — reglas no negociables
+
+La especificación completa está en `openspec/config.yaml` (`rules.design`,
+`ui_tokens`, `locale.rut_format`). LEERLA antes de crear un componente nuevo.
+Lo de abajo es el subconjunto que nunca debe romperse.
+
+## Librerías
+
+- La UI es CSS propio. MUI se usa EXCLUSIVAMENTE como librería de íconos
+  (`@mui/icons-material`, variante Outlined). NO importar componentes de
+  `@mui/material` (Button, TextField, Dialog, etc.) aunque el paquete esté
+  instalado.
+- Tiptap solo dentro del editor de cláusulas.
+
+## Tipografía
+
+- Fuente exclusiva del sistema: Nunito Sans, TTF locales en
+  `frontend/src/assets/fonts/`, vía @font-face en `styles/global.css`
+  (`--font-family-base`). NUNCA cargarla desde Google Fonts CDN.
+- Lora únicamente dentro del editor Tiptap (`--font-family-clause-editor`).
+- PROHIBIDAS como fuente principal: Inter, Syne, Roboto, cualquier otra.
+- Tamaño base 13px. Valores numéricos destacados en cards: 18px.
+- Los elementos de formulario necesitan `font-family: inherit` explícito.
+
+## Color
+
+- Links y botones tipo link: `#F62D84` (`--color-selection`).
+- Acento del ítem activo del sidebar: `#657A8A`.
+- Los hex canónicos viven en `ui_tokens` de config.yaml y se implementan como
+  variables en `frontend/src/styles/variables.css`. NO duplicar hex en
+  componentes.
+
+## Componentes
+
+- Botones: usar SIEMPRE la clase `.btn` de `global.css`. Píldora
+  (border-radius 9999px), fondo blanco, borde #C8CDD2, 13px peso 600.
+  NUNCA fondo de color sólido. NUNCA width 100% ni ancho fijo.
+- Cards: fondo #FFFFFF, borde 1px #E3E6E8, radius 8px, padding 12px, sin sombra.
+- Tablas: sin rayado alternado, header #F7F7F7 peso 600.
+
+## Prohibiciones generales
+
+- Sin sombras, salvo las cuatro excepciones declaradas en config.yaml.
+- Sin gradientes (única excepción: el favicon SVG).
+- Sin estética "marketing" o dashboard decorativo. ERP sobrio, compacto,
+  alta densidad de información.
+
+## RUT
+
+Mostrar con `formatRut`/`formatRutDisplay`; editar con el componente
+`RutInput`. La validación módulo 11 vive en `parseRut` y es independiente
+del formateo.

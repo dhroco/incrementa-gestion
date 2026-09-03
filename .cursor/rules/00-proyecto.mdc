@@ -1,0 +1,43 @@
+---
+description: Contexto permanente del proyecto incrementa-gestion
+globs:
+alwaysApply: true
+---
+
+# incrementa-gestion
+
+ERP de gestión de contratos (proveedores, clientes, plantillas, documentos)
+para una empresa chilena. Monorepo:
+
+- `frontend/` React 19 + Vite + Redux Toolkit + React Router 7. Auth MSAL (Entra ID).
+- `backend/` Node + Express + Knex + PostgreSQL. PDFs con @react-pdf/renderer,
+  email con Resend, expone un MCP Server (`backend/mcp.mjs`).
+- `infra/` GCP · `docs/` documentación · `openspec/` gestión de cambios.
+
+## Fuente oficial de estilo y contexto
+
+`openspec/config.yaml` es la fuente oficial del sistema de diseño, el locale y
+las convenciones. Antes de escribir o modificar cualquier componente de UI,
+LEER la sección `rules.design` y las claves `ui_tokens` y `locale` de ese
+archivo. No reinterpretar estilos ni inventar variantes fuera de esas
+definiciones.
+
+## Locale — Chile
+
+- Timezone `America/Santiago`, idioma `es-CL`
+- Números `XXX.XXX,X` (miles punto, decimal coma) · Fechas ISO `YYYY-MM-DD`
+- RUT `XX.XXX.XXX-X` — implementación canónica en `frontend/src/utils/rut.js`
+- Todo mensaje de error dirigido al usuario va en español
+
+## Configuración por ambiente
+
+No se usa `.env` ni dotenv. `config.js` (back y front) exporta configuración
+según la variable única `ENVIRONMENT`, válida solo en `{local, dev, prod}`.
+Pre-producción usa `ENVIRONMENT=dev`; no existe el valor "preprod".
+
+## Frontera de roles
+
+Claude (terminal) es PM, arquitecto y revisor: decide el QUÉ y el POR QUÉ.
+Cursor implementa: escribe los artefactos OpenSpec y el código de producto.
+No ampliar el alcance más allá de las tareas del change en curso. Ante una
+ambigüedad o un problema de diseño, pausar y preguntar — no adivinar.

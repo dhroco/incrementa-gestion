@@ -1,0 +1,36 @@
+---
+description: Arquitectura y convenciones del backend
+globs: backend/**/*.{js,mjs}
+alwaysApply: false
+---
+
+# Backend — convenciones
+
+## Base de datos
+
+- Tablas en inglés y en SINGULAR. Columnas en inglés snake_case.
+  Plurales solo con razón documentada.
+- Una sola instancia knex, en `db/knex.js` desde `knexfile.js`.
+  Migraciones en `migrations/`, seeds en `seeds/`.
+
+## Estructura
+
+- `app.js` exporta `createApp({ ...services })` — factory con inyección de
+  dependencias. `index.js` la arranca; los tests inyectan mocks.
+  Servicios en `services/`, controladores en `controllers/`, respuestas HTTP
+  en `http/responses.js`.
+
+## Autenticación y autorización
+
+- Cadena: `requireOidcAuth` → `resolveInternalIdentity` → `attachAbility`
+  (CASL) → `authorize`/`authorizeAny`.
+- Todas las rutas están protegidas por defecto. Las públicas (`/`, `/health`)
+  se declaran ANTES de aplicar `requireAuth`.
+- La identidad interna se resuelve por EMAIL contra `user_profile`, nunca por
+  el claim `sub`.
+
+## Otros
+
+- Tests con `node --test`. Los mensajes de error al usuario van en español.
+- El MCP Server (`mcp.mjs` + `mcpTools.mjs`) reutiliza los mismos services que
+  la API REST. Un cambio en un service afecta a ambos: verificar los dos.
