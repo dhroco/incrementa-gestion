@@ -193,6 +193,9 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
   assert.ok(validateTool.description.includes('NO genera PDF'))
   assert.ok(validateTool.description.includes('values'))
   assert.ok(validateTool.description.includes('pairField'))
+  assert.ok(validateTool.description.includes('PROHIBIDO elegir por cuenta propia'))
+  assert.ok(validateTool.description.includes('espera respuesta explícita'))
+  assert.ok(validateTool.description.includes('Prohibido inferir'))
   parseToolJson(
     await validateTool.handler({
       companyId: COMPANY_ID,
@@ -207,6 +210,8 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
   assert.equal(generateArgs.body.clientId, CLIENT_ID)
 
   const generateTool = server.getTool('generar_contrato')
+  assert.ok(generateTool.description.includes('confirmación explícita'))
+  assert.ok(generateTool.description.includes('missingFieldOverrides'))
   parseToolJson(
     await generateTool.handler({
       companyId: COMPANY_ID,

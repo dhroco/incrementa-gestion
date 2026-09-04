@@ -148,41 +148,129 @@ function preprocessMissingFieldOverrides(overrides) {
   return out
 }
 
+function resolveFieldDefinition(key, { clientRow, supplierRow } = {}) {
+  const meta = getVariableMeta(key)
+  const pairField = getPairFieldForPrimary(key)
+  const field = { key, label: meta.label, type: meta.type, source: meta.source ?? 'contract' }
+  if (pairField) field.pairField = pairField
+
+  if (key === 'formato_reel') {
+    field.options = [...FORMATO_REEL_OPTIONS]
+  }
+
+  if (key === 'client_product_campaign' && clientRow?.product_campaigns?.length > 0) {
+    field.type = 'select'
+    field.options = clientRow.product_campaigns.map((c) => c.name)
+  }
+
+  if (key === 'proveedor_red_social') {
+    const networks = supplierRow?.social_networks ?? []
+    if (networks.length > 0) {
+      field.type = 'select'
+      field.options = networks.map((sn) => ({
+        label: `${String(sn.name || '').trim()} — ${String(sn.account_name || '').trim()}`,
+        values: {
+          proveedor_red_social: String(sn.name || '').trim(),
+          proveedor_cuenta_social: String(sn.account_name || '').trim()
+        }
+      }))
+    } else {
+      field.type = 'text'
+    }
+  }
+
+  return field
+}
+
 function buildMissingFields(missingKeys, { clientRow, supplierRow } = {}) {
   const normalized = normalizeMissingKeys(missingKeys)
-  return normalized.map((key) => {
-    const meta = getVariableMeta(key)
-    const pairField = getPairFieldForPrimary(key)
-    const field = { key, label: meta.label, type: meta.type, source: meta.source ?? 'contract' }
-    if (pairField) field.pairField = pairField
+  return normalized.map((key) => resolveFieldDefinition(key, { clientRow, supplierRow }))
+}
 
-    if (key === 'formato_reel') {
-      field.options = [...FORMATO_REEL_OPTIONS]
+function isNonEmptyOverride(value) {
+  return value != null && String(value) !== ''
+}
+
+function optionDisplayLabels(options) {
+  return options.map((opt) =>
+    opt && typeof opt === 'object' && opt.label != null ? String(opt.label) : String(opt)
+  )
+}
+
+function selectCatalogError(field) {
+  const labels = optionDisplayLabels(field.options)
+  return {
+    ok: false,
+    status: 400,
+    code: 'VALIDATION_ERROR',
+    message: `El valor de ${field.label} no es una opción válida. Opciones: ${labels.join(', ')}.`
+  }
+}
+
+function optionsHaveValues(options) {
+  return (
+    Array.isArray(options) &&
+    options.length > 0 &&
+    typeof options[0] === 'object' &&
+    options[0] !== null &&
+    options[0].values != null &&
+    typeof options[0].values === 'object'
+  )
+}
+
+function validateSelectOverrides(overrides, { clientRow, supplierRow } = {}) {
+  const raw = overrides && typeof overrides === 'object' ? overrides : {}
+  const keysToCheck = new Set()
+  for (const key of Object.keys(raw)) {
+    if (!isNonEmptyOverride(raw[key])) continue
+    keysToCheck.add(SECONDARY_FIELDS[key] ?? key)
+  }
+
+  for (const key of keysToCheck) {
+    const field = resolveFieldDefinition(key, { clientRow, supplierRow })
+    if (field.type !== 'select' || !Array.isArray(field.options) || field.options.length === 0) {
+      continue
     }
 
-    if (key === 'client_product_campaign' && clientRow?.product_campaigns?.length > 0) {
-      field.type = 'select'
-      field.options = clientRow.product_campaigns.map((c) => c.name)
-    }
+    if (optionsHaveValues(field.options)) {
+      const primaryVal = raw[key]
+      const pairField = field.pairField
+      const secondaryVal = pairField != null ? raw[pairField] : undefined
+      const primaryPresent = isNonEmptyOverride(primaryVal)
+      const secondaryPresent = isNonEmptyOverride(secondaryVal)
 
-    if (key === 'proveedor_red_social') {
-      const networks = supplierRow?.social_networks ?? []
-      if (networks.length > 0) {
-        field.type = 'select'
-        field.options = networks.map((sn) => ({
-          label: `${String(sn.name || '').trim()} — ${String(sn.account_name || '').trim()}`,
-          values: {
-            proveedor_red_social: String(sn.name || '').trim(),
-            proveedor_cuenta_social: String(sn.account_name || '').trim()
-          }
-        }))
-      } else {
-        field.type = 'text'
+      if (primaryPresent) {
+        const primaryOk = field.options.some(
+          (opt) => opt.values && String(opt.values[key]) === String(primaryVal)
+        )
+        if (!primaryOk) return selectCatalogError(field)
       }
-    }
 
-    return field
-  })
+      if (primaryPresent && secondaryPresent) {
+        const pairOk = field.options.some(
+          (opt) =>
+            opt.values &&
+            String(opt.values[key]) === String(primaryVal) &&
+            String(opt.values[pairField]) === String(secondaryVal)
+        )
+        if (!pairOk) return selectCatalogError(field)
+      }
+
+      if (!primaryPresent && secondaryPresent) {
+        const secondaryOk = field.options.some(
+          (opt) => opt.values && String(opt.values[pairField]) === String(secondaryVal)
+        )
+        if (!secondaryOk) return selectCatalogError(field)
+      }
+    } else {
+      const value = raw[key]
+      if (!isNonEmptyOverride(value)) continue
+      const match = field.options.some((opt) => String(opt) === String(value))
+      if (!match) return selectCatalogError(field)
+    }
+  }
+
+  return { ok: true }
 }
 
 function sanitizeFilePart(s) {
@@ -352,7 +440,6 @@ function createDocumentBuilderService({
       body?.missingFieldOverrides && typeof body.missingFieldOverrides === 'object'
         ? body.missingFieldOverrides
         : {}
-    const overrides = preprocessMissingFieldOverrides(overridesRaw)
 
     if (!supplierId) {
       return {
@@ -406,6 +493,14 @@ function createDocumentBuilderService({
       }
       clientRow = clientResult.data?.client ?? null
     }
+
+    const selectCheck = validateSelectOverrides(overridesRaw, {
+      clientRow,
+      supplierRow: supplier
+    })
+    if (!selectCheck.ok) return selectCheck
+
+    const overrides = preprocessMissingFieldOverrides(overridesRaw)
 
     const companyRow = await loadCompanyRow(db, companyId)
     if (!companyRow) {
@@ -593,6 +688,8 @@ module.exports = {
   findActiveDuplicateDraft,
   getVariableMeta,
   buildMissingFields,
+  resolveFieldDefinition,
+  validateSelectOverrides,
   preprocessMissingFieldOverrides,
   SECONDARY_FIELDS
 }

@@ -239,3 +239,130 @@ test('signContract succeeds and logs email failure without rollback', async () =
   assert.ok(draftUpdated)
   assert.ok(emailCalled)
 })
+
+test('signContract does not catalog-check persisted formato_reel render form', async () => {
+  const src = await PDFDocument.create()
+  src.addPage()
+  const pdfBuffer = Buffer.from(await src.save())
+  const snapshot = {
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'tres (3) videos' }] }]
+  }
+
+  let documentInserted = false
+
+  const db = (table) => {
+    if (table === 'draft_document') {
+      return {
+        where() {
+          return {
+            first: async () => ({
+              id: DRAFT_ID,
+              status: 'draft',
+              company_id: COMPANY_ID,
+              supplier_id: SUPPLIER_ID,
+              template_id: TEMPLATE_ID,
+              client_id: null,
+              gcs_path: 'contratos/original.pdf',
+              file_name: 'contrato.pdf',
+              content_snapshot: snapshot,
+              contract_overrides: { formato_reel: 'videos' }
+            }),
+            update: async () => 1
+          }
+        }
+      }
+    }
+
+    if (table === 'user_profile') {
+      return {
+        where() {
+          return { first: async () => ({ id: PROFILE_ID, full_name: 'Ana Usuario' }) }
+        }
+      }
+    }
+
+    if (table === 'company') {
+      return {
+        where() {
+          return {
+            first: async () => ({
+              id: COMPANY_ID,
+              business_name: 'Empresa SpA',
+              short_name: 'Empresa',
+              rut_body: '76123456',
+              rut_dv: '7',
+              email: 'empresa@test.cl'
+            })
+          }
+        }
+      }
+    }
+
+    if (table === 'template') {
+      return {
+        where() {
+          return { first: async () => ({ id: TEMPLATE_ID, name: 'Plantilla', code: 'PLT' }) }
+        }
+      }
+    }
+
+    if (table === 'supplier as s') {
+      return {
+        leftJoin() {
+          return this
+        },
+        where() {
+          return this
+        },
+        select() {
+          return this
+        },
+        first: async () => ({ supplier_name: 'Proveedor SpA' })
+      }
+    }
+
+    return {}
+  }
+
+  db.raw = (sql) => sql
+
+  db.transaction = async (fn) => {
+    const trx = (table) => {
+      if (table === 'document') {
+        return {
+          insert: async () => {
+            documentInserted = true
+          }
+        }
+      }
+      if (table === 'draft_document') {
+        return {
+          where: () => ({
+            update: async () => 1
+          })
+        }
+      }
+      return db(table)
+    }
+    await fn(trx)
+  }
+
+  const service = createContractSigningService({
+    db,
+    gcsService: {
+      downloadBuffer: async () => pdfBuffer,
+      uploadBuffer: async () => 'contratos-firmados/signed.pdf'
+    },
+    emailService: { sendSignedContractEmail: async () => ({ ok: true }) }
+  })
+
+  const result = await service.signContract({
+    draftDocumentId: DRAFT_ID,
+    signerUserProfileId: PROFILE_ID
+  })
+
+  assert.equal(result.ok, true)
+  assert.notEqual(result.code, 'VALIDATION_ERROR')
+  assert.ok(documentInserted)
+})
