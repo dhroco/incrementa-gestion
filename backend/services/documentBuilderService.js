@@ -17,6 +17,7 @@ const {
   FORMATO_REEL_OPTIONS
 } = require('../utils/formatReels')
 const { formatFechaEs } = require('../utils/formatFechaEs')
+const { countryLabel } = require('../utils/identityDocument')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -356,7 +357,7 @@ function createDocumentBuilderService({
   async function getTemplateRow(trx, templateId) {
     return trx('template as t')
       .join('template_standard as ts', 'ts.id', 't.id')
-      .select('t.id', 't.code', 't.name', 't.description', 't.content_json')
+      .select('t.id', 't.code', 't.name', 't.description', 't.content_json', 't.country_code')
       .where('t.id', templateId)
       .first()
   }
@@ -512,6 +513,19 @@ function createDocumentBuilderService({
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
     }
 
+    if (
+      templateRow.country_code &&
+      supplier.country_code &&
+      templateRow.country_code !== supplier.country_code
+    ) {
+      return {
+        ok: false,
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: `No se puede generar el contrato: el proveedor es de ${countryLabel(supplier.country_code)} y la plantilla es de ${countryLabel(templateRow.country_code)}.`
+      }
+    }
+
     const mergedDoc = materializeTemplateMergedDoc(templateRow.content_json)
     const baseText = await tipTapDocToPlainTextAsync(mergedDoc)
     const map = buildSubstitutionMap(supplier, companyRow, clientRow, overrides)
@@ -594,9 +608,7 @@ function createDocumentBuilderService({
     const pdfBytes = await buildPdfBytesFromTipTapWithReactPdf(resolvedDoc)
 
     const rutPart =
-      sanitizeFilePart(
-        supplier.supplier_type === 'empresa' ? supplier.rut_empresa_display : supplier.rut_display
-      ) || sanitizeFilePart(supplierId)
+      sanitizeFilePart(supplier.document_display) || sanitizeFilePart(supplierId)
     const file_name = `${templateName}_${rutPart}.pdf`
 
     const docId = randomUUID()

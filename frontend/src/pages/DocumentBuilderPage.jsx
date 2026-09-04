@@ -23,7 +23,6 @@ import {
 } from '../store/documentBuilderSlice'
 import { PlatformAdminCompanySelect } from '../components/PlatformAdminCompanySelect'
 import { SupplierTypeChip } from '../components/SupplierTypeChip'
-import { formatRutDisplay } from '../utils/rut'
 import { usePlatformAdminCompaniesLoader } from './usePlatformAdminCompaniesLoader'
 import { usePlatformAdminCompanyScope } from './usePlatformAdminCompanyScope'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -537,7 +536,7 @@ export function DocumentBuilderPage() {
                       <span className="db-supplier-table-sr-only">Seleccionar</span>
                     </th>
                     <th>Nombre</th>
-                    <th>RUT</th>
+                    <th>Identificador</th>
                     <th>Tipo</th>
                   </tr>
                 </thead>
@@ -551,7 +550,12 @@ export function DocumentBuilderPage() {
                         : s.supplier_type === 'empresa'
                           ? s.razon_social
                           : s.full_name
-                    const rut = typeof s.rut === 'string' ? s.rut : ''
+                    const identifier =
+                      typeof s.document_display === 'string' && s.document_display.trim()
+                        ? s.document_display.trim()
+                        : typeof s.rut === 'string'
+                          ? s.rut
+                          : ''
                     return (
                       <tr
                         key={id}
@@ -568,7 +572,7 @@ export function DocumentBuilderPage() {
                           />
                         </td>
                         <td>{name || '—'}</td>
-                        <td>{formatRutDisplay(rut)}</td>
+                        <td>{identifier || '—'}</td>
                         <td>
                           <SupplierTypeChip supplierType={s.supplier_type} />
                         </td>

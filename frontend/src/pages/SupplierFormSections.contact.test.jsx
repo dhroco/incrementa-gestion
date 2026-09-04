@@ -8,6 +8,7 @@ import { flushSync } from 'react-dom'
 import {
   SupplierBasicDataSection,
   emptySupplierForm,
+  validateCatalogDocument,
   validateSupplierEmail,
   validateSupplierPhone
 } from './SupplierFormSections'
@@ -114,5 +115,26 @@ describe('supplier contact validation', () => {
 
     root.unmount()
     container.remove()
+  })
+})
+
+describe('catalog document validation', () => {
+  const rfc = {
+    code: 'RFC',
+    country_code: 'MX',
+    label: 'RFC',
+    validator_key: 'pattern',
+    pattern: JSON.stringify({
+      persona_natural: '^[A-ZÑ&]{4}\\d{6}[A-Z0-9]{3}$',
+      empresa: '^[A-ZÑ&]{3}\\d{6}[A-Z0-9]{3}$'
+    }),
+    format_example: 'LEGF870121MGA'
+  }
+
+  it('accepts Mexican persona RFC and rejects 12-char without echo', () => {
+    expect(validateCatalogDocument('legf870121mga', rfc, { role: 'persona_natural' })).toBeNull()
+    const err = validateCatalogDocument('ABC010203AB1', rfc, { role: 'persona_natural' })
+    expect(err).toMatch(/RFC ingresado no es válido/)
+    expect(err?.includes('ABC010203AB1')).toBe(false)
   })
 })

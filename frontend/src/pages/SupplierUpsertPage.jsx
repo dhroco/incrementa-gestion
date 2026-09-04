@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAbility } from '@casl/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { createSupplier, fetchSupplierDetail, updateSupplier } from '../api/suppliersApi'
+import { createSupplier, fetchIdentityDocumentTypes, fetchSupplierDetail, updateSupplier } from '../api/suppliersApi'
 import { AbilityContext } from '../lib/ability'
 import { parseOptionalRut, parseRut } from '../utils/rut'
 import { normalizeIsoDateOrNull } from '../utils/dateUtils'
@@ -13,6 +13,8 @@ import {
   getFirstSupplierFormTabWithErrors,
   socialNetworksForSubmit,
   supplierToForm,
+  validateCatalogDocument,
+  documentTypeForCountry,
   validateSocialNetworksForForm,
   validateSupplierEmail,
   validateSupplierPhone
@@ -44,6 +46,7 @@ function SupplierUpsertContent({ mode }) {
       : ability.can('update', 'Supplier') || ability.can('create', 'Supplier')
 
   const [form, setForm] = useState(emptySupplierForm)
+  const [identityDocumentTypes, setIdentityDocumentTypes] = useState([])
   const [loading, setLoading] = useState(mode === 'edit')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -67,6 +70,7 @@ function SupplierUpsertContent({ mode }) {
     if (tab && mode === 'edit') setActiveTab(tab)
     const firstMessage =
       fe.full_name ||
+      fe.country_code ||
       fe.rut ||
       fe.email ||
       fe.phone ||
@@ -85,6 +89,19 @@ function SupplierUpsertContent({ mode }) {
       document.querySelector('.clause-field-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     })
   }
+
+  useEffect(() => {
+    let active = true
+    async function loadCatalog() {
+      const res = await fetchIdentityDocumentTypes()
+      if (!active) return
+      if (res.ok) setIdentityDocumentTypes(res.data?.items || [])
+    }
+    loadCatalog()
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     if (mode !== 'edit' || !routeId) return
@@ -139,27 +156,57 @@ function SupplierUpsertContent({ mode }) {
     typeLocked: mode === 'edit',
     fieldErrors,
     onSocialNetworksChange,
-    emailRequired: mode === 'create'
+    emailRequired: mode === 'create',
+    identityDocumentTypes
   }
 
   function buildPayload() {
     const fe = {}
     const isEmpresa = form.supplier_type === 'empresa'
+    const docType = documentTypeForCountry(identityDocumentTypes, form.country_code)
+
+    if (!String(form.country_code || '').trim()) {
+      fe.country_code = 'Debe indicar el país del proveedor.'
+    }
 
     if (isEmpresa) {
       if (!String(form.razon_social || '').trim()) fe.razon_social = 'La razón social es obligatoria.'
-      const rutEmp = parseRut(form.rut_empresa)
-      if (!String(form.rut_empresa || '').trim()) fe.rut_empresa = 'El RUT de la empresa es obligatorio.'
-      else if (!rutEmp.ok) fe.rut_empresa = rutEmp.message
-      if (String(form.rut_rep_legal || '').trim()) {
-        const rr = parseOptionalRut(form.rut_rep_legal)
-        if (!rr.ok) fe.rut_rep_legal = rr.message
+      if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
+        const rutEmp = parseRut(form.rut_empresa)
+        if (!String(form.rut_empresa || '').trim()) fe.rut_empresa = 'El RUT de la empresa es obligatorio.'
+        else if (!rutEmp.ok) fe.rut_empresa = rutEmp.message
+        if (String(form.rut_rep_legal || '').trim()) {
+          const rr = parseOptionalRut(form.rut_rep_legal)
+          if (!rr.ok) fe.rut_rep_legal = rr.message
+        }
+      } else {
+        const docErr = validateCatalogDocument(form.rut_empresa, docType, {
+          required: true,
+          role: 'empresa',
+          chileanLabel: 'RUT'
+        })
+        if (docErr) fe.rut_empresa = docErr
+        const repErr = validateCatalogDocument(form.rut_rep_legal, docType, {
+          required: false,
+          role: 'persona_natural',
+          chileanLabel: 'RUT'
+        })
+        if (repErr) fe.rut_rep_legal = repErr
       }
     } else {
       if (!String(form.full_name || '').trim()) fe.full_name = 'El nombre completo es obligatorio.'
-      const rut = parseRut(form.rut)
-      if (!String(form.rut || '').trim()) fe.rut = 'El RUT es obligatorio.'
-      else if (!rut.ok) fe.rut = rut.message
+      if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
+        const rut = parseRut(form.rut)
+        if (!String(form.rut || '').trim()) fe.rut = 'El RUT es obligatorio.'
+        else if (!rut.ok) fe.rut = rut.message
+      } else {
+        const docErr = validateCatalogDocument(form.rut, docType, {
+          required: true,
+          role: 'persona_natural',
+          chileanLabel: 'RUT'
+        })
+        if (docErr) fe.rut = docErr
+      }
     }
 
     const emailError = validateSupplierEmail(form.email, { required: mode === 'create' })
@@ -176,6 +223,7 @@ function SupplierUpsertContent({ mode }) {
 
     const payload = {
       supplier_type: form.supplier_type,
+      country_code: String(form.country_code || '').trim(),
       email: String(form.email || '').trim() || null,
       phone: String(form.phone || '').trim() || null,
       social_networks

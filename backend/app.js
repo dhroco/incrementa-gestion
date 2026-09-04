@@ -338,6 +338,7 @@ function createApp({
   app.put('/api/roles/:id/permissions', authorize('update', 'RolePermission'), rolesController.putPermissions)
 
   app.get('/api/social-networks/catalog', authorize('read', 'Supplier'), supplierController.getSocialNetworkCatalog)
+  app.get('/api/identity-document-types', authorize('read', 'Supplier'), supplierController.getIdentityDocumentTypes)
   app.get('/api/suppliers', authorize('read', 'Supplier'), supplierController.getList)
   app.get('/api/suppliers/:id/documents', authorize('read', 'Supplier'), supplierController.getDocuments)
   app.get(

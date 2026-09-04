@@ -78,6 +78,7 @@ test('POST /api/suppliers creates persona natural', async () => {
       supplier_type: 'persona_natural',
       full_name: 'Juan Pérez',
       email: 'juan.perez@agencia.cl',
+      country_code: 'CL',
       rut: '12.345.678-5',
       social_networks: [{ catalog_id: '11111111-1111-4111-8111-111111111111', account_name: '@juan' }]
     })
@@ -233,6 +234,30 @@ test('GET /api/suppliers/:id/documents/:documentId/view returns 404 when not fou
 
   const res = await request(app).get('/api/suppliers/s1/documents/missing/view')
   assert.equal(res.statusCode, 404)
+})
+
+test('GET /api/identity-document-types returns catalog items', async () => {
+  const supplierService = {
+    listIdentityDocumentTypes: async () => ({
+      ok: true,
+      data: {
+        items: [
+          { code: 'RUT', country_code: 'CL', validator_key: 'rut_cl' },
+          { code: 'RFC', country_code: 'MX', validator_key: 'pattern' }
+        ]
+      }
+    })
+  }
+  const app = createApp({
+    requireAuth: authOk,
+    attachAbilityMiddleware: attachAbilityWithRules([['read', 'Supplier']]),
+    supplierService
+  })
+
+  const res = await request(app).get('/api/identity-document-types')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body?.data?.items?.length, 2)
+  assert.equal(res.body?.data?.items?.[0]?.code, 'RUT')
 })
 
 test('GET /api/social-networks/catalog returns 403 without grant', async () => {

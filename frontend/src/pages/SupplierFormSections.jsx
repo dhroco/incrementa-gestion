@@ -1,6 +1,6 @@
 import { formatEsDateFromIso } from '../utils/dateUtils'
 import { DateInputCL } from '../components/DateInputCL'
-import { formatRut, formatRutDisplay } from '../utils/rut'
+import { formatRutDisplay } from '../utils/rut'
 import { RutInput } from '../components/RutInput'
 import { SupplierTypeChip } from '../components/SupplierTypeChip'
 import { SocialNetworkSelector } from '../components/SocialNetworkSelector'
@@ -16,8 +16,93 @@ function displayText(v) {
   return s === '' ? '—' : s
 }
 
-function displayRut(v) {
-  return formatRutDisplay(v, { empty: '—' })
+function displayIdentifier(v, docType) {
+  if (v == null || String(v).trim() === '') return '—'
+  if (docType?.validator_key === 'rut_cl') return formatRutDisplay(v, { empty: '—' })
+  return String(v).trim()
+}
+
+function DocumentField({
+  id,
+  formKey,
+  chileanLabel,
+  form,
+  onChange,
+  readOnly,
+  fieldErrors,
+  docType,
+  optional = false
+}) {
+  const c = inputClass(readOnly)
+  const isRut = docType?.validator_key === 'rut_cl' || (!docType && form.country_code === 'CL')
+  const label = isRut ? chileanLabel : docType?.label || 'Identificador'
+  const placeholder = docType?.format_example || ''
+  const value = form[formKey] ?? ''
+  const error = fieldErrors[formKey]
+
+  return (
+    <div className="clause-form-col">
+      <label className="clause-form-label" htmlFor={id}>
+        {label}
+        {!readOnly && !optional ? <span className="clause-form-required"> *</span> : null}
+      </label>
+      {readOnly ? (
+        <input id={id} className={c} readOnly value={displayIdentifier(value, docType)} />
+      ) : isRut ? (
+        <RutInput
+          id={id}
+          className={c}
+          optional={optional}
+          value={value}
+          onChange={(next) => onChange(formKey, next)}
+        />
+      ) : (
+        <input
+          id={id}
+          className={c}
+          value={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          onChange={(e) => onChange(formKey, e.target.value.toUpperCase())}
+        />
+      )}
+      {error && !readOnly ? <div className="clause-field-error">{error}</div> : null}
+    </div>
+  )
+}
+
+function parsePatternSpec(pattern, role) {
+  if (pattern == null || String(pattern).trim() === '') return null
+  const raw = String(pattern).trim()
+  if (raw.startsWith('{')) {
+    try {
+      const obj = JSON.parse(raw)
+      return obj?.[role] || obj?.persona_natural || null
+    } catch {
+      return null
+    }
+  }
+  return raw
+}
+
+export function validateCatalogDocument(value, docType, { required = true, role = 'persona_natural', chileanLabel = 'RUT' } = {}) {
+  const trimmed = String(value || '').trim()
+  const label = docType?.validator_key === 'rut_cl' ? chileanLabel : docType?.label || 'documento'
+  if (!trimmed) {
+    if (required) return `El ${label} es obligatorio.`
+    return null
+  }
+  if (!docType) return 'Debe indicar el país del proveedor.'
+  if (docType.validator_key === 'rut_cl') return null
+  const source = parsePatternSpec(docType.pattern, role)
+  if (!source) return null
+  const canonical = trimmed.toUpperCase().replace(/[\s.-]/g, '')
+  try {
+    if (!new RegExp(source, 'u').test(canonical)) return `El ${label} ingresado no es válido.`
+  } catch {
+    return `El ${label} ingresado no es válido.`
+  }
+  return null
 }
 
 function personeriaLabel(type) {
@@ -87,6 +172,7 @@ export function socialNetworksForSubmit(list) {
 /** @type {Record<string, 'datos_basicos' | 'redes_sociales'>} */
 const SUPPLIER_FIELD_ERROR_TAB = {
   full_name: 'datos_basicos',
+  country_code: 'datos_basicos',
   rut: 'datos_basicos',
   email: 'datos_basicos',
   phone: 'datos_basicos',
@@ -94,6 +180,25 @@ const SUPPLIER_FIELD_ERROR_TAB = {
   rut_empresa: 'datos_basicos',
   rut_rep_legal: 'datos_basicos',
   social_networks: 'redes_sociales'
+}
+
+export const COUNTRY_LABELS = { CL: 'Chile', MX: 'México' }
+
+export function uniqueCountries(types) {
+  const seen = new Set()
+  const out = []
+  for (const t of types || []) {
+    const code = String(t.country_code || '').toUpperCase()
+    if (!code || seen.has(code)) continue
+    seen.add(code)
+    out.push({ code, label: COUNTRY_LABELS[code] || code })
+  }
+  return out
+}
+
+export function documentTypeForCountry(types, countryCode) {
+  const code = String(countryCode || '').toUpperCase()
+  return (types || []).find((t) => String(t.country_code).toUpperCase() === code) || null
 }
 
 const SUPPLIER_TAB_ORDER = /** @type {const} */ (['datos_basicos', 'redes_sociales', 'antecedentes'])
@@ -129,12 +234,15 @@ export function SupplierBasicDataSection({
   readOnly = false,
   typeLocked = false,
   fieldErrors = {},
-  emailRequired = false
+  emailRequired = false,
+  identityDocumentTypes = []
 }) {
   const c = inputClass(readOnly)
   const isEmpresa = form.supplier_type === 'empresa'
   const isPersona = form.supplier_type === 'persona_natural'
   const personeria = form.personeria_type || ''
+  const countries = uniqueCountries(identityDocumentTypes)
+  const docType = documentTypeForCountry(identityDocumentTypes, form.country_code)
 
   const showPersoneriaEmpresa =
     isEmpresa &&
@@ -186,6 +294,40 @@ export function SupplierBasicDataSection({
         </div>
       )}
 
+      <h3 className="clause-form-section-title">País</h3>
+      <div className="clause-form-row">
+        <div className="clause-form-col">
+          <label className="clause-form-label" htmlFor="sup-country">
+            País{!readOnly ? <span className="clause-form-required"> *</span> : null}
+          </label>
+          {readOnly ? (
+            <input
+              id="sup-country"
+              className={c}
+              readOnly
+              value={COUNTRY_LABELS[form.country_code] || form.country_code || '—'}
+            />
+          ) : (
+            <select
+              id="sup-country"
+              className={c}
+              value={form.country_code ?? ''}
+              onChange={(e) => onChange('country_code', e.target.value)}
+            >
+              <option value="">Seleccione un país</option>
+              {countries.map((co) => (
+                <option key={co.code} value={co.code}>
+                  {co.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {fieldErrors.country_code && !readOnly ? (
+            <div className="clause-field-error">{fieldErrors.country_code}</div>
+          ) : null}
+        </div>
+      </div>
+
       {isPersona ? (
         <>
           <h3 className="clause-form-section-title">Identificación</h3>
@@ -208,23 +350,16 @@ export function SupplierBasicDataSection({
                 <div className="clause-field-error">{fieldErrors.full_name}</div>
               ) : null}
             </div>
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-rut">
-                RUT{!readOnly ? <span className="clause-form-required"> *</span> : null}
-              </label>
-              {readOnly ? (
-                <input id="sup-rut" className={c} readOnly value={displayRut(form.rut)} />
-              ) : (
-                <RutInput
-                  id="sup-rut"
-                  className={c}
-                  optional={false}
-                  value={form.rut ?? ''}
-                  onChange={(next) => onChange('rut', next)}
-                />
-              )}
-              {fieldErrors.rut && !readOnly ? <div className="clause-field-error">{fieldErrors.rut}</div> : null}
-            </div>
+            <DocumentField
+              id="sup-rut"
+              formKey="rut"
+              chileanLabel="RUT"
+              form={form}
+              onChange={onChange}
+              readOnly={readOnly}
+              fieldErrors={fieldErrors}
+              docType={docType}
+            />
           </div>
         </>
       ) : null}
@@ -251,25 +386,16 @@ export function SupplierBasicDataSection({
                 <div className="clause-field-error">{fieldErrors.razon_social}</div>
               ) : null}
             </div>
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-rut-empresa">
-                RUT empresa{!readOnly ? <span className="clause-form-required"> *</span> : null}
-              </label>
-              {readOnly ? (
-                <input id="sup-rut-empresa" className={c} readOnly value={displayRut(form.rut_empresa)} />
-              ) : (
-                <RutInput
-                  id="sup-rut-empresa"
-                  className={c}
-                  optional={false}
-                  value={form.rut_empresa ?? ''}
-                  onChange={(next) => onChange('rut_empresa', next)}
-                />
-              )}
-              {fieldErrors.rut_empresa && !readOnly ? (
-                <div className="clause-field-error">{fieldErrors.rut_empresa}</div>
-              ) : null}
-            </div>
+            <DocumentField
+              id="sup-rut-empresa"
+              formKey="rut_empresa"
+              chileanLabel="RUT empresa"
+              form={form}
+              onChange={onChange}
+              readOnly={readOnly}
+              fieldErrors={fieldErrors}
+              docType={docType}
+            />
           </div>
         </>
       ) : null}
@@ -396,24 +522,17 @@ export function SupplierBasicDataSection({
                 />
               )}
             </div>
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-rep-rut">
-                RUT representante legal
-              </label>
-              {readOnly ? (
-                <input id="sup-rep-rut" className={c} readOnly value={displayRut(form.rut_rep_legal)} />
-              ) : (
-                <RutInput
-                  id="sup-rep-rut"
-                  className={c}
-                  value={form.rut_rep_legal ?? ''}
-                  onChange={(next) => onChange('rut_rep_legal', next)}
-                />
-              )}
-              {fieldErrors.rut_rep_legal && !readOnly ? (
-                <div className="clause-field-error">{fieldErrors.rut_rep_legal}</div>
-              ) : null}
-            </div>
+            <DocumentField
+              id="sup-rep-rut"
+              formKey="rut_rep_legal"
+              chileanLabel="RUT representante legal"
+              form={form}
+              onChange={onChange}
+              readOnly={readOnly}
+              fieldErrors={fieldErrors}
+              docType={docType}
+              optional
+            />
           </div>
 
           {showPersoneriaSection ? (
@@ -607,7 +726,8 @@ export function SupplierFormSections({
   typeLocked = false,
   fieldErrors = {},
   onSocialNetworksChange = null,
-  emailRequired = false
+  emailRequired = false,
+  identityDocumentTypes = []
 }) {
   return (
     <>
@@ -618,6 +738,7 @@ export function SupplierFormSections({
         typeLocked={typeLocked}
         fieldErrors={fieldErrors}
         emailRequired={emailRequired}
+        identityDocumentTypes={identityDocumentTypes}
       />
       <SupplierSocialNetworksSection
         form={form}
@@ -634,17 +755,18 @@ export function supplierToForm(s) {
   const isEmpresa = s.supplier_type === 'empresa'
   return {
     supplier_type: s.supplier_type ?? 'persona_natural',
+    country_code: s.country_code ?? '',
     full_name: s.full_name ?? '',
-    rut: isEmpresa ? '' : s.rut_display || formatRut(s.rut_body, s.rut_dv),
+    rut: isEmpresa ? '' : s.document_display || s.rut || '',
     email: s.email ?? '',
     phone: s.phone ?? '',
     address: s.address ?? '',
     razon_social: s.razon_social ?? '',
-    rut_empresa: isEmpresa ? s.rut_empresa_display || formatRut(s.rut_empresa_body, s.rut_empresa_dv) : '',
+    rut_empresa: isEmpresa ? s.document_display || s.rut || '' : '',
     giro: s.giro ?? '',
     direccion_empresa: s.direccion_empresa ?? '',
     nombre_rep_legal: s.nombre_rep_legal ?? '',
-    rut_rep_legal: s.rut_rep_legal_display || formatRut(s.rut_rep_legal_body, s.rut_rep_legal_dv),
+    rut_rep_legal: s.rep_document_display || '',
     personeria_type: s.personeria_type ?? '',
     fecha_certificado_estatuto: s.fecha_certificado_estatuto?.slice?.(0, 10) ?? s.fecha_certificado_estatuto ?? '',
     codigo_cve: s.codigo_cve ?? '',
@@ -665,6 +787,7 @@ export function supplierToForm(s) {
 export function emptySupplierForm() {
   return {
     supplier_type: 'persona_natural',
+    country_code: '',
     full_name: '',
     rut: '',
     email: '',

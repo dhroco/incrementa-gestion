@@ -32,6 +32,10 @@ export async function fetchSocialNetworkCatalog({ signal } = {}) {
   return apiGet('/api/social-networks/catalog', { signal })
 }
 
+export async function fetchIdentityDocumentTypes({ signal } = {}) {
+  return apiGet('/api/identity-document-types', { signal })
+}
+
 /**
  * @returns {Promise<Blob>}
  */

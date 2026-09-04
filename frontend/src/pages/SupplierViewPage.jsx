@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAbility } from '@casl/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { fetchSupplierDetail } from '../api/suppliersApi'
+import { fetchIdentityDocumentTypes, fetchSupplierDetail } from '../api/suppliersApi'
 import { AbilityContext } from '../lib/ability'
 import {
   SupplierBasicDataSection,
@@ -29,6 +29,7 @@ export function SupplierViewPage() {
   const [error, setError] = useState(null)
   const [supplier, setSupplier] = useState(null)
   const [form, setForm] = useState(null)
+  const [identityDocumentTypes, setIdentityDocumentTypes] = useState([])
   const [activeTab, setActiveTab] = useState('datos_basicos')
 
   useEffect(() => {
@@ -40,7 +41,10 @@ export function SupplierViewPage() {
       }
       setLoading(true)
       setError(null)
-      const res = await fetchSupplierDetail({ id })
+      const [res, catalog] = await Promise.all([
+        fetchSupplierDetail({ id }),
+        fetchIdentityDocumentTypes()
+      ])
       if (!active) return
       setLoading(false)
       if (!res.ok) {
@@ -52,6 +56,7 @@ export function SupplierViewPage() {
       const s = res.data?.supplier
       setSupplier(s || null)
       setForm(s ? supplierToForm(s) : null)
+      if (catalog.ok) setIdentityDocumentTypes(catalog.data?.items || [])
     }
     load()
     return () => {
@@ -125,7 +130,13 @@ export function SupplierViewPage() {
               <div className="company-shell-tabs-panel">
                 {activeTab === 'datos_basicos' ? (
                   <div role="tabpanel">
-                    <SupplierBasicDataSection form={form} onChange={() => {}} readOnly typeLocked />
+                    <SupplierBasicDataSection
+                      form={form}
+                      onChange={() => {}}
+                      readOnly
+                      typeLocked
+                      identityDocumentTypes={identityDocumentTypes}
+                    />
                   </div>
                 ) : null}
                 {activeTab === 'redes_sociales' ? (

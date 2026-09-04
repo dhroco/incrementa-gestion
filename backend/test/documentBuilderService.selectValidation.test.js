@@ -10,8 +10,9 @@ const CLIENT_ID = '99999999-9999-9999-9999-999999999999'
 
 const SUPPLIER = {
   supplier_type: 'persona_natural',
+  country_code: 'CL',
   full_name: 'Juan Pérez',
-  rut_display: '11.111.111-1',
+  document_display: '11.111.111-1',
   address: 'Calle 1'
 }
 

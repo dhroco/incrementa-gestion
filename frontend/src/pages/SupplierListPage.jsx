@@ -6,7 +6,6 @@ import { ListSearchField } from '../components/ListSearchField'
 import { fetchSuppliersList } from '../api/suppliersApi'
 import { SupplierTypeChip } from '../components/SupplierTypeChip'
 import { AbilityContext } from '../lib/ability'
-import { formatRutDisplay } from '../utils/rut'
 import '../styles/shared-form.css'
 
 export function SupplierListPage() {
@@ -100,7 +99,7 @@ export function SupplierListPage() {
                 <tr>
                   <th>Tipo</th>
                   <th>Nombre</th>
-                  <th>RUT</th>
+                  <th>Identificador</th>
                   <th>Correo</th>
                   <th>Redes sociales</th>
                   <th className="clause-list-col-actions">Acciones</th>
@@ -120,7 +119,7 @@ export function SupplierListPage() {
                         <SupplierTypeChip supplierType={row.supplier_type} />
                       </td>
                       <td>{row.display_name || '—'}</td>
-                      <td>{formatRutDisplay(row.rut)}</td>
+                      <td>{row.document_display || row.rut || '—'}</td>
                       <td>
                         {row.email ? (
                           row.email

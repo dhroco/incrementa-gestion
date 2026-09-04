@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 
+const { SEED_IDENTITY_DOCUMENT_TYPES } = require('../utils/identityDocument')
 const knexMod = require.resolve('../db/knex')
 const serviceMod = require.resolve('../services/supplierService')
 
@@ -32,7 +33,11 @@ function makeTable(table, state) {
     orWhereILike() {
       return api
     },
-    andWhere() {
+    orWhereRaw() {
+      return api
+    },
+    andWhere(fn) {
+      if (typeof fn === 'function') fn(api)
       return api
     },
     orderBy() {
@@ -42,6 +47,17 @@ function makeTable(table, state) {
       return api
     },
     first: async () => {
+      if (table === 'identity_document_type') {
+        return SEED_IDENTITY_DOCUMENT_TYPES[0]
+      }
+      if (table === 'supplier_persona_natural' || table === 'supplier_empresa') {
+        return (
+          state.child || {
+            document_type_code: 'RUT',
+            document_number: '12345678-5'
+          }
+        )
+      }
       if (table === 'supplier' || table === 'supplier as s') {
         const base = state.existing || (state.insertedSupplier
           ? { id: NEW_ID, supplier_type: state.insertedSupplier.supplier_type }
@@ -50,11 +66,17 @@ function makeTable(table, state) {
         return {
           id: base.id,
           supplier_type: base.supplier_type,
+          country_code:
+            state.updatedSupplier?.country_code ??
+            state.insertedSupplier?.country_code ??
+            base.country_code ??
+            'CL',
           email: state.updatedSupplier?.email ?? state.insertedSupplier?.email ?? base.email ?? null,
           phone: state.updatedSupplier?.phone ?? state.insertedSupplier?.phone ?? base.phone ?? null,
           full_name: state.child?.full_name ?? 'Ana Gómez',
-          rut_body: state.child?.rut_body ?? '12345678',
-          rut_dv: state.child?.rut_dv ?? '5',
+          document_type_code: state.child?.document_type_code ?? 'RUT',
+          document_number: state.child?.document_number ?? '12345678-5',
+          document_validator_key: 'rut_cl',
           address: state.child?.address ?? null
         }
       }
@@ -82,6 +104,9 @@ function makeTable(table, state) {
     },
     del: async () => 0,
     then(resolve, reject) {
+      if (table === 'identity_document_type') {
+        return Promise.resolve(SEED_IDENTITY_DOCUMENT_TYPES).then(resolve, reject)
+      }
       return Promise.resolve([]).then(resolve, reject)
     }
   }
@@ -97,6 +122,7 @@ function makeDb(state) {
       return makeTable(table, state)
     }
     trx.fn = { now: () => new Date() }
+    trx.raw = (sql) => sql
     return fn(trx)
   }
   db.fn = { now: () => new Date() }
@@ -124,14 +150,19 @@ function restoreKnex() {
 
 const personaBase = {
   supplier_type: 'persona_natural',
+  country_code: 'CL',
   full_name: 'Ana Gómez',
   rut: '12.345.678-5'
+}
+
+function createOpts(extra = {}) {
+  return { partial: false, documentTypes: SEED_IDENTITY_DOCUMENT_TYPES, ...extra }
 }
 
 test('validatePayload requires email on create', () => {
   try {
     const { _validatePayload } = installKnex({})
-    const result = _validatePayload(personaBase, { partial: false })
+    const result = _validatePayload(personaBase, createOpts())
     assert.equal(result.ok, false)
     assert.match(result.errors.join(' '), /correo es obligatorio/)
     assert.equal(result.errors.join(' ').includes('@'), false)
@@ -145,7 +176,7 @@ test('validatePayload rejects invalid email without echoing the value', () => {
     const { _validatePayload } = installKnex({})
     const result = _validatePayload(
       { ...personaBase, email: 'no-es-un-correo' },
-      { partial: false }
+      createOpts()
     )
     assert.equal(result.ok, false)
     assert.match(result.errors.join(' '), /formato válido/)
@@ -160,7 +191,7 @@ test('validatePayload lowercases email on create', () => {
     const { _validatePayload } = installKnex({})
     const result = _validatePayload(
       { ...personaBase, email: 'Ana.Gomez@Agencia.CL' },
-      { partial: false }
+      createOpts()
     )
     assert.equal(result.ok, true)
     assert.equal(result.data.email, 'ana.gomez@agencia.cl')
@@ -172,10 +203,10 @@ test('validatePayload lowercases email on create', () => {
 test('validatePayload allows the same email on two creates', () => {
   try {
     const { _validatePayload } = installKnex({})
-    const a = _validatePayload({ ...personaBase, email: 'agencia@x.cl' }, { partial: false })
+    const a = _validatePayload({ ...personaBase, email: 'agencia@x.cl' }, createOpts())
     const b = _validatePayload(
       { ...personaBase, full_name: 'Otra', email: 'agencia@x.cl' },
-      { partial: false }
+      createOpts()
     )
     assert.equal(a.ok, true)
     assert.equal(b.ok, true)
@@ -217,7 +248,7 @@ test('validatePayload keeps foreign phone as typed', () => {
     const { _validatePayload } = installKnex({})
     const result = _validatePayload(
       { ...personaBase, email: 'ana@x.cl', phone: '+52 55 1234 5678' },
-      { partial: false }
+      createOpts()
     )
     assert.equal(result.ok, true)
     assert.equal(result.data.phone, '+52 55 1234 5678')
@@ -231,7 +262,7 @@ test('validatePayload rejects phone with letters without echoing the value', () 
     const { _validatePayload } = installKnex({})
     const result = _validatePayload(
       { ...personaBase, email: 'ana@x.cl', phone: 'abc-1234' },
-      { partial: false }
+      createOpts()
     )
     assert.equal(result.ok, false)
     assert.match(result.errors.join(' '), /teléfono no tiene un formato válido/)

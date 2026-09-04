@@ -117,6 +117,18 @@ function createSupplierController({ service = supplierService, getUserProfileIdB
         })
       }
       return sendOk(res, result.data)
+    },
+
+    getIdentityDocumentTypes: async (req, res) => {
+      const result = await service.listIdentityDocumentTypes()
+      if (!result.ok) {
+        return sendError(res, {
+          status: result.status ?? 500,
+          code: result.code ?? 'IDENTITY_DOCUMENT_TYPES_FAILED',
+          message: result.message ?? 'No se pudo obtener el catálogo de documentos.'
+        })
+      }
+      return sendOk(res, result.data)
     }
   }
 }

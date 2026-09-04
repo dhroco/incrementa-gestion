@@ -17,20 +17,20 @@ test('buildSubstitutionMap maps persona natural supplier', () => {
   const supplier = {
     supplier_type: 'persona_natural',
     full_name: 'Ana Pérez',
-    rut_display: '12345678-5',
+    document_display: '12.345.678-5',
     address: 'Calle 1'
   }
   const company = { business_name: 'ACME', rut_body: '76543210', rut_dv: 'K' }
   const map = buildSubstitutionMap(supplier, company, null, { custom_key: 'valor' })
   assert.equal(map.proveedor_nombre, 'Ana Pérez')
-  assert.equal(map.proveedor_rut, '12345678-5')
+  assert.equal(map.proveedor_rut, '12.345.678-5')
   assert.equal(map.proveedor_red_social, '')
   assert.equal(map.custom_key, 'valor')
   assert.equal(map.proveedor_email, undefined)
 })
 
 test('buildSubstitutionMap maps company commercial name', () => {
-  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', rut_display: '1-9' }
+  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', document_display: '1-9' }
   const company = { business_name: 'Dynamics Corp. SpA', short_name: 'Dynamics' }
   const map = buildSubstitutionMap(supplier, company, null)
   assert.equal(map.company_legal_name, 'Dynamics Corp. SpA')
@@ -41,11 +41,11 @@ test('buildSubstitutionMap maps empresa supplier', () => {
   const supplier = {
     supplier_type: 'empresa',
     razon_social: 'Servicios TI SpA',
-    rut_empresa_display: '76543210-K',
+    document_display: '76.543.210-K',
     direccion_empresa: 'Av. Central 100',
     giro: 'Servicios TI',
     nombre_rep_legal: 'Luis Díaz',
-    rut_rep_legal_display: '11111111-1'
+    rep_document_display: '11.111.111-1'
   }
   const company = { business_name: 'ACME' }
   const map = buildSubstitutionMap(supplier, company, null)
@@ -55,7 +55,7 @@ test('buildSubstitutionMap maps empresa supplier', () => {
 })
 
 test('buildSubstitutionMap maps client fields', () => {
-  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', rut_display: '1-9' }
+  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', document_display: '1-9' }
   const company = { business_name: 'ACME' }
   const client = { name: 'Cliente X', brand: 'Marca Y', brand_account: '@marca' }
   const map = buildSubstitutionMap(supplier, company, client)
@@ -66,7 +66,7 @@ test('buildSubstitutionMap maps client fields', () => {
 })
 
 test('buildSubstitutionMap resolves client_product_campaign via override only', () => {
-  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', rut_display: '1-9' }
+  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', document_display: '1-9' }
   const company = { business_name: 'ACME' }
   const client = {
     name: 'Cliente X',
@@ -96,14 +96,14 @@ test('unresolvedKeys lists empty values', () => {
 
 test('unresolvedKeys lists empty contract variables as missing', () => {
   const text = '{{lugar_contrato}} {{precio_numero}}'
-  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', rut_display: '1-9' }
+  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', document_display: '1-9' }
   const company = { business_name: 'ACME' }
   const map = buildSubstitutionMap(supplier, company, null)
   assert.deepEqual(unresolvedKeys(text, map).sort(), ['lugar_contrato', 'precio_numero'].sort())
 })
 
 test('buildSubstitutionMap applies contract overrides', () => {
-  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', rut_display: '1-9' }
+  const supplier = { supplier_type: 'persona_natural', full_name: 'Ana', document_display: '1-9' }
   const company = { business_name: 'ACME' }
   const map = buildSubstitutionMap(supplier, company, null, {
     lugar_contrato: 'Santiago',
@@ -213,4 +213,15 @@ test('applySubstitutionsToTipTapDoc preserves bold and uppercase marks on variab
   const textNode = out.content[0].content[0]
   assert.equal(textNode.text, 'ANA PÉREZ')
   assert.deepEqual(textNode.marks, [{ type: 'bold' }, { type: 'uppercase' }])
+})
+
+test('proveedor_rut substitutes Mexican RFC from document_display', () => {
+  const supplier = {
+    supplier_type: 'persona_natural',
+    full_name: 'Ana López',
+    document_display: 'LEGF870121MGA',
+    country_code: 'MX'
+  }
+  const map = buildSubstitutionMap(supplier, { business_name: 'ACME' }, null)
+  assert.equal(map.proveedor_rut, 'LEGF870121MGA')
 })

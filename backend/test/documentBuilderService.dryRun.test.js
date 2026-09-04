@@ -19,8 +19,9 @@ const DOC_WITH_PLACEHOLDER = {
 
 const SUPPLIER = {
   supplier_type: 'persona_natural',
+  country_code: 'CL',
   full_name: 'Juan Pérez',
-  rut_display: '11.111.111-1',
+  document_display: '11.111.111-1',
   address: 'Calle 1'
 }
 
@@ -106,7 +107,8 @@ function createGenerateDb({ duplicateRow = null, templateDoc = null, hooks = {} 
         code: 'CT-001',
         name: 'Plantilla',
         description: '',
-        content_json: contentJson
+        content_json: contentJson,
+        country_code: 'CL'
       })
     }
     if (table === 'draft_document') {

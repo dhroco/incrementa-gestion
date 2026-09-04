@@ -31,9 +31,7 @@ function buildSubstitutionMap(supplier, company, client = null, overrides = {}) 
   const proveedorNombre = isEmpresa
     ? String(supplier?.razon_social || '').trim()
     : String(supplier?.full_name || '').trim()
-  const proveedorRut = isEmpresa
-    ? String(supplier?.rut_empresa_display || '').trim()
-    : String(supplier?.rut_display || '').trim()
+  const proveedorRut = String(supplier?.document_display || '').trim()
   const proveedorDireccion = isEmpresa
     ? String(supplier?.direccion_empresa || '').trim()
     : String(supplier?.address || '').trim()
@@ -44,7 +42,7 @@ function buildSubstitutionMap(supplier, company, client = null, overrides = {}) 
     proveedor_direccion: proveedorDireccion,
     proveedor_giro: isEmpresa ? String(supplier?.giro || '').trim() : '',
     proveedor_rep_legal: isEmpresa ? String(supplier?.nombre_rep_legal || '').trim() : '',
-    proveedor_rep_legal_rut: isEmpresa ? String(supplier?.rut_rep_legal_display || '').trim() : '',
+    proveedor_rep_legal_rut: isEmpresa ? String(supplier?.rep_document_display || '').trim() : '',
     proveedor_red_social: '',
     proveedor_cuenta_social: '',
     // Personería del proveedor empresa (Certificado de Estatuto / Escritura pública)

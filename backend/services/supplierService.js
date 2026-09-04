@@ -1,21 +1,29 @@
 const { db } = require('../db/knex')
-const { parseRut } = require('../utils/rut')
 const { isValidEmail } = require('../utils/validation')
 const { gcsService } = require('./gcsService')
+const {
+  compactSearchTerm,
+  formatDocumentDisplay,
+  formatRutDisplay,
+  normalizeCountryCode,
+  resolveDocumentType,
+  typesForCountry,
+  validateIdentityDocument
+} = require('../utils/identityDocument')
 
 const SUPPLIER_TYPES = new Set(['persona_natural', 'empresa'])
 const PERSONERIA_TYPES = new Set(['empresa_en_un_dia', 'escritura_publica'])
 
-const PERSONA_FIELDS = new Set(['full_name', 'rut_body', 'rut_dv', 'address'])
+const PERSONA_FIELDS = new Set(['full_name', 'document_type_code', 'document_number', 'address'])
 const EMPRESA_FIELDS = new Set([
   'razon_social',
-  'rut_empresa_body',
-  'rut_empresa_dv',
+  'document_type_code',
+  'document_number',
   'giro',
   'direccion_empresa',
   'nombre_rep_legal',
-  'rut_rep_legal_body',
-  'rut_rep_legal_dv',
+  'rep_document_type_code',
+  'rep_document_number',
   'personeria_type',
   'fecha_certificado_estatuto',
   'codigo_cve',
@@ -24,20 +32,6 @@ const EMPRESA_FIELDS = new Set([
   'nombre_notario'
 ])
 
-function formatRutDisplay(rutBody, rutDv) {
-  const body = String(rutBody || '').replace(/\D/g, '')
-  const dv = String(rutDv || '').toUpperCase()
-  if (!body) return ''
-  const parts = []
-  let i = body.length
-  while (i > 0) {
-    const start = Math.max(0, i - 3)
-    parts.unshift(body.slice(start, i))
-    i = start
-  }
-  return dv ? `${parts.join('.')}-${dv}` : parts.join('.')
-}
-
 function parseISODate(s) {
   if (s == null || s === '') return { ok: true, value: null }
   const t = String(s).trim()
@@ -45,15 +39,6 @@ function parseISODate(s) {
   const d = new Date(`${t}T12:00:00`)
   if (Number.isNaN(d.getTime())) return { ok: false, message: 'La fecha no es válida.' }
   return { ok: true, value: t }
-}
-
-function parseOptionalRut(input) {
-  if (input == null || String(input).trim() === '') {
-    return { ok: true, rut_body: null, rut_dv: null }
-  }
-  const r = parseRut(input)
-  if (!r.ok) return r
-  return { ok: true, rut_body: r.rut_body, rut_dv: r.rut_dv }
 }
 
 function trimOrNull(v) {
@@ -90,7 +75,45 @@ function splitBaseFields(d) {
   const base = {}
   if (d.email !== undefined) base.email = d.email
   if (d.phone !== undefined) base.phone = d.phone
+  if (d.country_code !== undefined) base.country_code = d.country_code
   return base
+}
+
+async function loadIdentityDocumentTypes(trxOrDb = db) {
+  return trxOrDb('identity_document_type').select(
+    'id',
+    'code',
+    'country_code',
+    'label',
+    'label_long',
+    'validator_key',
+    'pattern',
+    'format_example'
+  )
+}
+
+function pickDocumentInput(body, supplierType) {
+  if (body?.document_number !== undefined) return body.document_number
+  if (supplierType === 'empresa') return body?.rut_empresa
+  return body?.rut
+}
+
+function pickRepDocumentInput(body) {
+  if (body?.rep_document_number !== undefined) return body.rep_document_number
+  return body?.rut_rep_legal
+}
+
+function documentFieldsSent(body) {
+  return (
+    body?.document_number !== undefined ||
+    body?.document_type_code !== undefined ||
+    body?.rut !== undefined ||
+    body?.rut_empresa !== undefined
+  )
+}
+
+function repDocumentFieldsSent(body) {
+  return body?.rep_document_number !== undefined || body?.rut_rep_legal !== undefined
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -128,7 +151,84 @@ async function validateSocialNetworks(raw, trxOrDb = db) {
   return { ok: true, value }
 }
 
-function validatePayload(body, { partial = false, existingType = null } = {}) {
+function applyDocumentValidation(body, out, errors, {
+  partial,
+  type,
+  existingCountry,
+  existingDocumentNumber,
+  existingRepDocumentNumber,
+  documentTypes
+}) {
+  if (!partial || body?.country_code !== undefined) {
+    const c = normalizeCountryCode(body?.country_code)
+    if (!c.ok) errors.push(c.message)
+    else if (!typesForCountry(documentTypes, c.value).length) {
+      errors.push('El país del proveedor no es válido.')
+    } else {
+      out.country_code = c.value
+    }
+  }
+
+  const country = out.country_code ?? existingCountry
+  const countryChanged = Boolean(out.country_code && existingCountry && out.country_code !== existingCountry)
+  const mustValidateDocument = !partial || documentFieldsSent(body) || countryChanged
+  const mustValidateRep = type === 'empresa' && (!partial || repDocumentFieldsSent(body) || countryChanged)
+
+  if (mustValidateDocument && type) {
+    const raw = documentFieldsSent(body) ? pickDocumentInput(body, type) : existingDocumentNumber
+    const resolved = resolveDocumentType({
+      documentTypes,
+      countryCode: country,
+      documentTypeCode: body?.document_type_code
+    })
+    if (!resolved.ok) errors.push(resolved.message)
+    else {
+      const r = validateIdentityDocument({
+        value: raw,
+        documentType: resolved.documentType,
+        role: type,
+        required: true
+      })
+      if (!r.ok) errors.push(r.message)
+      else {
+        out.document_type_code = resolved.documentType.code
+        out.document_number = r.canonical
+      }
+    }
+  }
+
+  if (mustValidateRep) {
+    const raw = repDocumentFieldsSent(body) ? pickRepDocumentInput(body) : existingRepDocumentNumber
+    const resolved = resolveDocumentType({
+      documentTypes,
+      countryCode: country,
+      documentTypeCode: body?.rep_document_type_code
+    })
+    if (!resolved.ok) errors.push(resolved.message)
+    else {
+      const r = validateIdentityDocument({
+        value: raw,
+        documentType: resolved.documentType,
+        role: 'persona_natural',
+        required: false
+      })
+      if (!r.ok) errors.push(r.message)
+      else {
+        out.rep_document_type_code = r.canonical ? resolved.documentType.code : null
+        out.rep_document_number = r.canonical
+      }
+    }
+  }
+}
+
+function validatePayload(body, {
+  partial = false,
+  existingType = null,
+  existingCountry = null,
+  existingDocumentNumber = null,
+  existingRepDocumentNumber = null,
+  documentTypes = []
+} = {}) {
   const errors = []
   const out = {}
 
@@ -156,23 +256,20 @@ function validatePayload(body, { partial = false, existingType = null } = {}) {
     else out.phone = phone.value
   }
 
+  applyDocumentValidation(body, out, errors, {
+    partial,
+    type,
+    existingCountry,
+    existingDocumentNumber,
+    existingRepDocumentNumber,
+    documentTypes
+  })
+
   if (type === 'persona_natural') {
     if (!partial || body?.full_name !== undefined) {
       const fullName = typeof body?.full_name === 'string' ? body.full_name.trim() : ''
       if (!fullName) errors.push('El nombre completo es obligatorio.')
       else out.full_name = fullName
-    }
-    if (!partial || body?.rut !== undefined) {
-      if (body?.rut == null || String(body.rut).trim() === '') {
-        errors.push('El RUT es obligatorio.')
-      } else {
-        const r = parseRut(body.rut)
-        if (!r.ok) errors.push(r.message)
-        else {
-          out.rut_body = r.rut_body
-          out.rut_dv = r.rut_dv
-        }
-      }
     }
     if (!partial || body?.address !== undefined) {
       out.address = trimOrNull(body?.address)
@@ -183,18 +280,6 @@ function validatePayload(body, { partial = false, existingType = null } = {}) {
       if (!rs) errors.push('La razón social es obligatoria.')
       else out.razon_social = rs
     }
-    if (!partial || body?.rut_empresa !== undefined) {
-      if (body?.rut_empresa == null || String(body.rut_empresa).trim() === '') {
-        errors.push('El RUT de la empresa es obligatorio.')
-      } else {
-        const r = parseRut(body.rut_empresa)
-        if (!r.ok) errors.push(r.message)
-        else {
-          out.rut_empresa_body = r.rut_body
-          out.rut_empresa_dv = r.rut_dv
-        }
-      }
-    }
     if (!partial || body?.giro !== undefined) out.giro = trimOrNull(body?.giro)
     if (!partial || body?.direccion_empresa !== undefined) {
       out.direccion_empresa = trimOrNull(body?.direccion_empresa)
@@ -202,14 +287,7 @@ function validatePayload(body, { partial = false, existingType = null } = {}) {
     if (!partial || body?.nombre_rep_legal !== undefined) {
       out.nombre_rep_legal = trimOrNull(body?.nombre_rep_legal)
     }
-    if (!partial || body?.rut_rep_legal !== undefined) {
-      const r = parseOptionalRut(body?.rut_rep_legal)
-      if (!r.ok) errors.push(r.message)
-      else {
-        out.rut_rep_legal_body = r.rut_body
-        out.rut_rep_legal_dv = r.rut_dv
-      }
-    }
+
 
     if (!partial || body?.personeria_type !== undefined) {
       const pt = body?.personeria_type == null || String(body.personeria_type).trim() === ''
@@ -273,6 +351,7 @@ function supplierJoinQuery(trxOrDb = db) {
     .select(
       's.id',
       's.supplier_type',
+      's.country_code',
       's.email',
       's.phone',
       's.created_at',
@@ -280,24 +359,30 @@ function supplierJoinQuery(trxOrDb = db) {
       's.created_by',
       's.updated_by',
       'spn.full_name',
-      'spn.rut_body',
-      'spn.rut_dv',
+      'spn.document_type_code',
+      'spn.document_number',
       'spn.address',
       'se.razon_social',
-      'se.rut_empresa_body',
-      'se.rut_empresa_dv',
+      'se.document_type_code as empresa_document_type_code',
+      'se.document_number as empresa_document_number',
       'se.giro',
       'se.direccion_empresa',
       'se.nombre_rep_legal',
-      'se.rut_rep_legal_body',
-      'se.rut_rep_legal_dv',
+      'se.rep_document_type_code',
+      'se.rep_document_number',
       'se.personeria_type',
       'se.fecha_certificado_estatuto',
       'se.codigo_cve',
       'se.fecha_escritura_publica',
       'se.nombre_notaria',
-      'se.nombre_notario'
+      'se.nombre_notario',
+      'idt.validator_key as document_validator_key',
+      'idt_rep.validator_key as rep_document_validator_key'
     )
+    .leftJoin('identity_document_type as idt', function joinDocType() {
+      this.on('idt.code', '=', trxOrDb.raw('COALESCE(spn.document_type_code, se.document_type_code)'))
+    })
+    .leftJoin('identity_document_type as idt_rep', 'idt_rep.code', 'se.rep_document_type_code')
 }
 
 function mapSocialNetworkRow(r) {
@@ -339,32 +424,35 @@ function socialNetworkBaseQuery(trxOrDb = db) {
 function normalizeSupplier(row, socialNetworks = []) {
   const isEmpresa = row.supplier_type === 'empresa'
   const displayName = isEmpresa ? row.razon_social : row.full_name
-  const rut = isEmpresa
-    ? formatRutDisplay(row.rut_empresa_body, row.rut_empresa_dv)
-    : formatRutDisplay(row.rut_body, row.rut_dv)
+  const documentTypeCode = isEmpresa ? row.empresa_document_type_code : row.document_type_code
+  const documentNumber = isEmpresa ? row.empresa_document_number : row.document_number
+  const documentType = { validator_key: row.document_validator_key, code: documentTypeCode }
+  const documentDisplay = formatDocumentDisplay(documentType, documentNumber)
+  const repDisplay = formatDocumentDisplay(
+    { validator_key: row.rep_document_validator_key, code: row.rep_document_type_code },
+    row.rep_document_number
+  )
 
   return {
     id: row.id,
     supplier_type: row.supplier_type,
+    country_code: row.country_code ?? null,
     display_name: displayName,
-    rut,
+    document_type_code: documentTypeCode ?? null,
+    document_number: documentNumber ?? null,
+    document_display: documentDisplay,
+    rut: documentDisplay,
     email: row.email ?? null,
     phone: row.phone ?? null,
     full_name: row.full_name ?? null,
-    rut_body: row.rut_body ?? null,
-    rut_dv: row.rut_dv ?? null,
-    rut_display: formatRutDisplay(row.rut_body, row.rut_dv),
     address: row.address ?? null,
     razon_social: row.razon_social ?? null,
-    rut_empresa_body: row.rut_empresa_body ?? null,
-    rut_empresa_dv: row.rut_empresa_dv ?? null,
-    rut_empresa_display: formatRutDisplay(row.rut_empresa_body, row.rut_empresa_dv),
     giro: row.giro ?? null,
     direccion_empresa: row.direccion_empresa ?? null,
     nombre_rep_legal: row.nombre_rep_legal ?? null,
-    rut_rep_legal_body: row.rut_rep_legal_body ?? null,
-    rut_rep_legal_dv: row.rut_rep_legal_dv ?? null,
-    rut_rep_legal_display: formatRutDisplay(row.rut_rep_legal_body, row.rut_rep_legal_dv),
+    rep_document_type_code: row.rep_document_type_code ?? null,
+    rep_document_number: row.rep_document_number ?? null,
+    rep_document_display: repDisplay || '',
     personeria_type: row.personeria_type ?? null,
     fecha_certificado_estatuto: row.fecha_certificado_estatuto ?? null,
     codigo_cve: row.codigo_cve ?? null,
@@ -408,15 +496,21 @@ async function listSuppliers({ search = '' } = {}) {
   const term = String(search || '').trim()
   if (term.length > 0) {
     const t = `%${term}%`
-    const digits = term.replace(/\D/g, '')
+    const compact = compactSearchTerm(term)
     qb.andWhere((w) => {
       w.whereILike('spn.full_name', t)
-        .orWhereILike('spn.rut_body', t)
+        .orWhereILike('spn.document_number', t)
         .orWhereILike('se.razon_social', t)
-        .orWhereILike('se.rut_empresa_body', t)
+        .orWhereILike('se.document_number', t)
         .orWhereILike('s.email', t)
-      if (digits.length) {
-        w.orWhereILike('spn.rut_body', `%${digits}%`).orWhereILike('se.rut_empresa_body', `%${digits}%`)
+      if (compact.length) {
+        w.orWhereRaw(
+          "replace(replace(replace(coalesce(spn.document_number, ''), '.', ''), '-', ''), ' ', '') ILIKE ?",
+          [`%${compact}%`]
+        ).orWhereRaw(
+          "replace(replace(replace(coalesce(se.document_number, ''), '.', ''), '-', ''), ' ', '') ILIKE ?",
+          [`%${compact}%`]
+        )
       }
     })
   }
@@ -461,8 +555,8 @@ async function insertChildRow(trx, supplierId, supplierType, childFields) {
     await trx('supplier_persona_natural').insert({
       supplier_id: supplierId,
       full_name: childFields.full_name,
-      rut_body: childFields.rut_body,
-      rut_dv: childFields.rut_dv,
+      document_type_code: childFields.document_type_code,
+      document_number: childFields.document_number,
       address: childFields.address ?? null
     })
     return
@@ -470,13 +564,13 @@ async function insertChildRow(trx, supplierId, supplierType, childFields) {
   await trx('supplier_empresa').insert({
     supplier_id: supplierId,
     razon_social: childFields.razon_social,
-    rut_empresa_body: childFields.rut_empresa_body,
-    rut_empresa_dv: childFields.rut_empresa_dv,
+    document_type_code: childFields.document_type_code,
+    document_number: childFields.document_number,
     giro: childFields.giro ?? null,
     direccion_empresa: childFields.direccion_empresa ?? null,
     nombre_rep_legal: childFields.nombre_rep_legal ?? null,
-    rut_rep_legal_body: childFields.rut_rep_legal_body ?? null,
-    rut_rep_legal_dv: childFields.rut_rep_legal_dv ?? null,
+    rep_document_type_code: childFields.rep_document_type_code ?? null,
+    rep_document_number: childFields.rep_document_number ?? null,
     personeria_type: childFields.personeria_type ?? null,
     fecha_certificado_estatuto: childFields.fecha_certificado_estatuto ?? null,
     codigo_cve: childFields.codigo_cve ?? null,
@@ -499,8 +593,14 @@ async function listSocialNetworkCatalog() {
   return { ok: true, data: { items: rows } }
 }
 
+async function listIdentityDocumentTypes() {
+  const rows = await loadIdentityDocumentTypes()
+  return { ok: true, data: { items: rows } }
+}
+
 async function createSupplier({ payload, userId }) {
-  const v = validatePayload(payload, { partial: false })
+  const documentTypes = await loadIdentityDocumentTypes()
+  const v = validatePayload(payload, { partial: false, documentTypes })
   if (!v.ok) {
     return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors[0] || 'Datos inválidos.' }
   }
@@ -521,6 +621,7 @@ async function createSupplier({ payload, userId }) {
     const [ins] = await trx('supplier')
       .insert({
         supplier_type: supplierType,
+        country_code: d.country_code,
         email: d.email ?? null,
         phone: d.phone ?? null,
         created_by: userId ?? null,
@@ -616,7 +717,7 @@ async function getSupplierDocumentForView(supplierId, documentId) {
 }
 
 async function updateSupplier(id, { payload, userId }) {
-  const existing = await db('supplier').select('id', 'supplier_type').where({ id }).first()
+  const existing = await db('supplier').select('id', 'supplier_type', 'country_code').where({ id }).first()
   if (!existing) {
     return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Proveedor no encontrado.' }
   }
@@ -630,7 +731,17 @@ async function updateSupplier(id, { payload, userId }) {
     }
   }
 
-  const v = validatePayload(payload, { partial: true, existingType: existing.supplier_type })
+  const childTable = existing.supplier_type === 'empresa' ? 'supplier_empresa' : 'supplier_persona_natural'
+  const child = await db(childTable).where({ supplier_id: id }).first()
+  const documentTypes = await loadIdentityDocumentTypes()
+  const v = validatePayload(payload, {
+    partial: true,
+    existingType: existing.supplier_type,
+    existingCountry: existing.country_code,
+    existingDocumentNumber: child?.document_number ?? null,
+    existingRepDocumentNumber: child?.rep_document_number ?? null,
+    documentTypes
+  })
   if (!v.ok) {
     return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors[0] || 'Datos inválidos.' }
   }
@@ -682,6 +793,7 @@ module.exports = {
   getSupplierDocumentForView,
   createSupplier,
   updateSupplier,
+  listIdentityDocumentTypes,
   normalizeSupplier,
   _formatRutDisplay: formatRutDisplay,
   _validateSocialNetworks: validateSocialNetworks,

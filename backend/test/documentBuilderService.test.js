@@ -17,8 +17,9 @@ const STATIC_DOC = {
 
 const SUPPLIER = {
   supplier_type: 'persona_natural',
+  country_code: 'CL',
   full_name: 'Juan Pérez',
-  rut_display: '11.111.111-1',
+  document_display: '11.111.111-1',
   address: 'Calle 1'
 }
 
@@ -86,7 +87,7 @@ function chainable(endValue, hooks = {}) {
   return chain
 }
 
-function createGenerateDb({ duplicateRow = null, hooks = {} } = {}) {
+function createGenerateDb({ duplicateRow = null, hooks = {}, templateCountry = 'CL' } = {}) {
   return function db(table) {
     if (table === 'company') {
       return chainable({ id: COMPANY_ID, business_name: 'Empresa Test' })
@@ -97,7 +98,8 @@ function createGenerateDb({ duplicateRow = null, hooks = {} } = {}) {
         code: 'CT-001',
         name: 'Plantilla',
         description: '',
-        content_json: STATIC_DOC
+        content_json: STATIC_DOC,
+        country_code: templateCountry
       })
     }
     if (table === 'draft_document') {
@@ -386,5 +388,90 @@ test('getGeneratedDocumentForDownload reads buffer from GCS', async () => {
     assert.equal(result.data.file_name, 'test.pdf')
     assert.deepEqual(result.data.buffer, pdf)
     assert.equal(downloadedPath, gcs_path)
+  })
+})
+
+test('generateAndPersist rejects Mexican supplier with Chilean template without echoing identifier', async () => {
+  await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
+    const service = createDocumentBuilderService({
+      db: createGenerateDb({ templateCountry: 'CL' }),
+      supplierService: {
+        getSupplierById: async () => ({
+          ok: true,
+          data: {
+            supplier: {
+              ...SUPPLIER,
+              country_code: 'MX',
+              document_display: 'LEGF870121MGA'
+            }
+          }
+        })
+      },
+      gcsService: {
+        uploadBuffer: async () => {},
+        downloadBuffer: async () => Buffer.alloc(0),
+        deleteFile: async () => {}
+      },
+      getUserProfileIdByUserId: async () => PROFILE_ID
+    })
+
+    const result = await service.generateAndPersist(baseGenerateArgs({ dryRun: true }))
+    assert.equal(result.ok, false)
+    assert.equal(result.status, 400)
+    assert.equal(result.code, 'VALIDATION_ERROR')
+    assert.match(result.message, /México/)
+    assert.match(result.message, /Chile/)
+    assert.equal(String(result.message).includes('LEGF870121MGA'), false)
+  })
+})
+
+test('generateAndPersist rejects Chilean supplier with Mexican template', async () => {
+  await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
+    const service = createDocumentBuilderService({
+      db: createGenerateDb({ templateCountry: 'MX' }),
+      supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
+      gcsService: {
+        uploadBuffer: async () => {},
+        downloadBuffer: async () => Buffer.alloc(0),
+        deleteFile: async () => {}
+      },
+      getUserProfileIdByUserId: async () => PROFILE_ID
+    })
+
+    const result = await service.generateAndPersist(baseGenerateArgs({ dryRun: true }))
+    assert.equal(result.ok, false)
+    assert.equal(result.status, 400)
+    assert.match(result.message, /Chile/)
+    assert.match(result.message, /México/)
+  })
+})
+
+test('generateAndPersist dryRun accepts Mexican supplier with Mexican template', async () => {
+  await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
+    const service = createDocumentBuilderService({
+      db: createGenerateDb({ templateCountry: 'MX' }),
+      supplierService: {
+        getSupplierById: async () => ({
+          ok: true,
+          data: {
+            supplier: {
+              ...SUPPLIER,
+              country_code: 'MX',
+              document_display: 'LEGF870121MGA'
+            }
+          }
+        })
+      },
+      gcsService: {
+        uploadBuffer: async () => {},
+        downloadBuffer: async () => Buffer.alloc(0),
+        deleteFile: async () => {}
+      },
+      getUserProfileIdByUserId: async () => PROFILE_ID
+    })
+
+    const result = await service.generateAndPersist(baseGenerateArgs({ dryRun: true }))
+    assert.equal(result.ok, true)
+    assert.equal(result.data.valid, true)
   })
 })

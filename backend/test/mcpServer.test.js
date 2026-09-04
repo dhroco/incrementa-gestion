@@ -533,6 +533,9 @@ test('crear_proveedor description documents catalog_id for social networks', asy
   assert.ok(updateTool.description.includes('phone'))
   assert.ok(createTool.description.includes('representante legal'))
   assert.ok(updateTool.description.includes('representante legal'))
+  assert.ok(createTool.description.includes('country_code'))
+  assert.ok(createTool.description.includes('document_number'))
+  assert.ok(updateTool.description.includes('country_code'))
 })
 
 test('MCP supplier tools document and validate contact fields', async () => {
@@ -553,6 +556,10 @@ test('MCP supplier tools document and validate contact fields', async () => {
       createSupplier: async ({ payload }) => {
         if (payload?.email == null || String(payload.email).trim() === '') {
           return { ok: false, code: 'VALIDATION_ERROR', message: 'El correo es obligatorio.' }
+        }
+        const doc = String(payload?.document_number || payload?.rut || '').trim()
+        if (doc && !/^(LEGF870121MGA|12\.345\.678-5|12345678-5)$/i.test(doc)) {
+          return { ok: false, code: 'VALIDATION_ERROR', message: 'El RFC ingresado no es válido.' }
         }
         return { ok: true, data: { supplier: { id: SUPPLIER_ID, email: payload.email } } }
       },
@@ -594,6 +601,33 @@ test('MCP supplier tools document and validate contact fields', async () => {
   )
   assert.equal(missingEmail.ok, false)
   assert.match(String(missingEmail.message), /correo es obligatorio/)
+
+  const rfcOk = parseToolJson(
+    await createTool.handler({
+      payload: {
+        supplier_type: 'persona_natural',
+        country_code: 'MX',
+        full_name: 'Ana López',
+        document_number: 'LEGF870121MGA',
+        email: 'ana@x.mx'
+      }
+    })
+  )
+  assert.equal(rfcOk.ok, true)
+
+  const invalidId = parseToolJson(
+    await createTool.handler({
+      payload: {
+        supplier_type: 'persona_natural',
+        country_code: 'MX',
+        full_name: 'Ana',
+        document_number: 'NO-ES-RFC',
+        email: 'ana@x.mx'
+      }
+    })
+  )
+  assert.equal(invalidId.ok, false)
+  assert.equal(String(invalidId.message || '').includes('NO-ES-RFC'), false)
 
   const legacyUpdate = parseToolJson(
     await updateTool.handler({
