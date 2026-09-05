@@ -4,7 +4,7 @@
 > **La respuesta se le enviará consolidada**, no tema por tema. Este documento
 > acumula el material para redactarla.
 >
-> Última actualización: 4 de septiembre de 2026.
+> Última actualización: 4 de septiembre de 2026 (Tema 4).
 
 ---
 
@@ -146,6 +146,38 @@ Es un defecto **activo**, no hipotético, y probablemente ya afectó contratos. 
 
 ---
 
+## Tema 4 — El sistema no acepta el RFC de una proveedora mexicana (CONTRATO_0016)
+
+**Qué pasó.** Marcela intentó cargar a Francisca Elena Leos García con su RFC `LEGF870121MGA` para generar un contrato con CONTRATO_0016, de jurisdicción mexicana. El sistema respondió *"El RUT ingresado no es válido"* y ella abandonó ese contrato.
+
+**Qué se encontró — eran tres capas, no una validación mal puesta:**
+
+1. `parseRut` es estrictamente chileno: 7-8 dígitos y dígito verificador módulo 11. El RFC se reduce a 6 dígitos al quitarle las letras y falla.
+2. El esquema **no podía contenerlo**: `rut_body` y `rut_dv` eran NOT NULL y modelan un RUT descompuesto en cuerpo + dígito verificador. Un RFC es alfanumérico de 13 caracteres y no se descompone así — su homoclave final cumple la función de verificador pero es parte del identificador.
+3. La plantilla mexicana decía **"cédula de identidad"**, copiada de la chilena. Aunque se arreglaran 1 y 2, el contrato habría salido mal redactado.
+
+De fondo: el sistema se construyó para Chile y después se le agregaron plantillas mexicanas sin un modelo de datos internacional.
+
+**Qué se hizo.** Change `identificador-tributario-por-pais`, desplegado el 4 de septiembre:
+
+- El proveedor ahora tiene **país**, y su identificador es **tipo + número** resueltos contra un catálogo. Agregar Argentina o Colombia pasa a ser cargar una fila, no escribir código.
+- Chile conserva íntegra su validación módulo 11 y su formato `XX.XXX.XXX-X`.
+- El formulario adapta la etiqueta según el país: **RUT** para Chile, **RFC** para México, cada uno con su ejemplo.
+- **Coherencia país–plantilla**: generar una plantilla chilena para un proveedor mexicano ahora se rechaza nombrando ambos países. Antes nada lo impedía y el contrato habría salido con la jurisdicción equivocada.
+- Las plantillas 0016 y 0017 dejaron de llamar "cédula de identidad" al RFC.
+
+**Verificado:** alta mexicana con `LEGF870121MGA` por la interfaz; listado y Constructor de documento mostrando el RFC íntegro junto a los RUT chilenos formateados; los 22 proveedores chilenos con su identificador **idéntico** al de antes del cambio, contrastado contra un listado capturado previamente.
+
+**Estado:** ✅ **resuelto y desplegado. Nada que consultarle** — solo avisarle que ya puede reintentar ese contrato.
+
+### Hallazgos colaterales (sin resolver, no bloquean)
+
+**La moneda.** CONTRATO_0016 es en dólares (`$290 USD`) y el precio se formatea con separador de miles chileno y signo `$`. Es la misma fuga de locale por otro lado, y hoy es lo único que separa a México de estar realmente soportado. Merece su propio change.
+
+**El RUT que se autocorrige.** Detectado al probar, y **preexistente**: `parseRut('12.345.678-9')` devuelve `ok` con `dv=5`. El sistema no rechaza un dígito verificador equivocado, lo **reemplaza en silencio**. Un dedazo produce un RUT distinto del que se escribió, y ese RUT sale impreso en un contrato. Es el mismo patrón del Tema 2.1: el sistema decide por el usuario en vez de preguntar. Sin change asignado.
+
+---
+
 ## Temas siguientes
 
 *(pendientes de registrar)*
@@ -163,4 +195,5 @@ Puntos a cubrir cuando se le escriba:
 - **Avisarle que los PDF ya generados conservan el formato viejo**: tiene que generar uno nuevo para ver la corrección.
 - Tema 3: **incluir la pregunta redactada** sobre cómo resolver el multi-red (opción A vs anexo), más las tres consultas: precio único o por red, alcance del boost/exclusividad, y frecuencia del caso multi-red.
 - Tema 3 colateral: el "Instagram" escrito a mano en la 2.5 quedó **postergado**; no incluirlo en la respuesta salvo que el usuario lo reactive.
+- Tema 4: resuelto. Avisarle que ya puede reintentar el contrato mexicano; el sistema acepta RFC y adapta el formulario según el país. No requiere respuesta suya.
 - Recordar que revisar el borrador antes de firmar es parte del diseño, y que su revisión funcionó.
