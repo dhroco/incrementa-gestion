@@ -4,7 +4,7 @@
 > **La respuesta se le enviará consolidada**, no tema por tema. Este documento
 > acumula el material para redactarla.
 >
-> Última actualización: 4 de septiembre de 2026 (Tema 4).
+> Última actualización: 22 de septiembre de 2026 (Tema 5).
 
 ---
 
@@ -136,6 +136,8 @@ Arrastra a la **2.5**, que nombra una sola cuenta de publicación y se declara a
 
 **Estado:** ⛔ **esperando definición de Marcela.** Nada implementado.
 
+> **Ampliado por el [Tema 5](#tema-5--contratos-por-evento-el-alcance-del-multi-red-es-más-amplio-22-sep) (22-sep):** el alcance no es solo la 2.3 — los contratos por evento impactan también la 2.1 y la 2.2, y lo multi-red puede darse fuera de los contratos por evento.
+
 ### Hallazgo colateral — red social escrita a mano (sin resolver)
 
 Independiente del multi-red: **las 17 plantillas tienen "Instagram" escrito a mano en la cláusula 2.5**, junto a la variable de la cuenta. Un contrato solo de TikTok ya sale hoy diciendo *"deberá publicar el contenido en Instagram a través de su cuenta @sucuentadetiktok"*. Y esa cláusula se declara esencial.
@@ -175,6 +177,25 @@ De fondo: el sistema se construyó para Chile y después se le agregaron plantil
 **La moneda.** CONTRATO_0016 es en dólares (`$290 USD`) y el precio se formatea con separador de miles chileno y signo `$`. Es la misma fuga de locale por otro lado, y hoy es lo único que separa a México de estar realmente soportado. Merece su propio change.
 
 **El RUT que se autocorrige.** Detectado al probar, y **preexistente**: `parseRut('12.345.678-9')` devuelve `ok` con `dv=5`. El sistema no rechaza un dígito verificador equivocado, lo **reemplaza en silencio**. Un dedazo produce un RUT distinto del que se escribió, y ese RUT sale impreso en un contrato. Es el mismo patrón del Tema 2.1: el sistema decide por el usuario en vez de preguntar. Sin change asignado.
+
+---
+
+## Tema 5 — Contratos por evento: el alcance del multi-red es más amplio (22-sep)
+
+**De dónde sale.** Apuntes de la reunión con Marcela del 22 de septiembre. Amplía el **Tema 3**: el problema no es solo "dos redes sociales en la 2.3".
+
+**Lo que dijo.**
+
+- Hay **cinco tipos de contrato que son por evento**. Cuando el contrato es por evento, se ven impactadas **tres cláusulas: 2.1, 2.2 y 2.3**.
+- **Cláusula 2.1 — se especifica el evento en sí mismo.** En el contrato de ejemplo que entregó: el evento, la fecha (27 de mayo), la hora (18:30) y el lugar. *(Nombres del evento y del recinto por confirmar contra el contrato de ejemplo; los apuntes vienen de una transcripción.)*
+- **Cláusula 2.2 — más de una red social y más de una cantidad de reels.** Marcela precisó que esto **puede ocurrir aunque el contrato no sea por evento**: un proveedor, persona o empresa puede entregar su servicio en varias redes y con varias cantidades.
+- **Cláusula 2.3 — el contenido del servicio**, que también puede ser más de uno y en más de una red social.
+
+**Qué cambia respecto del Tema 3.** El Tema 3 estaba planteado sobre la 2.3 y su arrastre a la 2.5. Ahora son al menos **cuatro cláusulas** (2.1, 2.2, 2.3 y 2.5) y aparece una dimensión nueva, el **evento**, que no estaba en el análisis.
+
+**Pendiente de recabar:** el contrato de ejemplo con evento, y cuáles son los cinco tipos de contrato por evento (¿son 5 de las 17 plantillas activas? ¿cuáles?).
+
+**Estado:** ⛔ **sin analizar.** No hay diseño ni estimación; hay que rehacer el análisis del Tema 3 con este alcance.
 
 ---
 

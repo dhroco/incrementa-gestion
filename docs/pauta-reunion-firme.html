@@ -1,0 +1,605 @@
+<title>Pauta reunión Firme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --sunk:#E8ECEA; --ink:#15201B; --muted:#56635D; --line:#D5DCD8;
+  --accent:#2446A8; --accent-soft:#E6ECFA;
+  --must:#B42318; --must-soft:#FDECEA; --imp:#9A5B00; --imp-soft:#FDF3E1; --nice:#44546A; --nice-soft:#ECEFF3;
+  --ok:#1E7A45; --ok-soft:#E4F4EA; --bad:#B42318;
+  --warn-bg:#FFF6E0; --warn-line:#E9C46A;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Public Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111714; --surface:#18201C; --sunk:#202A25; --ink:#E6ECE9; --muted:#9AA8A1; --line:#2E3A34;
+    --accent:#8FA9FF; --accent-soft:#1D2848;
+    --must:#FF8A7E; --must-soft:#3A1C1A; --imp:#F2B45A; --imp-soft:#352812; --nice:#AAB6C6; --nice-soft:#232B35;
+    --ok:#6FD39A; --ok-soft:#15301F; --bad:#FF8A7E;
+    --warn-bg:#2E2712; --warn-line:#7A6320;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111714; --surface:#18201C; --sunk:#202A25; --ink:#E6ECE9; --muted:#9AA8A1; --line:#2E3A34;
+  --accent:#8FA9FF; --accent-soft:#1D2848;
+  --must:#FF8A7E; --must-soft:#3A1C1A; --imp:#F2B45A; --imp-soft:#352812; --nice:#AAB6C6; --nice-soft:#232B35;
+  --ok:#6FD39A; --ok-soft:#15301F; --bad:#FF8A7E;
+  --warn-bg:#2E2712; --warn-line:#7A6320;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:20px;padding-block:0 80px}
+.wrap{max-width:860px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,2.8rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700}
+p{margin:0}
+.prose{display:flex;flex-direction:column;gap:14px;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+a{color:var(--accent)}
+strong{font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+
+/* Header */
+header.top{padding-block:48px 28px;display:flex;flex-direction:column;gap:18px;border-bottom:2px solid var(--ink)}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 24px;font-size:.92rem}
+.meta div{display:flex;flex-direction:column;gap:2px}
+.meta b{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lead{font-size:1.15rem;max-width:62ch}
+
+/* Nav */
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 18px;padding-block:14px;border-bottom:1px solid var(--line);font-size:.9rem}
+nav.toc a{text-decoration:none;color:var(--muted)}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+
+section{padding-block:44px 8px;display:flex;flex-direction:column;gap:20px;scroll-margin-top:12px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+
+/* Goal box */
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.goal .big{font-family:var(--display);font-size:1.3rem;font-weight:700;line-height:1.35}
+ul.plain{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+
+/* Callouts */
+.note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:14px 18px;border-radius:0 8px 8px 0;max-width:68ch}
+.warn{border:1px solid var(--warn-line);background:var(--warn-bg);padding:16px 20px;border-radius:8px;display:flex;flex-direction:column;gap:8px;max-width:68ch}
+.warn .eyebrow{color:var(--ink)}
+
+/* Script */
+.script{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 24px;font-size:1.05rem;line-height:1.7;max-width:68ch}
+.script p+p{margin-top:12px}
+
+/* Glossary */
+dl.gloss{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:0;margin:0;border-top:1px solid var(--line)}
+dl.gloss dt,dl.gloss dd{padding:12px 0;border-bottom:1px solid var(--line);margin:0}
+dl.gloss dt{font-weight:700;padding-right:18px}
+dl.gloss dd{color:var(--ink)}
+dl.gloss dd span{display:block;color:var(--muted);font-size:.92rem;margin-top:2px}
+@media (max-width:600px){dl.gloss{grid-template-columns:1fr} dl.gloss dt{border-bottom:none;padding-bottom:0}}
+
+/* Flow */
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.flow-grid{display:grid;grid-template-columns:44px repeat(3,minmax(170px,1fr));min-width:620px}
+.lane-h{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 12px;border-bottom:1px solid var(--line);background:var(--sunk)}
+.lane-h:first-child{padding:0}
+.fn{font-family:var(--display);font-weight:800;color:var(--muted);padding:14px 0 14px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.fcell{padding:12px;border-bottom:1px solid var(--line);border-left:1px dashed var(--line);min-height:56px}
+.fstep{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:8px;font-size:.92rem;line-height:1.45}
+.fstep.us{background:var(--ok-soft)}
+.fstep.them{background:var(--accent-soft)}
+.fstep.person{background:var(--imp-soft)}
+.fstep .to{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.flow-legend{display:flex;flex-wrap:wrap;gap:8px 18px;padding:12px 14px;font-size:.85rem;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+
+/* Requirements */
+.legend{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:.9rem;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.chip.must{color:var(--must);background:var(--must-soft)}
+.chip.imp{color:var(--imp);background:var(--imp-soft)}
+.chip.nice{color:var(--nice);background:var(--nice-soft)}
+.group-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:12px}
+.group-title p{color:var(--muted);font-size:.95rem}
+.req-list{display:flex;flex-direction:column;gap:14px}
+.req{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.req.done{border-color:var(--ok)}
+.req-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.req-head h3{flex:1 1 280px}
+.req .why{color:var(--muted);max-width:68ch}
+.req .ask-l{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:4px}
+.gb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gb div{padding:10px 12px;border-radius:8px;font-size:.9rem;line-height:1.45}
+.gb .g{background:var(--ok-soft)} .gb .b{background:var(--must-soft)}
+.gb b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.gb .g b{color:var(--ok)} .gb .b b{color:var(--bad)}
+@media (max-width:600px){.gb{grid-template-columns:1fr}}
+.answer{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--line);padding-top:12px}
+.answer-row{display:flex;flex-wrap:wrap;gap:6px}
+.answer-row label{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:4px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:var(--bg)}
+.answer-row input{accent-color:var(--accent);margin:0}
+.answer-row label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+textarea{width:100%;min-height:58px;resize:vertical;font:inherit;font-size:.92rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.93rem;min-width:520px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--sunk)}
+tr:last-child td{border-bottom:none}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Agenda */
+ol.agenda{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+ol.agenda li{display:grid;grid-template-columns:78px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+ol.agenda .t{font-family:var(--mono);font-size:.85rem;color:var(--accent);font-variant-numeric:tabular-nums;padding-top:2px}
+ol.agenda .d{color:var(--muted);font-size:.93rem}
+
+/* Checklist */
+.checks{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.checks label{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.checks input{margin-top:5px;accent-color:var(--ok);width:17px;height:17px;flex:none}
+.checks label:has(input:checked) span{color:var(--muted);text-decoration:line-through}
+
+/* Private */
+.private{border:2px dashed var(--must);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;background:var(--surface)}
+.private .eyebrow{color:var(--must)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+
+/* Summary */
+.progress{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.92rem;color:var(--muted)}
+.progress b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:600;font-size:.92rem;padding:9px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+#resumen{min-height:220px;font-family:var(--mono);font-size:.82rem}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem}
+
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  nav.toc,.answer,.btns,#resumen-wrap{display:none}
+  section{padding-block:22px 4px;break-inside:auto}
+  .req,.private,.goal{break-inside:avoid}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <span class="eyebrow">Pauta de reunión · Firma electrónica integrada</span>
+  <h1>Reunión con Firme.cl</h1>
+  <p class="lead">Qué contarles, qué preguntarles y con qué debes salir de la reunión. La página está escrita para que puedas leerla sin otro contexto.</p>
+  <div class="meta">
+    <div><b>Fecha</b>Martes 22 de septiembre de 2026</div>
+    <div><b>Con</b>Firme.cl (firma electrónica y notaría online)</div>
+    <div><b>Tú</b>Ingeniero en Sistemas · Arquitecto de Software · líder del desarrollo</div>
+    <div><b>Antecedente</b>Correo enviado a <span class="mono">ayuda@firme.app</span> el 21 de septiembre</div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Contenido">
+  <a href="#objetivo">Objetivo</a>
+  <a href="#contexto">Contexto</a>
+  <a href="#conceptos">Conceptos</a>
+  <a href="#flujo">El flujo que queremos</a>
+  <a href="#apertura">Cómo abrir</a>
+  <a href="#agenda">Agenda</a>
+  <a href="#preguntas">Preguntas</a>
+  <a href="#precios">Precios</a>
+  <a href="#cierre">Antes de colgar</a>
+  <a href="#posicion">Tu posición</a>
+  <a href="#resumen-wrap">Resumen</a>
+</nav>
+
+<section id="objetivo">
+  <div class="sec-head"><span class="eyebrow">Lo primero</span><h2>Qué quieres conseguir</h2></div>
+  <div class="goal">
+    <p class="big">Salir sabiendo si Firme puede recibir nuestros contratos por API, hacerlos firmar por el influencer desde su celular y devolverlos firmados a nuestro sistema, y cuánto cuesta eso para unos 50 contratos al mes.</p>
+    <p>Concretamente, al terminar la reunión debes tener:</p>
+    <ul class="plain">
+      <li><strong>Un sí, un no o un "sí, con ajustes"</strong> sobre cada una de las seis necesidades imprescindibles de la sección <a href="#preguntas">Preguntas</a>.</li>
+      <li><strong>Una respuesta clara sobre los firmantes extranjeros sin RUT.</strong> Es la duda más importante: si no lo resuelven, Firme no sirve.</li>
+      <li><strong>Un precio</strong> para nuestro volumen, o el compromiso de enviar una cotización por escrito.</li>
+      <li><strong>El acceso de desarrollador activado</strong> en la cuenta, o una fecha para activarlo, y el enlace a la documentación técnica.</li>
+      <li><strong>Un próximo paso con fecha</strong> y el nombre de quién lo hace en Firme.</li>
+    </ul>
+  </div>
+  <div class="note">En esta reunión <strong>no se decide nada</strong>. La decisión la toma el cliente después de comparar alternativas. Tu trabajo hoy es reunir información confiable.</div>
+</section>
+
+<section id="contexto">
+  <div class="sec-head"><span class="eyebrow">Para explicar el caso</span><h2>El contexto</h2></div>
+  <div class="prose">
+    <p><strong>Quién es el cliente.</strong> Una agencia de marketing en Chile que trabaja con influencers y creadores de contenido. Por cada campaña, la agencia firma con el influencer un contrato de prestación de servicios. En esta reunión no se dice el nombre de la agencia.</p>
+    <p><strong>Qué hace hoy el sistema.</strong> Tú lideras el desarrollo de un sistema de gestión de contratos para esa agencia. El sistema toma los datos del influencer y de la campaña, los combina con una plantilla de contrato y genera un PDF. Al generarlo, pone automáticamente la firma del representante legal de la agencia sobre su línea de firma, dentro del contrato. Después guarda el contrato.</p>
+    <p><strong>Qué falta.</strong> La firma del influencer. Tiene que firmar a distancia, casi siempre desde su celular. Una vez firmado, el contrato tiene que volver al sistema y quedar guardado sin que nadie lo haga a mano.</p>
+    <p><strong>Cómo se hace hoy.</strong> A mano, con Adobe Acrobat Sign. Alguien descarga el contrato del sistema, lo sube a Adobe, lo envía al influencer, espera la firma, descarga el contrato firmado y lo vuelve a subir al sistema. Adobe confirmó por escrito que su API no está disponible en Latinoamérica, así que no se puede conectar al sistema.</p>
+    <p><strong>El volumen.</strong> Unos 50 contratos al mes, con meses de más carga cuando hay campañas grandes. Cada contrato tiene un solo firmante en la plataforma: el influencer, porque la firma de la agencia ya va puesta en el PDF.</p>
+    <p><strong>Un caso que ya ocurrió.</strong> La agencia también contrata influencers de otros países. Ya hubo una proveedora mexicana que no tiene RUT chileno. Cualquier solución tiene que permitir que firme alguien sin RUT.</p>
+  </div>
+</section>
+
+<section id="conceptos">
+  <div class="sec-head"><span class="eyebrow">Palabras que van a aparecer</span><h2>Conceptos</h2></div>
+  <dl class="gloss">
+    <dt>Firma electrónica simple (FES)</dt>
+    <dd>Cualquier forma electrónica de firmar que permita identificar a quien firma, por ejemplo dibujar la firma en la pantalla o ingresar un código recibido por SMS. <strong>Es la que necesitamos.</strong><span>La Ley 19.799 la reconoce como válida para contratos como estos. Adobe Acrobat Sign, lo que se usa hoy, también es firma simple.</span></dd>
+    <dt>Firma electrónica avanzada (FEA)</dt>
+    <dd>Firma hecha con un certificado que emite una empresa acreditada por el Estado. La ley presume que es auténtica. <strong>No la necesitamos.</strong><span>Se exige solo para ciertos trámites formales. Si la ofrecen, sirve saber el precio, pero no es parte de lo que pedimos.</span></dd>
+    <dt>API</dt>
+    <dd>Forma en que un sistema le pide cosas a otro sistema directamente, sin que una persona use una pantalla. Por ejemplo: nuestro sistema le dice a Firme "envía este PDF a firmar a esta persona".</dd>
+    <dt>Token de API</dt>
+    <dd>Clave secreta que identifica a nuestro sistema cuando le habla a Firme. Se crea en la sección "Desarrollador" de la cuenta.</dd>
+    <dt>Sandbox o ambiente de prueba</dt>
+    <dd>Una versión del servicio para probar. Lo que se firma ahí no tiene efecto legal ni cuesta dinero.<span>Su sitio anuncia un sandbox gratuito. Pero la dirección de registro, <span class="mono">doc.firme.app</span>, es su aplicación real, y la sección de desarrollador solo aparece si Firme la activa en la cuenta. Hay que confirmarlo con ellos.</span></dd>
+    <dt>Webhook</dt>
+    <dd>Mensaje que Firme envía a nuestro sistema en el momento en que pasa algo, por ejemplo "el influencer firmó". Así el sistema se entera sin que alguien tenga que revisar.</dd>
+    <dt>Registro de auditoría</dt>
+    <dd>Lista de todo lo que pasó con el documento: cuándo se envió, cuándo se abrió, cuándo se firmó, desde qué dirección IP y qué dispositivo, y cómo se verificó a la persona.<span>Es la prueba de que el influencer firmó. Si alguien niega su firma, esto es lo que se presenta.</span></dd>
+    <dt>Verificación de identidad</dt>
+    <dd>Paso en que el firmante demuestra que es quien dice ser. Lo más común es un código de un solo uso (OTP) enviado a su correo o a su celular. Algunos servicios piden además una foto del documento de identidad.</dd>
+    <dt>Sello digital del PDF</dt>
+    <dd>Marca criptográfica sobre el archivo firmado. Si alguien cambia algo del PDF después, el sello queda inválido y cualquier lector de PDF lo muestra.</dd>
+    <dt>Posición de la firma</dt>
+    <dd>Lugar exacto del PDF donde se dibuja la firma del influencer. Se indica con página y coordenadas, o con un texto marcador que el servicio busca dentro del documento.</dd>
+    <dt>Rate limit</dt>
+    <dd>Número máximo de pedidos por minuto que acepta la API. Su plan publicado permite 100 por minuto, mucho más de lo que necesitamos.</dd>
+  </dl>
+</section>
+
+<section id="flujo">
+  <div class="sec-head"><span class="eyebrow">Lo que queremos que pase</span><h2>El flujo que queremos</h2></div>
+  <p class="prose">Cada fila es un paso, en orden. La columna dice quién lo hace. Los pasos 1 y 7 ya los hace nuestro sistema. La pregunta de la reunión es si Firme puede hacer los pasos 3 a 6 y comunicarse con nosotros en los pasos 2 y 6.</p>
+  <div class="flow">
+    <div class="flow-grid" role="table" aria-label="Flujo de firma por pasos">
+      <div class="lane-h" role="columnheader"></div>
+      <div class="lane-h" role="columnheader">Nuestro sistema</div>
+      <div class="lane-h" role="columnheader">Firme</div>
+      <div class="lane-h" role="columnheader">Influencer</div>
+
+      <div class="fn">1</div>
+      <div class="fcell"><div class="fstep us">Genera el contrato en PDF, con la firma de la agencia ya puesta.<span class="to">ya existe</span></div></div>
+      <div class="fcell"></div><div class="fcell"></div>
+
+      <div class="fn">2</div>
+      <div class="fcell"><div class="fstep us">Envía por API el PDF, los datos del influencer y dónde va la firma.<span class="to">→ a Firme</span></div></div>
+      <div class="fcell"></div><div class="fcell"></div>
+
+      <div class="fn">3</div>
+      <div class="fcell"></div>
+      <div class="fcell"><div class="fstep them">Envía al influencer un enlace para firmar, por correo o SMS.<span class="to">→ al influencer</span></div></div>
+      <div class="fcell"></div>
+
+      <div class="fn">4</div>
+      <div class="fcell"></div><div class="fcell"></div>
+      <div class="fcell"><div class="fstep person">Abre el enlace en su celular, confirma su identidad y dibuja su firma.</div></div>
+
+      <div class="fn">5</div>
+      <div class="fcell"></div>
+      <div class="fcell"><div class="fstep them">Pone la firma en el PDF, sella el archivo y arma el registro de auditoría.</div></div>
+      <div class="fcell"></div>
+
+      <div class="fn">6</div>
+      <div class="fcell"></div>
+      <div class="fcell"><div class="fstep them">Avisa a nuestro sistema por webhook: "firmado".<span class="to">→ a nuestro sistema</span></div></div>
+      <div class="fcell"></div>
+
+      <div class="fn">7</div>
+      <div class="fcell"><div class="fstep us">Descarga el PDF firmado y la auditoría, y los guarda con el contrato.<span class="to">el guardado ya existe</span></div></div>
+      <div class="fcell"></div><div class="fcell"></div>
+    </div>
+    <div class="flow-legend">
+      <span><i class="sw" style="background:var(--ok-soft);border:1px solid var(--ok)"></i>Nuestro sistema</span>
+      <span><i class="sw" style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Lo que debe resolver Firme</span>
+      <span><i class="sw" style="background:var(--imp-soft);border:1px solid var(--imp)"></i>Lo que hace el influencer</span>
+    </div>
+  </div>
+  <p class="prose">También tiene que estar resuelto lo que pasa fuera de este camino: si el influencer no firma (recordatorios y vencimiento), si rechaza el contrato, o si la agencia necesita anular el envío.</p>
+</section>
+
+<section id="apertura">
+  <div class="sec-head"><span class="eyebrow">Primer minuto</span><h2>Cómo abrir la reunión</h2></div>
+  <p class="prose">Un texto para decir en voz alta al comienzo. Es corto a propósito: presenta el caso y deja que ellos muestren su producto.</p>
+  <div class="script">
+    <p>"Soy [nombre], ingeniero en sistemas y arquitecto de software. Lidero el desarrollo de un sistema de gestión de contratos para una agencia de marketing en Chile que trabaja con influencers.</p>
+    <p>El sistema ya genera los contratos automáticamente y pone la firma del representante legal de la agencia. Nos falta la firma del influencer: a distancia, desde su celular, integrada por API, y que el contrato firmado vuelva solo a nuestro sistema.</p>
+    <p>Es firma electrónica simple, unos 50 contratos al mes, y algunos firmantes son extranjeros sin RUT. Les envié el detalle ayer a ayuda@firme.app. Me gustaría ver cómo funciona el flujo y resolver algunas preguntas."</p>
+  </div>
+  <div class="note">Si no recibieron el correo, ofrece reenviarlo apenas termine la reunión. Es la versión escrita de todo lo que vas a preguntar.</div>
+</section>
+
+<section id="agenda">
+  <div class="sec-head"><span class="eyebrow">Orden sugerido</span><h2>Agenda</h2></div>
+  <p class="prose">Tiempos pensados para 45 minutos. Si la reunión es más corta, recorta la demostración, pero no las preguntas imprescindibles.</p>
+  <ol class="agenda">
+    <li><span class="t">0–5 min</span><div><strong>Presentación y caso.</strong><div class="d">Usa el texto de apertura. Pregunta quiénes están en la reunión y su rol: ventas, técnico o soporte.</div></div></li>
+    <li><span class="t">5–15 min</span><div><strong>Que te muestren el flujo en vivo.</strong><div class="d">Pide ver: cómo se envía un documento, qué ve el firmante en el celular, cómo se verifica la identidad y cómo queda el PDF firmado con su auditoría.</div></div></li>
+    <li><span class="t">15–30 min</span><div><strong>Preguntas imprescindibles.</strong><div class="d">Las seis en rojo. Parte por los firmantes extranjeros sin RUT.</div></div></li>
+    <li><span class="t">30–38 min</span><div><strong>Preguntas importantes.</strong><div class="d">Las en ámbar, en el orden en que aparecen. Las deseables, solo si queda tiempo; se pueden resolver por correo.</div></div></li>
+    <li><span class="t">38–43 min</span><div><strong>Precio y condiciones.</strong><div class="d">Ver la sección <a href="#precios">Precios</a>.</div></div></li>
+    <li><span class="t">43–45 min</span><div><strong>Cierre.</strong><div class="d">Repasa la lista <a href="#cierre">Antes de colgar</a> y acuerda el próximo paso.</div></div></li>
+  </ol>
+</section>
+
+<section id="preguntas">
+  <div class="sec-head"><span class="eyebrow">El centro de la reunión</span><h2>Preguntas, por prioridad</h2></div>
+  <div class="prose">
+    <p>Cada tarjeta explica por qué la necesidad importa, qué preguntar, qué respuesta es buena y cuál debería preocuparte. Abajo de cada una puedes marcar la respuesta y anotar lo que te digan. Las notas quedan guardadas solo en este navegador.</p>
+  </div>
+  <div class="legend">
+    <span><span class="chip must">Imprescindible</span> Si no la cumplen, Firme no sirve.</span>
+    <span><span class="chip imp">Importante</span> Si no la cumplen, se puede evaluar un ajuste.</span>
+    <span><span class="chip nice">Deseable</span> Suma, pero no decide.</span>
+  </div>
+  <div class="progress" id="progress" aria-live="polite"></div>
+  <div id="reqs"></div>
+</section>
+
+<section id="precios">
+  <div class="sec-head"><span class="eyebrow">Lo que ya sabemos y lo que falta</span><h2>Precios</h2></div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Dato</th><th>Lo publicado</th><th>Qué confirmar</th></tr></thead>
+      <tbody>
+        <tr><td>Plan con API</td><td class="num">Desde $50.000 al mes</td><td>Si existe un plan menor, o uno que cobre solo las firmas que se usan.</td></tr>
+        <tr><td>Firmas incluidas</td><td class="num">1.000 al mes</td><td>Necesitamos unas 50. Pregunta si el precio baja con un volumen tan menor.</td></tr>
+        <tr><td>Límite de la API</td><td class="num">100 pedidos por minuto</td><td>Nada: alcanza de sobra.</td></tr>
+        <tr><td>Sandbox</td><td>"Gratuito", sin límite de pedidos</td><td>Si es un ambiente separado y cómo se activa.</td></tr>
+        <tr><td>Verificación por SMS</td><td>No publicado</td><td>Si está incluida, cuánto cuesta cada SMS y si funciona con números extranjeros.</td></tr>
+        <tr><td>Cobro</td><td>No publicado</td><td>Si se cobra por documento o por firmante, y qué pasa si un mes se supera el límite.</td></tr>
+        <tr><td>Condiciones</td><td>No publicado</td><td>Permanencia mínima, pago mensual o anual, factura electrónica en pesos chilenos.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="prose">Referencia: a $50.000 al mes, el plan cuesta unos <strong>$600.000 al año</strong>. Pide que la cotización llegue <strong>por escrito</strong>. Un precio dicho en la reunión no sirve para presentarlo al cliente.</p>
+</section>
+
+<section id="cierre">
+  <div class="sec-head"><span class="eyebrow">Últimos cinco minutos</span><h2>Antes de colgar</h2></div>
+  <p class="prose">Revisa que tengas cada una de estas cosas. Si falta alguna, pídela en ese momento, con fecha.</p>
+  <div class="checks" id="checks"></div>
+</section>
+
+<section id="posicion">
+  <div class="private">
+    <span class="eyebrow">Solo para ti · no mostrar en pantalla</span>
+    <h2>Tu posición</h2>
+    <div class="prose">
+      <p>Si compartes pantalla durante la reunión, no muestres esta sección. El resto de la página no nombra al cliente y se puede mostrar.</p>
+    </div>
+    <div class="two">
+      <div class="box">
+        <h3>La alternativa que existe</h3>
+        <p>El cliente también puede desarrollar la firma dentro del propio sistema. La estimación es de <strong>48 horas de desarrollo</strong>, más un certificado de sellado de <strong>$8.000 a $16.000 al año</strong> y una revisión legal breve. Estaría operando en cuatro a seis semanas.</p>
+        <p>La diferencia con Firme no está en la validez legal, porque ambas son firma simple. Está en <strong>quién produce y respalda la evidencia</strong> si alguien discute una firma: con Firme, un tercero especializado; con desarrollo propio, la agencia.</p>
+      </div>
+      <div class="box">
+        <h3>Qué puedes decir</h3>
+        <ul class="plain">
+          <li>"Estamos evaluando otras alternativas", sin detallar cuáles.</li>
+          <li>El volumen real: unos 50 al mes. No lo infles para conseguir interés.</li>
+          <li>Que la decisión la toma el cliente y que tú haces la evaluación técnica.</li>
+        </ul>
+        <h3>Qué no decir ni hacer</h3>
+        <ul class="plain">
+          <li>El nombre de la agencia.</li>
+          <li>Aceptar un plan, firmar algo o comprometer una fecha de inicio.</li>
+          <li>Dar como hecho un precio que no quedó por escrito.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box">
+      <h3>Señales de alerta</h3>
+      <ul class="plain">
+        <li>Exigen RUT, Clave Única o una verificación que un extranjero no puede hacer.</li>
+        <li>La firma siempre queda en una hoja aparte y no se puede poner sobre la línea del contrato.</li>
+        <li>No hay webhooks, o el PDF firmado no se puede descargar por API.</li>
+        <li>Dudan sobre por cuánto tiempo guardan la evidencia, o qué pasa con ella si se deja de ser cliente.</li>
+        <li>Permanencia larga como única opción, sin un plan acorde al volumen.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="resumen-wrap">
+  <div class="sec-head"><span class="eyebrow">Después de la reunión</span><h2>Resumen de respuestas</h2></div>
+  <p class="prose">Genera un texto con lo que marcaste y anotaste, cópialo y pégamelo en la conversación. Con eso comparamos Firme contra el desarrollo propio y preparamos la recomendación.</p>
+  <div class="btns">
+    <button class="btn" id="gen" type="button">Generar resumen</button>
+    <button class="btn ghost" id="copy" type="button">Copiar</button>
+    <button class="btn ghost" id="clear" type="button">Borrar mis notas</button>
+  </div>
+  <textarea id="resumen" readonly aria-label="Resumen de respuestas"></textarea>
+</section>
+
+<footer>
+  Contactos de Firme publicados en firme.cl/contacto: teléfono +56 2 2914 0657 · WhatsApp +56 9 3004 1924 · contacto@firme.cl · soporte: ayuda@firme.app.<br>
+  Precios y condiciones según lo publicado por Firme.cl a septiembre de 2026, sujetos a confirmación por escrito.
+</footer>
+
+</div>
+
+<script>
+const REQS = [
+  {id:'api', p:'must', t:'Integración por API con nuestro propio PDF',
+   why:'El contrato ya lo genera nuestro sistema. Necesitamos enviárselo a Firme desde el sistema, sin que nadie lo suba a mano.',
+   ask:['¿Podemos crear una solicitud de firma por API, enviando un PDF generado por nosotros?','¿La API es REST? ¿Tienen una librería para Node.js?'],
+   good:'Sí: se envía el PDF y los datos del firmante en una sola llamada.',
+   bad:'Solo se puede subir desde su página web, o solo funciona con plantillas creadas dentro de Firme.'},
+  {id:'extranjero', p:'must', t:'Firmantes extranjeros sin RUT',
+   why:'La agencia contrata influencers de otros países. Ya hubo una proveedora mexicana sin RUT chileno. Si la plataforma exige RUT, esos contratos no se pueden firmar.',
+   ask:['¿Puede firmar una persona que no tiene RUT chileno?','¿Con qué se identifica: pasaporte, documento de su país, o solo su correo y su teléfono?','¿Llegan los SMS a números de otros países? ¿Tienen costo adicional?'],
+   good:'Sí, con pasaporte o documento extranjero, o verificando correo y teléfono.',
+   bad:'El RUT es obligatorio, o la verificación usa Clave Única o el Registro Civil chileno.'},
+  {id:'movil', p:'must', t:'Firma desde el celular, sin crear cuenta',
+   why:'El influencer firma desde su teléfono. Si tiene que crear una cuenta o instalar una aplicación, muchos no lo harán o se demorarán.',
+   ask:['¿El firmante necesita crear una cuenta en Firme?','¿Necesita instalar alguna aplicación?','¿Por dónde le llega el enlace: correo, SMS o WhatsApp?'],
+   good:'Recibe un enlace, lo abre en el navegador del celular y firma.',
+   bad:'Tiene que registrarse, instalar una aplicación o usar Clave Única.'},
+  {id:'devolucion', p:'must', t:'Recuperar el PDF firmado y el registro de auditoría',
+   why:'Cuando el influencer firma, el contrato firmado tiene que volver a nuestro sistema y quedar guardado. El registro de auditoría es la prueba de que esa persona firmó.',
+   ask:['¿Podemos descargar el PDF firmado por API?','¿El registro de auditoría viene dentro del mismo PDF o en un archivo aparte?','¿Qué registra: correo, teléfono, IP, fecha y hora, dispositivo, método de verificación?'],
+   good:'El PDF firmado se descarga por API e incluye una hoja de auditoría completa.',
+   bad:'Solo se descarga desde su página, o el registro de auditoría no se puede obtener.'},
+  {id:'webhook', p:'must', t:'Aviso automático cuando algo cambia (webhooks)',
+   why:'Nuestro sistema tiene que enterarse de que el influencer firmó sin que una persona entre a revisar.',
+   ask:['¿Tienen webhooks? ¿Para qué eventos: abierto, firmado, rechazado, vencido?','¿Cómo comprobamos que el aviso viene de Firme y no de otra parte (por ejemplo, con una clave secreta)?','¿Reintentan el aviso si nuestro sistema no responde?'],
+   good:'Sí, un aviso por cada cambio de estado, con clave de verificación y reintentos.',
+   bad:'No hay webhooks y hay que consultar el estado cada cierto tiempo.'},
+  {id:'precio', p:'must', t:'Un plan acorde a unas 50 firmas al mes',
+   why:'El plan con API publicado incluye 1.000 firmas al mes, veinte veces lo que se usaría. Si no hay algo más ajustado, la agencia paga por capacidad que no usa.',
+   ask:['¿Qué plan nos corresponde para unas 50 firmas al mes?','¿Tienen un plan por uso o de menor volumen?','¿Qué se cobra: cada documento o cada firmante?','¿La verificación por SMS está incluida?'],
+   good:'Hay un plan menor, o se paga por las firmas que efectivamente se usan.',
+   bad:'Solo existe el plan de 1.000 firmas, y con permanencia larga.'},
+
+  {id:'posicion', p:'imp', t:'La firma queda sobre la línea del contrato',
+   why:'La firma del influencer debe verse dentro del contrato, sobre su línea, igual que la de la agencia. Una firma en una hoja aparte al final no es lo que el cliente espera.',
+   ask:['¿Podemos indicar dónde va la firma: página y coordenadas, o un texto marcador dentro del documento?','¿O la firma siempre se agrega en una hoja al final?'],
+   good:'Se indica la posición exacta o un texto marcador.',
+   bad:'La firma siempre va en una hoja anexa.'},
+  {id:'dibujo', p:'imp', t:'El influencer dibuja su firma',
+   why:'Hoy el influencer dibuja su firma con el dedo en el celular, y el contrato firmado muestra ese trazo. El cliente quiere mantener eso.',
+   ask:['¿El firmante puede dibujar su firma en la pantalla?','¿Qué otras formas de firmar hay: escribir el nombre, un botón de aceptación?'],
+   good:'Sí: dibuja con el dedo y el trazo aparece en el PDF.',
+   bad:'Solo hay un botón de "Acepto", sin firma visible.'},
+  {id:'identidad', p:'imp', t:'Cómo se comprueba que firmó la persona correcta',
+   why:'En firma simple, la firma vale porque se puede demostrar que la hizo esa persona. Eso se logra verificando algo que solo ella tiene: su correo, su teléfono o su documento.',
+   ask:['¿Qué métodos de verificación ofrecen: código por correo, código por SMS, foto del documento, selfie?','¿Se pueden combinar dos métodos?','¿Cuáles tienen costo extra?'],
+   good:'Al menos código por correo y por SMS, combinables.',
+   bad:'Solo se verifica que el enlace fue abierto.'},
+  {id:'sello', p:'imp', t:'El PDF firmado no se puede alterar sin que se note',
+   why:'Una vez firmado, si alguien cambia algo del PDF, tiene que quedar a la vista.',
+   ask:['¿El PDF firmado va sellado digitalmente?','¿Al abrirlo en Adobe Reader se ve que no fue modificado?'],
+   good:'Sí: va sellado y el lector de PDF muestra que el documento está íntegro.',
+   bad:'No se sella; solo se guarda la auditoría en su plataforma.'},
+  {id:'custodia', p:'imp', t:'Cuánto tiempo guardan la evidencia',
+   why:'Un contrato se puede discutir años después de firmado. Para entonces, la evidencia tiene que seguir existiendo.',
+   ask:['¿Por cuánto tiempo guardan los documentos y la evidencia?','Si dejamos de ser clientes, ¿qué pasa con esa evidencia? ¿Podemos descargarla completa?','¿En qué país se almacenan los datos?'],
+   good:'Varios años, con descarga completa disponible también al terminar el servicio.',
+   bad:'Plazo corto, o la evidencia se pierde al dejar de pagar.'},
+  {id:'impugnacion', p:'imp', t:'Respaldo si alguien desconoce su firma',
+   why:'Si un influencer dice "yo no firmé esto", la agencia tiene que probar lo contrario: en firma simple, quien presenta la firma debe acreditarla.',
+   ask:['Si una firma se discute en un juicio, ¿qué entregan: un certificado, un informe técnico?','¿Tiene costo?','¿Han tenido casos así?'],
+   good:'Entregan un informe o certificado de la transacción y tienen experiencia en casos reales.',
+   bad:'"Eso es responsabilidad del cliente", sin ningún apoyo.'},
+  {id:'ciclo', p:'imp', t:'Recordatorios, vencimiento, rechazo y anulación',
+   why:'Si el influencer no firma, hay que recordarle. Si pasa mucho tiempo, el envío debe vencer. Si no está de acuerdo, debe poder rechazar. Y la agencia debe poder anular un envío equivocado.',
+   ask:['¿Envían recordatorios automáticos? ¿Se puede elegir cada cuánto?','¿Se puede poner una fecha de vencimiento?','¿El firmante puede rechazar e indicar un motivo?','¿Podemos anular una solicitud ya enviada?'],
+   good:'Todo configurable por API.',
+   bad:'Solo desde su página, o sin opción de anular.'},
+
+  {id:'marca', p:'nice', t:'Los correos muestran el nombre de la agencia',
+   why:'El influencer tiene que reconocer quién le manda el contrato. Un correo que llega solo a nombre de Firme puede parecer sospechoso.',
+   ask:['¿Se puede personalizar el remitente, el logo y el texto del correo?','¿Podemos enviar nosotros el enlace de firma, en vez de que lo envíe Firme?']},
+  {id:'sandbox', p:'nice', t:'Ambiente de prueba y documentación',
+   why:'Antes de pagar hay que probar la integración completa sin firmar contratos reales ni gastar firmas.',
+   ask:['¿Pueden activar el acceso de desarrollador en la cuenta que creé? ¿A qué correo lo asocian?','¿El ambiente de prueba es separado del real? ¿Las firmas de prueba tienen costo o validez legal?','¿Dónde está la documentación técnica de la API?','¿Hay un contacto técnico para dudas durante la integración?']},
+  {id:'multi', p:'nice', t:'Más de un firmante en el futuro',
+   why:'Hoy firma solo el influencer. Más adelante podría haber contratos con dos firmantes externos, por ejemplo cuando el influencer firma junto a su representante.',
+   ask:['¿Se pueden tener varios firmantes y fijar el orden en que firman?']},
+  {id:'comercial', p:'nice', t:'Condiciones comerciales y servicio',
+   why:'Son datos que el cliente va a necesitar para decidir.',
+   ask:['¿Hay permanencia mínima?','¿Facturan en pesos chilenos, con factura electrónica?','¿El pago es mensual o anual?','¿Qué pasa si un mes se supera el límite de firmas?','¿Tienen un compromiso de disponibilidad del servicio (SLA)?']},
+];
+const GROUPS = [
+  {p:'must', name:'Imprescindible', desc:'Si alguna no se cumple, Firme no sirve para este caso.'},
+  {p:'imp', name:'Importante', desc:'Si no se cumple, se puede evaluar un ajuste de nuestro lado.'},
+  {p:'nice', name:'Deseable', desc:'Suma puntos. Se puede resolver por correo si no alcanza el tiempo.'},
+];
+const ANS = [['si','Sí'],['ajuste','Sí, con ajustes'],['no','No'],['pend','Quedaron de responder']];
+const CHECKS = [
+  ['c-extranjero','Respuesta clara sobre los firmantes extranjeros sin RUT.'],
+  ['c-seis','Un sí, un no o un "sí, con ajustes" en las seis preguntas imprescindibles.'],
+  ['c-cotizacion','Compromiso de enviar la cotización por escrito, con fecha.'],
+  ['c-sandbox','Acceso de desarrollador activado, o fecha para activarlo, y a qué correo.'],
+  ['c-docs','Enlace a la documentación técnica de la API.'],
+  ['c-contacto','Nombre y correo de un contacto comercial y de uno técnico.'],
+  ['c-paso','Próximo paso acordado: qué, quién y cuándo.'],
+];
+
+const KEY = 'pauta-firme-v1';
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderReqs(){
+  const root = document.getElementById('reqs');
+  root.innerHTML = GROUPS.map(g => {
+    const items = REQS.filter(r => r.p === g.p).map(r => `
+      <article class="req${state['a-'+r.id] ? ' done' : ''}" id="req-${r.id}">
+        <div class="req-head"><h3>${esc(r.t)}</h3><span class="chip ${r.p}">${g.name}</span></div>
+        <p class="why">${esc(r.why)}</p>
+        <div><div class="ask-l">Qué preguntar</div>
+          <ol>${r.ask.map(a => `<li>${esc(a)}</li>`).join('')}</ol></div>
+        ${r.good ? `<div class="gb"><div class="g"><b>Respuesta buena</b>${esc(r.good)}</div><div class="b"><b>Debería preocuparte</b>${esc(r.bad)}</div></div>` : ''}
+        <div class="answer">
+          <div class="answer-row" role="radiogroup" aria-label="Respuesta de Firme">
+            ${ANS.map(([v,l]) => `<label><input type="radio" name="a-${r.id}" id="a-${r.id}-${v}" value="${v}"${state['a-'+r.id]===v?' checked':''}>${l}</label>`).join('')}
+          </div>
+          <textarea id="n-${r.id}" placeholder="Qué dijeron…" aria-label="Notas: ${esc(r.t)}">${esc(state['n-'+r.id]||'')}</textarea>
+        </div>
+      </article>`).join('');
+    return `<div class="group-title"><span class="chip ${g.p}">${g.name}</span><p>${g.desc}</p></div><div class="req-list">${items}</div>`;
+  }).join('');
+}
+function renderChecks(){
+  const root = document.getElementById('checks');
+  root.innerHTML = CHECKS.map(([id,t]) => `<label for="${id}"><input type="checkbox" id="${id}"${state[id]?' checked':''}><span>${esc(t)}</span></label>`).join('');
+}
+function progress(){
+  const el = document.getElementById('progress');
+  el.innerHTML = GROUPS.map(g => {
+    const list = REQS.filter(r => r.p === g.p);
+    const n = list.filter(r => state['a-'+r.id]).length;
+    const no = g.p === 'must' ? list.filter(r => state['a-'+r.id] === 'no').length : 0;
+    return `<span>${g.name}: <b>${n} de ${list.length}</b> respondidas${no ? ` · <b style="color:var(--must)">${no} con "No"</b>` : ''}</span>`;
+  }).join('');
+}
+function summary(){
+  const label = Object.fromEntries(ANS);
+  const lines = ['RESUMEN REUNIÓN FIRME.CL · 22-sep-2026', ''];
+  GROUPS.forEach(g => {
+    lines.push('## ' + g.name.toUpperCase());
+    REQS.filter(r => r.p === g.p).forEach(r => {
+      const a = state['a-'+r.id]; const n = (state['n-'+r.id]||'').trim();
+      lines.push(`- ${r.t}: ${a ? label[a] : 'sin respuesta'}${n ? '\n    ' + n.replace(/\n/g,'\n    ') : ''}`);
+    });
+    lines.push('');
+  });
+  lines.push('## ANTES DE COLGAR');
+  CHECKS.forEach(([id,t]) => lines.push(`[${state[id]?'x':' '}] ${t}`));
+  return lines.join('\n');
+}
+document.getElementById('gen').addEventListener('click', () => { document.getElementById('resumen').value = summary(); });
+document.getElementById('copy').addEventListener('click', async e => {
+  const ta = document.getElementById('resumen');
+  if (!ta.value) ta.value = summary();
+  try { await navigator.clipboard.writeText(ta.value); e.target.textContent = 'Copiado'; }
+  catch (err) { ta.focus(); ta.select(); e.target.textContent = 'Selecciona y copia con Cmd+C'; }
+  setTimeout(() => { e.target.textContent = 'Copiar'; }, 2500);
+});
+document.getElementById('clear').addEventListener('click', e => {
+  if (e.target.dataset.confirm !== '1') { e.target.dataset.confirm = '1'; e.target.textContent = 'Presiona otra vez para borrar'; setTimeout(() => { e.target.dataset.confirm=''; e.target.textContent='Borrar mis notas'; }, 3000); return; }
+  state = {}; save(); renderReqs(); renderChecks(); progress(); document.getElementById('resumen').value = '';
+  e.target.dataset.confirm=''; e.target.textContent='Borrar mis notas';
+});
+const reqsRoot = document.getElementById('reqs');
+reqsRoot.addEventListener('change', e => {
+  const t = e.target;
+  if (t.type === 'radio') { state[t.name] = t.value; save(); t.closest('.req').classList.add('done'); progress(); }
+});
+reqsRoot.addEventListener('input', e => {
+  if (e.target.tagName === 'TEXTAREA') { state[e.target.id] = e.target.value; save(); }
+});
+document.getElementById('checks').addEventListener('change', e => { state[e.target.id] = e.target.checked; save(); });
+renderReqs(); renderChecks(); progress();
+</script>
