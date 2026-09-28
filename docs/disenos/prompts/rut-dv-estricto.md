@@ -19,7 +19,7 @@ Al terminar:
 
 ## 2. Arquitectura
 
-- Solo cambian las dos funciones `parseRut` y sus pruebas, más el dato de prueba de la sección 6.
+- Solo cambian las dos funciones `parseRut`, y se agregan las pruebas nuevas de la sección 7.
   `computeRutDv`, `normalizeRutInput`, `formatRut`, `formatRutDisplay`, `formatRutInput`,
   `parseOptionalRut` y `RutInput` **conservan su firma y su contrato**.
 - La forma del resultado no cambia: el backend devuelve `{ ok, rut_body, rut_dv }` o
@@ -80,18 +80,16 @@ Casos de referencia, ya calculados:
 - Nada que se conecte a la base: la local es la de pre-producción. Sin migraciones ni seeds.
 - Los mensajes al usuario, en español. Documentación y commits en español.
 
-## 6. Pruebas existentes que cambian (autorizado)
+## 6. Pruebas existentes que ya afirman el comportamiento nuevo
 
-Estas afirman justo el comportamiento que se elimina. **Solo estas** se pueden modificar:
+Estas pruebas existentes ya afirman el comportamiento nuevo (commit `17a8113`): **no las
+modifiques, haz que pasen.**
 
-- `backend/test/rut.test.js`: `parseRut accepts input without DV and computes it` y
-  `parseRut corrects a mistyped digit verificador when body is valid`. Se reemplazan por las que
-  afirman el rechazo.
-- `frontend/src/utils/rut.test.js`: `parseRut accepts without DV and computes it` y
-  `parseRut corrects a mistyped digit verificador when body is valid`. Igual.
-- `backend/test/companyService.test.js`: el dato `rut: '76123456-7'` (dos apariciones, en
-  `validBase` y en la primera prueba) tiene el dígito equivocado; el correcto es `76123456-0`.
-  Cámbialo sin tocar ninguna aserción.
+- `backend/test/rut.test.js`: `parseRut reads the last character as DV when there is no hyphen` y
+  `parseRut rejects a mistyped digit verificador`. Esperan `RUT_DV_MISMATCH` y el mensaje nuevo.
+  Hoy están en rojo.
+- `frontend/src/utils/rut.test.js`: las dos equivalentes, con el mismo nombre. Hoy están en rojo.
+- `backend/test/companyService.test.js`: el dato ya usa un RUT válido, `76123456-0`.
 
 Si cualquier otra prueba existente falla, **no la ajustes: consulta a la mesa.**
 
