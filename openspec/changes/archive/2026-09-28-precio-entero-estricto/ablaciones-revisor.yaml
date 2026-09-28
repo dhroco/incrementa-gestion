@@ -1,0 +1,63 @@
+version: 1
+ablaciones:
+  - id: rechazo-invertido-generar
+    que: >-
+      generateAndPersist debe cortar con 400 VALIDATION_ERROR un precio_numero mal
+      escrito antes de preprocesar, tanto con dryRun:true como en la generación real,
+      sin insert en draft_document ni subida a GCS
+    archivo: backend/services/documentBuilderService.js
+    buscar: 'if (!priceCheck.ok) {'
+    reemplazar: 'if (priceCheck.ok) {'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: grave
+
+  - id: precio-negativo-colado
+    que: >-
+      parsePriceInput debe rechazar un precio negativo (-1290); la regla es entero
+      limpio sin signo, igual en CLP y USD
+    archivo: backend/services/documentBuilderService.js
+    buscar: 'if (/^\d+$/.test(text)) {'
+    reemplazar: 'if (/^-?\d+$/.test(text)) {'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: grave
+
+  - id: formateo-invertido-preproceso
+    que: >-
+      preprocessMissingFieldOverrides solo debe formatear precio_numero y generar
+      precio_texto cuando parsePriceInput acepta; si rechaza, precio_numero debe
+      quedar igual y sin precio_texto
+    archivo: backend/services/documentBuilderService.js
+    buscar: 'if (priceCheck.ok) {'
+    reemplazar: 'if (!priceCheck.ok) {'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: grave
+
+  - id: grupo-punto-mal-formado
+    que: >-
+      parsePriceInput solo debe aceptar grupos de miles de exactamente 3 dígitos
+      separados por punto (rechaza 1.29, 1.2900, 12.90)
+    archivo: backend/services/documentBuilderService.js
+    buscar: '/^\d{1,3}(\.\d{3})+$/'
+    reemplazar: '/^\d{1,3}(\.\d{1,3})+$/'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: borde
+
+  - id: grupo-coma-mal-formado
+    que: >-
+      parsePriceInput solo debe aceptar grupos de miles de exactamente 3 dígitos
+      separados por coma (rechaza 12,5)
+    archivo: backend/services/documentBuilderService.js
+    buscar: '/^\d{1,3}(,\d{3})+$/'
+    reemplazar: '/^\d{1,3}(,\d{1,3})+$/'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: borde
+
+  - id: sin-recorte-de-espacios
+    que: >-
+      parsePriceInput debe aceptar espacios solo en los extremos (' 1290 ') vía
+      trim, no como parte del número
+    archivo: backend/services/documentBuilderService.js
+    buscar: 'const text = String(value).trim()'
+    reemplazar: 'const text = String(value)'
+    prueba: 'cd backend && env -u DATABASE_URL node --test test/documentBuilderService.priceInput.test.js'
+    gravedad: borde
