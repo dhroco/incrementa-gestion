@@ -1,0 +1,17 @@
+version: 1
+dominio: moneda-plantilla
+diseno: docs/disenos/moneda-plantilla.md
+recortes:
+  - id: moneda-plantilla-usd
+    objetivo: >
+      Que la plantilla tenga moneda (currency_code, CLP o USD), que precio_numero se escriba según
+      esa moneda (US$1,290 en USD, igual que hoy en CLP) y que la cláusula 3.1 de CONTRATO_0016 y
+      CONTRATO_0017 deje de imprimir «(Tipo de moneda País)» y diga la moneda en palabras.
+    depende_de: []
+    fuera: >
+      Decimales, entrada con coma de miles, elegir la moneda desde la interfaz, otras monedas,
+      contratos ya generados y las plantillas chilenas.
+    por_que_este_tamano: >
+      Una migración (columna y texto de dos plantillas, con respaldo) y un cambio acotado en
+      documentBuilderService: cargar la plantilla antes de formatear el precio. Sin cambios de API
+      ni de frontend.
