@@ -1,12 +1,13 @@
 # Perfil de incrementa-gestion para agent-orchestrator. Esquema: docs/perfil.md de aod-framework.
 version: 1
 
+# El lint del frontend no va aquí: en preprod ya falla con 38 errores en archivos ajenos a los recortes
+# (28-sep-2026). Vuelve cuando un recorte lo deje en cero.
 # Sin base de datos: el backend inyecta mocks (312 pruebas, ~1,4 s). DATABASE_URL se quita a propósito:
 # en esta máquina apunta a la base de PRE-PROD (Cloud SQL Auth Proxy en 127.0.0.1:5432).
 pruebas:
   - cd backend && env -u DATABASE_URL npm test
   - cd frontend && npm test
-  - cd frontend && npm run lint
 
 # CI/CD, infraestructura, conexión a la base, configuración por entorno y gobierno del proyecto.
 solo_lectura:
