@@ -1,0 +1,181 @@
+version: 1
+ablaciones:
+  - id: back-dv-no-se-compara
+    que: parseRut del backend rechaza el RUT cuyo dígito no es el módulo 11 del cuerpo (núcleo del cambio)
+    archivo: backend/utils/rut.js
+    buscar: "  if (dv !== computeRutDv(body)) {"
+    reemplazar: "  if (false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: grave
+
+  - id: back-dv-se-reemplaza-al-aceptar
+    que: misma ruptura que back-dv-no-se-compara, cazada por otro camino (validateCompanyPayload con RUT de empresa 12.345.678-9 y representante con dígito 9) para confirmar que el servicio de empresa depende de la comparación
+    archivo: backend/utils/rut.js
+    buscar: "  if (dv !== computeRutDv(body)) {"
+    reemplazar: "  if (dv !== computeRutDv(body) && false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js"
+    gravedad: grave
+
+  - id: back-cuerpo-acepta-k
+    que: el cuerpo debe ser solo dígitos; con K permitida en el cuerpo, 1K34567-4 dejaría de ser RUT_INVALID
+    archivo: backend/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9K]{7,8}$/.test(body)) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: grave
+
+  - id: back-cuerpo-seis-digitos
+    que: largo mínimo del cuerpo es 7; las pruebas usan 123456 (cuerpo de 5), así que un cuerpo de 6 dígitos no está cubierto. Probable sobreviviente
+    archivo: backend/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9]{6,8}$/.test(body)) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: back-cuerpo-nueve-digitos
+    que: largo máximo del cuerpo es 8; 1234567890 debe dar RUT_INVALID y no RUT_DV_MISMATCH
+    archivo: backend/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9]{7,9}$/.test(body)) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: back-dv-caracter-invalido
+    que: la spec exige RUT_INVALID para un dígito fuera de 0-9/K (p. ej. 12345678-X); sin esta regla sale RUT_DV_MISMATCH. Igual se rechaza, pero con código distinto al de la spec; ninguna prueba envía un dígito así. Probable sobreviviente
+    archivo: backend/utils/rut.js
+    buscar: "  if (!/^[0-9K]$/.test(dv)) {"
+    reemplazar: "  if (false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: back-k-minuscula
+    que: la k minúscula se normaliza a K antes de comparar con el módulo 11
+    archivo: backend/utils/rut.js
+    buscar: "  const upper = normalizeRutInput(input).toUpperCase()"
+    reemplazar: "  const upper = normalizeRutInput(input)"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: identidad-rut-rechazado-se-guarda
+    que: validateIdentityDocument (proveedor persona natural chilena) no produce canonical cuando parseRut rechaza; sin la guarda quedaría ok con canonical undefined-undefined
+    archivo: backend/utils/identityDocument.js
+    buscar: "  if (!r.ok) return { ok: false, message: r.message }"
+    reemplazar: ""
+    prueba: "cd backend && env -u DATABASE_URL node --test test/identityDocument.rutDv.test.js"
+    gravedad: grave
+
+  - id: empresa-rep-legal-error-ignorado
+    que: validateCompanyPayload rechaza el payload cuando el RUT del representante legal no pasa parseRut (dígito 9 o sin dígito)
+    archivo: backend/services/companyService.js
+    buscar: "    errors.push(rutParsed.message || `El RUT del representante legal ${n} no es válido.`)"
+    reemplazar: ""
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js"
+    gravedad: grave
+
+  - id: empresa-rep-legal-sin-dv-rellenado
+    que: si al representante le falta el dígito, el servicio no lo completa. Se rompe rellenando un 5 fijo (el dígito correcto de 12345678), como haría quien volviera a calcular el dígito
+    archivo: backend/services/companyService.js
+    buscar: "  const combined = `${b}${d}`"
+    reemplazar: "  const combined = d ? `${b}${d}` : `${b}5`"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js"
+    gravedad: grave
+
+  - id: front-dv-no-se-compara
+    que: parseRut del frontend rechaza el dígito que no corresponde; formatRutInput conserva lo tipeado
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (dv !== computeRutDv(body)) {"
+    reemplazar: "  if (false) {"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: grave
+
+  - id: front-cuerpo-acepta-k
+    que: el cuerpo del frontend debe ser solo dígitos
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9K]{7,8}$/.test(body)) {"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: front-cuerpo-seis-digitos
+    que: largo mínimo 7 en el frontend; ningún caso de prueba trae cuerpo de 6 dígitos. Probable sobreviviente
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9]{6,8}$/.test(body)) {"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: front-k-minuscula
+    que: el frontend normaliza la k minúscula a K antes de comparar con el módulo 11
+    archivo: frontend/src/utils/rut.js
+    buscar: "  const upper = normalizeRutInput(input).toUpperCase()"
+    reemplazar: "  const upper = normalizeRutInput(input)"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  # Vuelta 2: las tres del Arquitecto que sobrevivieron corrían pruebas viejas (restauradas a HEAD).
+  # Se repiten apuntando a los archivos nuevos donde vive la cobertura, para saber si el hueco es real.
+  - id: back-k-se-escribe-cero-prueba-nueva
+    que: computeRutDv escribe K cuando el módulo da 10; con '0' el RUT 10.000.013-K (válido) se rechazaría. Cruce de dv-k-backend contra la prueba nueva «Verificador K is accepted in either case»
+    archivo: backend/utils/rut.js
+    buscar: "if (mod === 10) return 'K'"
+    reemplazar: "if (mod === 10) return '0'"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.dvEstricto.test.js"
+    gravedad: grave
+
+  - id: front-k-se-escribe-cero-prueba-nueva
+    que: cruce de dv-k-frontend contra src/utils/rut.dvEstricto.test.js; un RUT terminado en K dejaría de aceptarse en el formulario
+    archivo: frontend/src/utils/rut.js
+    buscar: "if (mod === 10) return 'K'"
+    reemplazar: "if (mod === 10) return '0'"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: grave
+
+  - id: rep-legal-descarta-dv-prueba-nueva
+    que: cruce de rep-legal-pierde-el-dv contra companyService.rutDv.test.js; si se valida solo el cuerpo, 12345678 se lee como cuerpo 1234567 + dígito 8 y el representante válido queda rechazado (con otro cuerpo se guardaría un RUT distinto al tipeado)
+    archivo: backend/services/companyService.js
+    buscar: "  const combined = `${b}${d}`"
+    reemplazar: "  const combined = b"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js"
+    gravedad: grave
+
+  - id: empresa-edicion-rut-malo-silenciado
+    que: en la edición parcial (sin requireAll), un RUT de empresa con dígito equivocado debe dar error; sin este push la edición responde ok y el RUT tipeado se descarta en silencio (rut_body undefined). La prueba 3.1 usa requireAll, que cubre la otra rama. Probable sobreviviente
+    archivo: backend/services/companyService.js
+    buscar: "    errors.push(rutParsed.message)"
+    reemplazar: "    void 0"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js test/companyService.test.js test/companyApi.test.js"
+    gravedad: grave
+
+  - id: front-dv-caracter-invalido
+    que: el frontend da «El RUT ingresado no es válido.» para un dígito fuera de 0-9/K (12345678-X); sin la regla sale el mensaje de dígito que no corresponde. Ninguna prueba envía un dígito así. Probable sobreviviente
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (!/^[0-9K]$/.test(dv)) {"
+    reemplazar: "  if (false) {"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  - id: front-cuerpo-nueve-digitos
+    que: largo máximo del cuerpo es 8 en el frontend; 1234567890 debe dar «no es válido» y no «dígito no corresponde»
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (!/^[0-9]{7,8}$/.test(body)) {"
+    reemplazar: "  if (!/^[0-9]{7,9}$/.test(body)) {"
+    prueba: "cd frontend && npx vitest run src/utils/rut.dvEstricto.test.js"
+    gravedad: borde
+
+  # Vuelta 3: el arreglo agregó pruebas (edición parcial, cuerpo de 6, dígito X). Se cruza la nueva
+  # prueba de edición parcial con una ruptura distinta a borrar el push: acotar la condición.
+  - id: empresa-edicion-condicion-solo-alta
+    que: en la edición parcial, el RUT de empresa con dígito equivocado se rechaza; si la regla se acota a requireAll, la edición responde ok y descarta el RUT tipeado en silencio. Cruce de la prueba nueva «Partial company edit rejects a mistyped RUT»
+    archivo: backend/services/companyService.js
+    buscar: "  if (rutInput != null && rutParsed && !rutParsed.ok) {"
+    reemplazar: "  if (requireAll && rutInput != null && rutParsed && !rutParsed.ok) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.rutDv.test.js"
+    gravedad: grave
+
+  - id: front-form-rep-legal-dv-ignorado
+    que: el formulario de empresa (validateHeadquartersForCompanySubmit) bloquea el envío cuando el RUT del representante 1 trae un dígito que no corresponde; ninguna prueba del frontend lo envía mal. El backend lo rechaza igual (empresa-rep-legal-error-ignorado), por eso borde. Probable sobreviviente
+    archivo: frontend/src/utils/companyFormPayload.js
+    buscar: "  if (!rutLegal1Check.ok) {"
+    reemplazar: "  if (false) {"
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.test.js src/utils/rut.dvEstricto.test.js"
+    gravedad: borde

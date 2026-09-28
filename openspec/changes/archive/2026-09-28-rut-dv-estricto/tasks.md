@@ -1,0 +1,23 @@
+## 1. parseRut estricto
+
+- [x] 1.1 Reescribir `parseRut` en `backend/utils/rut.js`: último carácter = dígito verificador; cuerpo solo dígitos de largo 7 u 8; rechazar con `RUT_EMPTY`, `RUT_INVALID` o `RUT_DV_MISMATCH` y los mensajes del diseño. Borrar la rama que reemplaza el dígito, el comentario «típico error de tipeo» y la regla de largo `<= 8`. Actualizar el JSDoc. No cambiar `computeRutDv` ni `normalizeRutInput`.
+- [x] 1.2 Reescribir `parseRut` en `frontend/src/utils/rut.js` con la misma estructura y los mismos mensajes, devolviendo `{ ok, rutBody, rutDv }` o `{ ok: false, message }`. No cambiar la firma de `computeRutDv`, `normalizeRutInput`, `formatRut`, `formatRutDisplay`, `formatRutInput`, `parseOptionalRut` ni `RUT_INPUT_PLACEHOLDER`.
+
+## 2. Pruebas de parseRut
+
+Cada prueba llama la función y mira el resultado; ninguna lee el código fuente.
+
+- [x] 2.1 En `backend/test/rut.dvEstricto.test.js` (archivo nuevo: la guarda de AOD protege los archivos de prueba existentes completos), agregar pruebas nuevas que cubran cada fila de la tabla de referencia, con `code` y `message`, una por escenario de la spec `chilean-rut-validation`: «Valid 8-digit RUT with or without separators», «Valid 7-digit RUT», «Verificador K is accepted in either case», «Mistyped verificador is rejected», «Eight digits without a hyphen are body plus digit», «Wrong length is invalid», «A non-digit inside the body is invalid» y «Empty input is required». En los rechazos, afirmar además que el resultado no trae `rut_body` ni `rut_dv` (sin dígito corregido) y que el `message` no contiene el valor enviado ni el dígito esperado. `12.345.678-9` solo como caso `RUT_DV_MISMATCH`, nunca como RUT válido.
+- [x] 2.2 En `frontend/src/utils/rut.dvEstricto.test.js` (archivo nuevo: la guarda de AOD protege los archivos de prueba existentes completos), agregar las pruebas equivalentes de `parseRut` para los mismos ocho escenarios (con `message`, sin `code`; en los rechazos, sin `rutBody` ni `rutDv`), y una para el escenario «Blur keeps a mistyped RUT»: `formatRutInput('12.345.678-9')` === `12.345.678-9`. No modificar las pruebas existentes.
+- [x] 2.3 En los mismos archivos nuevos de 2.1 y 2.2, pruebas que cazan las ablaciones de borde: cuerpo de 6 dígitos (`1234567` → `RUT_INVALID` / «El RUT ingresado no es válido.») y dígito fuera de `0`–`9`/`K` (`12345678-X` → el mismo código y mensaje, no el de dígito que no corresponde).
+
+## 3. Empresa y proveedor chileno
+
+- [x] 3.1 En `backend/test/companyService.rutDv.test.js` (archivo nuevo: la guarda de AOD protege los archivos de prueba existentes completos), prueba nueva para el escenario «Company RUT with a mistyped digit»: `validateCompanyPayload({ ...validBase, rut: '12.345.678-9' }, { requireAll: true })` da `ok: false` y los errores incluyen «El dígito verificador no corresponde al RUT ingresado.».
+- [x] 3.2 En el mismo archivo, pruebas nuevas del representante legal por campos separados, una por escenario: «Legal representative body and matching digit» (cuerpo `12345678` y dígito `5`: `ok: true` y `data.rut_body_legal_representative_1` = `12345678`, `data.rut_dv_legal_representative_1` = `5`); «Legal representative digit does not match» (dígito `9`: `ok: false`); «Legal representative body without a digit» (sin `rut_dv_legal_representative_1`: `ok: false`). No modificar las pruebas existentes.
+- [x] 3.3 En `backend/test/identityDocument.rutDv.test.js` (archivo nuevo: la guarda de AOD protege los archivos de prueba existentes completos), pruebas nuevas con `validateIdentityDocument` y el tipo `RUT` (`rut_cl`): escenario «Chilean RUT with a mismatched verificador is rejected» (`12.345.678-9` da `ok: false`, mensaje «El dígito verificador no corresponde al RUT ingresado.» y sin `canonical` `12345678-5`); escenario «Chilean RUT with a matching verificador is stored canonically» (`12.345.678-5` da `ok: true` con `canonical` `12345678-5`). Sin prueba de API nueva.
+- [x] 3.4 En `backend/test/companyService.rutDv.test.js`, prueba de la edición parcial: `validateCompanyPayload({ rut: '12.345.678-9' }, { requireAll: false })` da `ok: false` y los errores incluyen «El dígito verificador no corresponde al RUT ingresado.».
+
+## 4. Verificación
+
+- [x] 4.1 Correr `cd backend && env -u DATABASE_URL npm test` y `cd frontend && npm test`. Las dos en verde (backend 329, frontend 124). El lint del frontend queda como deuda para un recorte propio: salió del perfil (28cffe2) porque en preprod ya falla con 38 errores en archivos ajenos. Si falla una prueba existente que esta tarea no manda a tocar, no ajustarla: consultar a la mesa.

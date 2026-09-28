@@ -1,0 +1,24 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan se puede implementar: proposal, design, specs y tasks calzan con prompt-propose.md, openspec validate --strict pasa y no hay pruebas existentes que se opongan (solo las 4 ya en rojo que el cambio debe poner en verde). Amarillo porque no pude ejecutar la suite ni el lint del frontend en esta revisión.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "frontend (npm test, npm run lint)",
+      "que": "La revisión no pudo correr las pruebas ni el lint del frontend: el entorno negó el permiso para ejecutar comandos dentro de frontend/. Lo revisado ahí se hizo leyendo frontend/src/utils/rut.test.js, companyFormPayload.test.js y resolveCompanyVariablePreview.test.js: todos usan RUT con dígito válido (76.543.210-3, 11.111.111-1, 12345678/5) o formatRut, que no pasa por parseRut. En backend sí se corrieron rut, companyService, companyApi, identityDocument, supplierService.document, supplierApi y mcpServer: 61 en verde y 2 en rojo, las dos ya previstas en rut.test.js.",
+      "como_arreglar": "Antes de aceptar, el humano o el desarrollador corre `cd frontend && npm test && npm run lint` y confirma que las únicas pruebas en rojo antes del apply son las dos previstas de rut.test.js."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/rut-dv-estricto/tasks.md",
+      "que": "Corregido en esta revisión: las tareas de prueba no nombraban los escenarios de la spec, no pedían comprobar que un rechazo no trae dígito corregido ni el valor enviado (lo exige la spec), y 3.3 no pedía comprobar que no queda el canónico corregido.",
+      "como_arreglar": "Ya aplicado: 2.1, 2.2, 3.1, 3.2 y 3.3 nombran cada escenario y dicen qué afirmar. No queda nada pendiente."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/services/companyService.js (validateCompanyPayload)",
+      "que": "Con requireAll y un RUT inválido, el mismo mensaje se agrega dos veces a errors. Ya pasaba antes del cambio, y la prueba 3.1 usa 'incluye', así que no bloquea.",
+      "como_arreglar": "Fuera de este recorte; queda anotado para que el Arquitecto decida si lo trata en otro cambio."
+    }
+  ]
+}
