@@ -406,7 +406,7 @@ Before dropping `rut_*` columns, the migration MUST dump every row of `supplier_
 
 `supplierService.validatePayload` MUST resolve `document_type_code` from the payload or, when omitted, from the unique catalog row for `country_code`. It MUST validate `document_number` through a validator registry keyed by `validator_key`. The registry MUST have three keys:
 
-- `rut_cl` MUST call existing `parseRut` from `backend/utils/rut.js` without rewriting it
+- `rut_cl` MUST call `parseRut` from `backend/utils/rut.js` and MUST NOT reimplement the módulo 11 check. A verificador digit that does not match MUST be rejected with message `El dígito verificador no corresponde al RUT ingresado.` and MUST NOT be replaced with the computed digit
 - `pattern` MUST apply `identity_document_type.pattern` (a regex, or a JSON object keyed by `persona_natural` / `empresa`) after trim and uppercase only, and MUST persist the identifier with its punctuation intact
 - `pattern_compact` MUST apply the same `pattern` field after also stripping spaces, dots, and hyphens, and MUST persist that compacted form
 
@@ -417,8 +417,20 @@ Input aliases `rut` (persona natural), `rut_empresa` (empresa), and `rut_rep_leg
 #### Scenario: Invalid Chilean RUT still rejected
 
 - **WHEN** an authorized client posts a Chilean supplier with an invalid RUT
-- **THEN** the response is HTTP 400 with the same Spanish invalid-RUT message used today
+- **THEN** the response is HTTP 400 with the Spanish message `El RUT ingresado no es válido.`
 - **AND** the message does not echo the submitted value
+
+#### Scenario: Chilean RUT with a mismatched verificador is rejected
+
+- **WHEN** a Chilean document of type `rut_cl` is validated with `document_number` `12.345.678-9`
+- **THEN** validation fails with message `El dígito verificador no corresponde al RUT ingresado.`
+- **AND** the value is not stored as canonical `12345678-5`
+
+#### Scenario: Chilean RUT with a matching verificador is stored canonically
+
+- **WHEN** a Chilean document of type `rut_cl` is validated with `document_number` `12.345.678-5`
+- **THEN** validation succeeds
+- **AND** the canonical value is `12345678-5`
 
 #### Scenario: Mexican persona natural RFC accepted
 

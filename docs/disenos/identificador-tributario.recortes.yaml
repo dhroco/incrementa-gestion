@@ -1,0 +1,16 @@
+version: 1
+dominio: identificador-tributario
+diseno: docs/disenos/identificador-tributario.md
+recortes:
+  - id: rut-dv-estricto
+    objetivo: >
+      Que parseRut, en backend y frontend, rechace un RUT cuyo dígito verificador no corresponde al
+      módulo 11, en vez de reemplazarlo sin avisar, y que exija siempre el dígito verificador
+      (el último carácter de la entrada es siempre el dígito).
+    depende_de: []
+    fuera: >
+      Moneda de las plantillas mexicanas, el placeholder 12.345.678-9 de openspec/config.yaml,
+      unificar las dos copias de parseRut, RFC y otros países, y revalidar datos guardados.
+    por_que_este_tamano: >
+      Dos funciones puras equivalentes y sus pruebas. No toca el modelo de datos, la API ni
+      migraciones; los llamadores solo propagan el mensaje de error que ya propagaban.

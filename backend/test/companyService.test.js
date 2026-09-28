@@ -5,12 +5,12 @@ const { validateCompanyPayload } = require('../services/companyService')
 const validBase = {
   business_name: 'Dynamics Corp. SpA',
   short_name: 'Dynamics',
-  rut: '76123456-7'
+  rut: '76123456-0'
 }
 
 test('validateCompanyPayload requires short_name on create', () => {
   const result = validateCompanyPayload(
-    { business_name: 'Dynamics Corp. SpA', rut: '76123456-7' },
+    { business_name: 'Dynamics Corp. SpA', rut: '76123456-0' },
     { requireAll: true }
   )
   assert.equal(result.ok, false)

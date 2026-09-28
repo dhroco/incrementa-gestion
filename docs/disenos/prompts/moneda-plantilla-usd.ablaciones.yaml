@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# de su lado: las pruebas nuevas viven en archivos nuevos.
+ablaciones:
+  - id: clp-miles-con-punto
+    que: en CLP el precio sigue con punto de miles; hace falta una prueba con la moneda CLP explícita
+    archivo: backend/services/documentBuilderService.js
+    buscar: "return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })"
+    reemplazar: "return n.toLocaleString('en-US', { maximumFractionDigits: 0 })"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: coherencia-pais-plantilla
+    que: al mover la carga de la plantilla, el control de país proveedor–plantilla sigue rechazando
+    archivo: backend/services/documentBuilderService.js
+    buscar: "templateRow.country_code !== supplier.country_code"
+    reemplazar: "templateRow.country_code === supplier.country_code"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

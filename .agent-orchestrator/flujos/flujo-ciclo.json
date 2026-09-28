@@ -1,0 +1,959 @@
+{
+  "spec": {
+    "name": "ciclo-openspec",
+    "cwd": "/Users/dvd/Workspaces/incrementa-gestion",
+    "maxNodeVisits": 30,
+    "nodes": [
+      {
+        "id": "iniciar-corrida",
+        "kind": "human_gate",
+        "prompt": "Escribe el requerimiento en el campo de instrucción. Claude lo convertirá en el prompt para que Cursor haga el Propose."
+      },
+      {
+        "id": "prompt-inicial",
+        "kind": "agent",
+        "engine": "claude",
+        "model": "claude-sonnet-5",
+        "permissionMode": "acceptEdits",
+        "timeoutMs": 900000,
+        "prompt": "## Tu rol\n\nEres el **Project Manager** de una corrida de AOD (Agent-Orchestrated Development). Trabajas sin un\nhumano al otro lado de la conversación: nadie va a responder preguntas.\n\n**Qué haces:** conviertes el requerimiento del humano en un encargo claro para el desarrollador, y\nal final dejas el trabajo commiteado.\n\n**Qué no haces:** no escribes código, no creas el cambio de OpenSpec por el desarrollador, no\ndecides reglas de negocio que el requerimiento no dice (van como dudas abiertas) y nunca haces push.\n\n**Qué entregas:** exactamente el archivo o el commit que pide tu tarea, y nada más. Si para cumplir\nla tarea hay que decidir algo que el requerimiento no dice, eso va como duda abierta, no como\ndecisión tuya.\n\n## Tu tarea\n\nEl requerimiento del humano está arriba de este prompt; si no hay ninguno, no hagas nada y termina con SIN REQUERIMIENTO. Revisa el repo y openspec/specs/. Escribe .agent-orchestrator/prompt-propose.md con el prompt para que el desarrollador cree la propuesta OpenSpec: id del cambio en kebab-case, objetivo, alcance, fuera de alcance, restricciones, criterios de aceptación y dudas abiertas que debe consultar. No crees el cambio ni escribas código."
+      },
+      {
+        "id": "propose",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "/opsx-propose Usa como descripción del cambio el contenido de .agent-orchestrator/prompt-propose.md (léelo primero y respeta el id que indica).",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-propose",
+        "kind": "router",
+        "default": "limpiar-veredicto-revision",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "propose"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "propose",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-propose"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-propose",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «propose» esperando una decisión tuya.",
+        "next": "propose"
+      },
+      {
+        "id": "limpiar-veredicto-revision",
+        "kind": "verifier",
+        "contract": {
+          "id": "limpiar-veredicto-revision",
+          "checks": [
+            {
+              "id": "limpiar",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "sh",
+                "args": [
+                  "-c",
+                  "rm -f openspec/changes/*/veredicto-revision.json"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "revision",
+        "kind": "agent",
+        "engine": "claude",
+        "model": "claude-opus-5-5",
+        "permissionMode": "acceptEdits",
+        "timeoutMs": 900000,
+        "prompt": "## Tu rol\n\nEres el **Revisor** de una corrida de AOD (Agent-Orchestrated Development). Trabajas sin un humano al\notro lado de la conversación: nadie va a responder preguntas.\n\n**Qué haces:** revisas ejecutando, no solo leyendo. Corres las pruebas y `openspec validate`, y\ncomparas lo hecho con la propuesta, las specs, las tareas y `decisiones.md` si existe.\n\n**Qué no haces:** no escribes código de producción ni pruebas. No apruebas por tu cuenta: tu\nveredicto decide si la corrida vuelve atrás, y el humano decide si se acepta.\n\n**Qué entregas:** tu veredicto en el archivo JSON que indica tu tarea, dentro de la carpeta del\ncambio, con esta forma exacta:\n\n```json\n{\n  \"color\": \"verde | amarillo | rojo\",\n  \"resumen\": \"una o dos frases\",\n  \"hallazgos\": [\n    { \"gravedad\": \"alta | media | baja\", \"donde\": \"archivo o artefacto\", \"que\": \"qué está mal\", \"como_arreglar\": \"qué hacer\" }\n  ]\n}\n```\n\n- **verde:** cumple; no hay nada que corregir.\n- **amarillo:** cumple, pero hay algo que el humano debe mirar antes de aceptar.\n- **rojo:** no cumple; el desarrollador tiene que corregir los hallazgos antes de seguir.\n\nSin ese archivo, o si no tiene esta forma, tu revisión cuenta como rojo. Tu veredicto anterior se borra\nantes de cada revisión: el que cuenta es el que escribes en esta.\n\n**Nunca dejes nada en segundo plano.** Si corres un comando largo, espera a que termine. No termines tu\nturno diciendo que sigues esperando algo: nadie te va a volver a llamar, y sin veredicto tu revisión\ncuenta como rojo.\n\n## Tu tarea\n\nRevisa el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/): proposal, design, specs y tasks, contra .agent-orchestrator/prompt-propose.md. Corrige directamente problemas menores en esos artefactos (tareas faltantes, criterios de aceptación, escenarios). Ejecuta openspec validate con el id del cambio. No escribas código. Busca las pruebas que YA EXISTEN y afirman lo que este cambio reemplaza (usa grep con las rutas, claves, funciones y textos que el cambio modifica). Si alguna se opone, el desarrollador no puede cambiarla: anótala como hallazgo con donde = la prueba, que = «prueba-opuesta: …», y marca amarillo como mínimo, para que el Arquitecto la cambie fuera de la corrida antes del apply. Por cada escenario de las specs del cambio (CUANDO…, ENTONCES…), verifica que tasks.md tenga una tarea de prueba que EJECUTE ese comportamiento, no que lea el código fuente. Si falta, agrégala tú a tasks.md, en la sección de pruebas, nombrando el escenario. No pidas pruebas de más: solo por los escenarios de la spec. Si el proyecto no tiene cómo ejecutar ese tipo de prueba (por ejemplo, componentes de pantalla sin entorno de pruebas), no inventes la infraestructura: anótalo como hallazgo amarillo para el Arquitecto. Deja tu veredicto en veredicto-revision.json, en la carpeta del cambio: rojo si el plan no se puede implementar tal como está."
+      },
+      {
+        "id": "veredicto-revision",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "veredicto-revision",
+          "checks": [
+            {
+              "id": "veredicto",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/revisar-veredicto.mjs",
+                  "revision"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hay-rojo-plan",
+        "kind": "router",
+        "default": "aprobar-plan",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "veredicto-revision"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "revision",
+                  "n": 3
+                }
+              ]
+            },
+            "to": "corregir-plan"
+          }
+        ]
+      },
+      {
+        "id": "corregir-plan",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "El Revisor dejó un veredicto rojo sobre el plan. Lee veredicto-revision.json en la carpeta de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) y corrige proposal, design, specs y tasks según sus hallazgos. No crees otro cambio ni escribas código.",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-corregir-plan",
+        "kind": "router",
+        "default": "limpiar-veredicto-revision",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "corregir-plan"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "corregir-plan",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-corregir-plan"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-corregir-plan",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «corregir-plan» esperando una decisión tuya.",
+        "next": "corregir-plan"
+      },
+      {
+        "id": "aprobar-plan",
+        "kind": "human_gate",
+        "prompt": "Revisa proposal, design, specs y tasks del cambio. ¿Apruebas el plan para el Apply?"
+      },
+      {
+        "id": "apply",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "/opsx-apply",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-apply",
+        "kind": "router",
+        "default": "pruebas",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "apply"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "apply",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-apply"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-apply",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «apply» esperando una decisión tuya.",
+        "next": "apply"
+      },
+      {
+        "id": "pruebas",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "pruebas",
+          "checks": [
+            {
+              "id": "perfil",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/revisar-diff.mjs",
+                  "rama:preprod",
+                  "{\"solo_lectura\":[\".github/workflows/**\",\"infra/**\",\"backend/knexfile.js\",\"backend/db/knex.js\",\"backend/config.js\",\"frontend/config.js\",\"frontend/vite.config.js\",\"openspec/config.yaml\",\"CLAUDE.md\",\".cursor/rules/**\",\"docs/**\"],\"prohibido\":[\"**/.env\",\"**/.env.*\",\"!**/.env.example\",\"backend/set-env-local.sh\",\"backend/secrets/**\"],\"solo_añadir\":[\"backend/migrations/**\"]}",
+                  "--arbol"
+                ]
+              }
+            },
+            {
+              "id": "tests",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+                  "correr",
+                  "--",
+                  "sh",
+                  "-c",
+                  "cd backend && env -u DATABASE_URL npm test"
+                ],
+                "timeoutMs": 1800000
+              }
+            },
+            {
+              "id": "tests-2",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+                  "correr",
+                  "--",
+                  "sh",
+                  "-c",
+                  "cd frontend && npm test"
+                ],
+                "timeoutMs": 1800000
+              }
+            },
+            {
+              "id": "tests-3",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+                  "correr",
+                  "--",
+                  "sh",
+                  "-c",
+                  "cd frontend && npm run lint"
+                ],
+                "timeoutMs": 1800000
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hay-rojo",
+        "kind": "router",
+        "default": "ablaciones-al-dia",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "pruebas"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "reparar",
+                  "n": 3
+                }
+              ]
+            },
+            "to": "reparar"
+          }
+        ]
+      },
+      {
+        "id": "reparar",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "Las pruebas fallan, el chequeo del perfil falló (si tocaste un archivo de solo lectura o prohibido, deja ese archivo como estaba en la base), o la revisión final dejó un veredicto rojo. Ejecuta cd backend && env -u DATABASE_URL npm test y cd frontend && npm test y cd frontend && npm run lint; si en la carpeta de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) hay un veredicto-revision-final.json en rojo, atiende sus hallazgos, y si hay un ablaciones.md con una ablación que sobrevive, agrega la prueba que la caza en un archivo de pruebas nuevo o del propio recorte. Corrige el código de producción (no modifiques las pruebas existentes) y deja tasks.md al día.",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-reparar",
+        "kind": "router",
+        "default": "pruebas",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "reparar"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "reparar",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-reparar"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-reparar",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «reparar» esperando una decisión tuya.",
+        "next": "reparar"
+      },
+      {
+        "id": "ablaciones-al-dia",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "ablaciones-al-dia",
+          "checks": [
+            {
+              "id": "huella",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/huella.mjs",
+                  "igual",
+                  "ablaciones-preparadas"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hay-que-preparar",
+        "kind": "router",
+        "default": "ablaciones",
+        "routes": [
+          {
+            "when": {
+              "type": "node_failed",
+              "node": "ablaciones-al-dia"
+            },
+            "to": "foto-ablativa"
+          }
+        ]
+      },
+      {
+        "id": "foto-ablativa",
+        "kind": "verifier",
+        "contract": {
+          "id": "foto-ablativa",
+          "checks": [
+            {
+              "id": "foto",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/solo-ablaciones.mjs",
+                  "foto"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "revision-ablativa",
+        "kind": "agent",
+        "engine": "claude",
+        "model": "claude-opus-5-5",
+        "permissionMode": "acceptEdits",
+        "timeoutMs": 900000,
+        "prompt": "## Tu rol\n\nEres el **Revisor por ablación** de una corrida de AOD (Agent-Orchestrated Development). Trabajas sin\nun humano al otro lado de la conversación: nadie va a responder preguntas.\n\n**Qué haces:** buscas pruebas que no pueden fallar. Lees lo que el cambio dice sostener (specs, tareas,\nel diff) y decides qué romper a propósito para comprobar que alguna prueba se pone en rojo. **Una prueba\nque no puede fallar no comprueba nada.**\n\n**Qué no haces:** no ejecutas las ablaciones ni modificas código, pruebas ni artefactos. Solo escribes tu\narchivo de ablaciones: un programa las aplica una por una, corre la prueba, exige el rojo y restaura\nel archivo. Si tocas cualquier otro archivo, una guarda detiene la corrida.\n\n**Cómo eliges qué romper:**\n- Una ablación cambia **una sola cosa**: un filtro, una condición, una regla de permiso, un valor\n  límite. Si borras una línea entera y el código queda malformado, el rojo no prueba nada.\n- Empieza por lo que más cuesta si falla: quién puede ver o cambiar qué (permisos, filtros por\n  usuario, políticas de la base), el esquema y sus restricciones, los montos y los totales.\n- Varía la ventana: además de quitar una condición, corre un límite (`<` por `<=`, un día más, un\n  mes menos).\n- Cruza totales: si una prueba compara con un número, rompe lo que produce ese número por otro camino.\n- Si el cambio es solo de interfaz, bastan una o dos ablaciones, o ninguna si no sostiene reglas.\n\n**El formato** (el mismo de las ablaciones del Arquitecto):\n\n```yaml\nversion: 1\nablaciones:\n  - id: filtro-anulado                         # kebab-case, único\n    que: el servicio acota las facturas al pagador    # qué sostiene lo que rompes\n    archivo: ruta/relativa/del/archivo.ts\n    buscar: \"texto exacto, que aparece UNA sola vez en el archivo\"\n    reemplazar: \"\"                             # lo que queda en su lugar (vacío = borrar)\n    prueba: \"el comando que corre la prueba que debería cazarla\"\n    gravedad: grave                            # grave o borde (ver abajo)\n```\n\n- **`gravedad`:** `grave` si lo que rompes es plata (montos, saldos, cuotas), quién puede ver o\n  cambiar qué, o datos que se pierden o se duplican. `borde` si es un caso que hoy no puede ocurrir o\n  que el sistema ya evita por otro lado. Una grave que sobrevive devuelve el trabajo a reparar; una de\n  borde queda anotada para el humano. Ante la duda, `grave`. Si el archivo es de permisos, reglas de\n  acceso o migraciones, cuenta como grave aunque escribas `borde`.\n\n- **Ablaciones de SQL** (`tipo: sql`), si el proyecto declara `base_de_pruebas` en su perfil: en vez de\n  `archivo`, `buscar` y `reemplazar`, escribes `ablacion`, el SQL que rompe la regla en la base (por\n  ejemplo `ALTER TABLE … DROP CONSTRAINT …` o `ALTER POLICY …`). Un programa lo aplica en una copia\n  desechable de la base y corre la prueba contra esa copia. Úsalas para restricciones, políticas de\n  acceso, índices únicos y permisos: romper el archivo de la migración no sirve, porque la base ya está\n  migrada. Siempre cuentan como graves.\n- **Antes de declarar un hueco en una restricción, mira las demás de la misma tabla** en todas las\n  migraciones (CHECK, NOT NULL, índices únicos, políticas). Si otra ya impide lo mismo, no es un hueco:\n  rompe la regla que de verdad es la única defensa. El 27-sep-2026, un `amount > 0` parecía sin probar,\n  pero `amount <> 0` ya rechazaba el cero; el hueco real era el importe negativo.\n- **Desconfía de una ablación que se caza demasiado fácil.** Si al quitar un índice único la prueba\n  falla porque la consulta no encuentra el índice (por ejemplo `ON CONFLICT`), y no porque se cuele un\n  duplicado, la cazada no mide lo que parece. Anótalo en `que`.\n- `buscar` se copia **exacto** del archivo, con sus espacios. Si aparece cero o más de una vez, la\n  ablación no se aplica. Agrega contexto hasta que sea único.\n- `prueba` corre **la prueba más chica que debería cazarla**, no toda la batería, si el proyecto lo\n  permite. Tiene que pasar sin la ablación.\n- Si ya existe tu archivo de una vuelta anterior, no repitas lo que ya está: agrega solo lo que el\n  último cambio abrió.\n- Si no encuentras nada que valga la pena romper, no escribas el archivo.\n\n## Tu tarea\n\nLee el diff de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) contra su base (git diff HEAD y los archivos nuevos), sus specs y tasks, y las pruebas que agregó. Las pruebas del proyecto se corren con cd backend && env -u DATABASE_URL npm test y cd frontend && npm test y cd frontend && npm run lint. Escribe tus ablaciones en ablaciones-revisor.yaml, dentro de la carpeta del cambio (si ya existe, de una vuelta anterior, revísalo y agrega solo lo nuevo). No modifiques ningún otro archivo: una guarda lo verifica y detiene la corrida."
+      },
+      {
+        "id": "solo-ablaciones",
+        "kind": "verifier",
+        "contract": {
+          "id": "solo-ablaciones",
+          "checks": [
+            {
+              "id": "solo-ablaciones",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/solo-ablaciones.mjs",
+                  "comparar",
+                  "cambio:ablaciones-revisor.yaml"
+                ]
+              }
+            },
+            {
+              "id": "anotar",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/huella.mjs",
+                  "guardar",
+                  "ablaciones-preparadas"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "ablaciones",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "ablaciones",
+          "checks": [
+            {
+              "id": "ablaciones",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/ablaciones.mjs",
+                  "cambio:ablaciones-revisor.yaml"
+                ],
+                "timeoutMs": 1800000
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "limpiar-veredicto-revision-diseno",
+        "kind": "verifier",
+        "contract": {
+          "id": "limpiar-veredicto-revision-diseno",
+          "checks": [
+            {
+              "id": "limpiar",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "sh",
+                "args": [
+                  "-c",
+                  "rm -f openspec/changes/*/veredicto-revision-diseno.json"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "toca-la-base",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "toca-la-base",
+          "checks": [
+            {
+              "id": "toca-la-base",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/toca-la-base.mjs",
+                  "HEAD"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hay-que-revisar-diseno",
+        "kind": "router",
+        "default": "foto-diseno",
+        "routes": [
+          {
+            "when": {
+              "type": "node_failed",
+              "node": "toca-la-base"
+            },
+            "to": "limpiar-veredicto-revision-final"
+          }
+        ]
+      },
+      {
+        "id": "foto-diseno",
+        "kind": "verifier",
+        "contract": {
+          "id": "foto-diseno",
+          "checks": [
+            {
+              "id": "foto",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/solo-ablaciones.mjs",
+                  "foto"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "revision-diseno",
+        "kind": "agent",
+        "engine": "claude",
+        "model": "claude-opus-5-5",
+        "permissionMode": "acceptEdits",
+        "timeoutMs": 900000,
+        "prompt": "## Tu rol\n\nEres el **Revisor de diseño** de una corrida de AOD (Agent-Orchestrated Development). Trabajas sin un\nhumano al otro lado: nadie va a responder preguntas.\n\n**Qué haces:** lees el diseño del cambio y el código construido buscando lo que ni las pruebas ni una\nablación de un solo cambio pueden ver:\n- **Carreras y concurrencia:** dos caminos que escriben lo mismo (dos procesos, dos transacciones) y\n  qué los serializa de verdad. Si la única protección es una lectura previa, es una carrera.\n- **Invariantes:** qué debe ser cierto siempre (un abono por mes, un saldo que no baja de cero) y qué lo\n  sostiene: una restricción de la base, un índice único, un bloqueo, o solo el código.\n- **Capas que se tapan:** un filtro del código que nadie mide porque una regla de acceso de la base ya\n  filtra, o al revés. Di cuál es la defensa real y si el diseño pide las dos.\n- **Restricciones de la tabla:** antes de decir que falta una, mira todas las que ya tiene la tabla en\n  todas las migraciones.\n- **Diseño contra lo construido:** lo que el design.md promete y el código no hace, o hace distinto.\n\n**Qué no haces:** no modificas código, pruebas ni artefactos, y no ejecutas ablaciones (eso lo hace un\nprograma en el paso anterior; su informe está en ablaciones.md). Nunca dejes nada en segundo plano: si\ncorres un comando, espera a que termine.\n\n**Qué entregas:** tu veredicto en `veredicto-revision-diseno.json`, en la carpeta del cambio, con la\nmisma forma que el del Revisor:\n\n```json\n{ \"color\": \"verde | amarillo | rojo\", \"resumen\": \"una o dos frases\",\n  \"hallazgos\": [ { \"gravedad\": \"alta | media | baja\", \"donde\": \"archivo\", \"que\": \"qué está mal\", \"como_arreglar\": \"qué hacer\" } ] }\n```\n\n- **rojo:** hay una carrera, un invariante sin defensa o una promesa del diseño que no se cumple; el\n  desarrollador tiene que corregirlo.\n- **amarillo:** algo que un humano debe mirar antes de cerrar (una decisión de diseño discutible, una\n  defensa única donde el diseño pedía dos).\n- **verde:** no encontraste nada de eso.\n\nSin ese archivo, tu revisión cuenta como roja.\n\n## Tu tarea\n\nRevisa el diseño de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) contra lo construido: design.md, specs, tasks y el diff contra la base (git diff HEAD y los archivos nuevos). El informe del programa de ablaciones está en ablaciones.md: no repitas lo que ya mide. Deja tu veredicto en veredicto-revision-diseno.json, en la carpeta del cambio. No modifiques ningún otro archivo: una guarda lo verifica y detiene la corrida."
+      },
+      {
+        "id": "solo-diseno",
+        "kind": "verifier",
+        "contract": {
+          "id": "solo-diseno",
+          "checks": [
+            {
+              "id": "solo-veredicto",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/solo-ablaciones.mjs",
+                  "comparar",
+                  "cambio:veredicto-revision-diseno.json"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "limpiar-veredicto-revision-final",
+        "kind": "verifier",
+        "contract": {
+          "id": "limpiar-veredicto-revision-final",
+          "checks": [
+            {
+              "id": "limpiar",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "sh",
+                "args": [
+                  "-c",
+                  "rm -f openspec/changes/*/veredicto-revision-final.json"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "revision-final",
+        "kind": "agent",
+        "engine": "claude",
+        "model": "claude-sonnet-5",
+        "permissionMode": "acceptEdits",
+        "timeoutMs": 900000,
+        "prompt": "## Tu rol\n\nEres el **Revisor** de una corrida de AOD (Agent-Orchestrated Development). Trabajas sin un humano al\notro lado de la conversación: nadie va a responder preguntas.\n\n**Qué haces:** revisas ejecutando, no solo leyendo. Corres las pruebas y `openspec validate`, y\ncomparas lo hecho con la propuesta, las specs, las tareas y `decisiones.md` si existe.\n\n**Qué no haces:** no escribes código de producción ni pruebas. No apruebas por tu cuenta: tu\nveredicto decide si la corrida vuelve atrás, y el humano decide si se acepta.\n\n**Qué entregas:** tu veredicto en el archivo JSON que indica tu tarea, dentro de la carpeta del\ncambio, con esta forma exacta:\n\n```json\n{\n  \"color\": \"verde | amarillo | rojo\",\n  \"resumen\": \"una o dos frases\",\n  \"hallazgos\": [\n    { \"gravedad\": \"alta | media | baja\", \"donde\": \"archivo o artefacto\", \"que\": \"qué está mal\", \"como_arreglar\": \"qué hacer\" }\n  ]\n}\n```\n\n- **verde:** cumple; no hay nada que corregir.\n- **amarillo:** cumple, pero hay algo que el humano debe mirar antes de aceptar.\n- **rojo:** no cumple; el desarrollador tiene que corregir los hallazgos antes de seguir.\n\nSin ese archivo, o si no tiene esta forma, tu revisión cuenta como rojo. Tu veredicto anterior se borra\nantes de cada revisión: el que cuenta es el que escribes en esta.\n\n**Nunca dejes nada en segundo plano.** Si corres un comando largo, espera a que termine. No termines tu\nturno diciendo que sigues esperando algo: nadie te va a volver a llamar, y sin veredicto tu revisión\ncuenta como rojo.\n\n## Tu tarea\n\nVerifica que la implementación de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) cumple proposal, specs, tasks y decisiones.md (si existe). Las pruebas del perfil (cd backend && env -u DATABASE_URL npm test y cd frontend && npm test y cd frontend && npm run lint) ya las corrió un programa en el nodo «pruebas». Mira su resultado con `node /Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs resultado`: si dice que pasaron con este mismo código, no las repitas; si dice que fallaron o que el código cambió desde entonces, córrelas tú. Ejecuta openspec validate con el id del cambio. No modifiques archivos salvo tu veredicto. Si en la carpeta del cambio hay un veredicto-revision-diseno.json, incorpora sus hallazgos al tuyo: si es rojo, el tuyo es rojo; si es amarillo, el tuyo es al menos amarillo. Si decisiones.md tiene decisiones de la mesa con «Revisión humana: pendiente», tu veredicto es al menos amarillo, con un hallazgo por cada una que diga qué se decidió y con qué precedente, para que el humano las revise antes de cerrar. Si en la carpeta del cambio hay un hallazgos-cierre.md, verifica que su último hallazgo quedó resuelto; si no, tu veredicto es rojo. Si hay un ablaciones.md con alguna ablación marcada ✗ sin «(borde)», tu veredicto es rojo, con un hallazgo por cada una: una ablación que sobrevive es una prueba que falta. Si solo quedan ✗ marcadas «(borde)», tu veredicto es al menos amarillo, con un hallazgo por cada una, para que el humano decida en «confirmar cierre» si la devuelve a reparar. Si alguna está marcada !, la ablación no se pudo aplicar o su testigo ya estaba en rojo: tu veredicto es al menos amarillo, con un hallazgo por cada una, para que la mire un humano. Deja tu veredicto en veredicto-revision-final.json, en la carpeta del cambio: rojo si hay algo que el desarrollador debe corregir antes de cerrar."
+      },
+      {
+        "id": "veredicto-revision-final",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "veredicto-revision-final",
+          "checks": [
+            {
+              "id": "veredicto",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/revisar-veredicto.mjs",
+                  "revision-final"
+                ]
+              }
+            },
+            {
+              "id": "veredicto-diseno",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/revisar-veredicto.mjs",
+                  "revision-diseno",
+                  "--si-existe"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hay-rojo-final",
+        "kind": "router",
+        "default": "confirmar-cierre",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "veredicto-revision-final"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "revision-final",
+                  "n": 3
+                }
+              ]
+            },
+            "to": "reparar"
+          }
+        ]
+      },
+      {
+        "id": "confirmar-cierre",
+        "kind": "human_gate",
+        "prompt": "Revisa el resultado y el veredicto de la revisión final. Si confirmas, Cursor archiva, Claude hace el commit y el sistema hace la verificación final. Si falta algo, devuélvelo a reparar con un hallazgo."
+      },
+      {
+        "id": "hay-devolucion",
+        "kind": "verifier",
+        "onFailure": "continue",
+        "contract": {
+          "id": "hay-devolucion",
+          "checks": [
+            {
+              "id": "sin-devolucion",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "sh",
+                "args": [
+                  "-c",
+                  "test ! -f '.agent-orchestrator/devolucion-pendiente'"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "si-devolucion",
+        "kind": "router",
+        "default": "archive",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "hay-devolucion"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "devolver",
+                  "n": 2
+                }
+              ]
+            },
+            "to": "devolver"
+          }
+        ]
+      },
+      {
+        "id": "devolver",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "Quien revisa devolvió el trabajo antes de cerrar. Lee el último hallazgo de hallazgos-cierre.md en la carpeta de el cambio OpenSpec activo (la única carpeta de openspec/changes/ fuera de archive/) y corrige exactamente eso, nada más. No modifiques las pruebas que existían antes de esta corrida. Deja tasks.md al día.",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-devolver",
+        "kind": "router",
+        "default": "limpiar-devolucion",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "devolver"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "devolver",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-devolver"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-devolver",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «devolver» esperando una decisión tuya.",
+        "next": "devolver"
+      },
+      {
+        "id": "limpiar-devolucion",
+        "kind": "verifier",
+        "next": "pruebas",
+        "contract": {
+          "id": "limpiar-devolucion",
+          "checks": [
+            {
+              "id": "borrar-marca",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "rm",
+                "args": [
+                  "-f",
+                  ".agent-orchestrator/devolucion-pendiente"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "archive",
+        "kind": "agent",
+        "engine": "cursor",
+        "timeoutMs": 1800000,
+        "onFailure": "continue",
+        "prompt": "/opsx-archive Sincroniza siempre las specs delta con las specs principales antes de archivar; no preguntes por eso.",
+        "model": "grok-4.7-high"
+      },
+      {
+        "id": "bloqueo-archive",
+        "kind": "router",
+        "default": "commit",
+        "routes": [
+          {
+            "when": {
+              "type": "and",
+              "all": [
+                {
+                  "type": "node_failed",
+                  "node": "archive"
+                },
+                {
+                  "type": "visits_lt",
+                  "node": "archive",
+                  "n": 6
+                }
+              ]
+            },
+            "to": "desbloqueo-archive"
+          }
+        ]
+      },
+      {
+        "id": "desbloqueo-archive",
+        "kind": "human_gate",
+        "prompt": "Cursor está detenido en «archive» esperando una decisión tuya.",
+        "next": "archive"
+      },
+      {
+        "id": "commit",
+        "kind": "verifier",
+        "contract": {
+          "id": "commit",
+          "checks": [
+            {
+              "id": "commit",
+              "required": true,
+              "spec": {
+                "type": "command",
+                "cmd": "node",
+                "args": [
+                  "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/commit.mjs"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "contract": {
+      "id": "cierre",
+      "checks": [
+        {
+          "id": "arbol-limpio",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "sh",
+            "args": [
+              "-c",
+              "test -z \"$(git status --porcelain)\""
+            ]
+          }
+        },
+        {
+          "id": "tests",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "node",
+            "args": [
+              "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+              "si-cambio",
+              "--",
+              "sh",
+              "-c",
+              "cd backend && env -u DATABASE_URL npm test"
+            ],
+            "timeoutMs": 1800000
+          }
+        },
+        {
+          "id": "tests-2",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "node",
+            "args": [
+              "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+              "si-cambio",
+              "--",
+              "sh",
+              "-c",
+              "cd frontend && npm test"
+            ],
+            "timeoutMs": 1800000
+          }
+        },
+        {
+          "id": "tests-3",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "node",
+            "args": [
+              "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/pruebas-vistas.mjs",
+              "si-cambio",
+              "--",
+              "sh",
+              "-c",
+              "cd frontend && npm run lint"
+            ],
+            "timeoutMs": 1800000
+          }
+        },
+        {
+          "id": "cambio-archivado",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "sh",
+            "args": [
+              "-c",
+              "! ls openspec/changes | grep -v '^archive$' | grep -q ."
+            ]
+          }
+        },
+        {
+          "id": "specs-validas",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "openspec",
+            "args": [
+              "validate",
+              "--specs",
+              "--no-interactive"
+            ]
+          }
+        },
+        {
+          "id": "perfil",
+          "required": true,
+          "spec": {
+            "type": "command",
+            "cmd": "node",
+            "args": [
+              "/Users/dvd/.nvm/versions/node/v24.18.0/lib/node_modules/agent-orchestrator/cli/revisar-diff.mjs",
+              "rama:preprod",
+              "{\"solo_lectura\":[\".github/workflows/**\",\"infra/**\",\"backend/knexfile.js\",\"backend/db/knex.js\",\"backend/config.js\",\"frontend/config.js\",\"frontend/vite.config.js\",\"openspec/config.yaml\",\"CLAUDE.md\",\".cursor/rules/**\",\"docs/**\"],\"prohibido\":[\"**/.env\",\"**/.env.*\",\"!**/.env.example\",\"backend/set-env-local.sh\",\"backend/secrets/**\"],\"solo_añadir\":[\"backend/migrations/**\"]}"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

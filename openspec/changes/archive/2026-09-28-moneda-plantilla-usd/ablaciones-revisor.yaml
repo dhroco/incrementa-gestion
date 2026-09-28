@@ -1,0 +1,178 @@
+version: 1
+ablaciones:
+  - id: generate-sin-moneda-de-plantilla
+    que: generateAndPersist pasa la moneda de la plantilla al preproceso; sin ella una plantilla USD guarda el precio en pesos
+    archivo: backend/services/documentBuilderService.js
+    buscar: "currencyCode: templateRow.currency_code"
+    reemplazar: "currencyCode: null"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.currency.test.js"
+    gravedad: grave
+
+  - id: select-sin-currency-code
+    que: getTemplateRow selecciona t.currency_code; el mock de base ignora select() y devuelve currency_code igual, así que probablemente ninguna prueba ve que la columna no se lee y la plantilla USD saldría en CLP
+    archivo: backend/services/documentBuilderService.js
+    buscar: "        't.country_code',\n        't.currency_code'\n"
+    reemplazar: "        't.country_code'\n"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.currency.test.js"
+    gravedad: grave
+
+  - id: usd-con-prefijo-de-pesos
+    que: el precio en dólares lleva prefijo US$ y miles en-US
+    archivo: backend/services/documentBuilderService.js
+    buscar: "USD: { prefix: 'US$', locale: 'en-US' }"
+    reemplazar: "USD: { prefix: '$', locale: 'es-CL' }"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.currency.test.js"
+    gravedad: grave
+
+  - id: moneda-desconocida-sin-guarda
+    que: una moneda distinta de CLP/USD se rechaza con un Error explícito; sin la guarda, MXN revienta con TypeError al desestructurar CURRENCY_FORMAT y assert.throws(fn, Error) igual pasa, así que la prueba no distingue la guarda del accidente
+    archivo: backend/services/documentBuilderService.js
+    buscar: "if (currencyCode !== 'CLP' && currencyCode !== 'USD') {"
+    reemplazar: "if (false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.currency.test.js"
+    gravedad: borde
+
+  - id: moneda-en-blanco-no-cae-a-clp
+    que: una moneda solo con espacios cae a CLP (trim); ninguna prueba usa espacios
+    archivo: backend/services/documentBuilderService.js
+    buscar: "String(currencyCode).trim() === ''"
+    reemplazar: "String(currencyCode) === ''"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.currency.test.js"
+    gravedad: borde
+
+  - id: migracion-no-marca-usd
+    que: la migración deja CONTRATO_0016 y CONTRATO_0017 en USD (escenario «Mexican templates tagged USD»); up() no tiene prueba, así que probablemente sobrevive
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: ".update({ currency_code: 'USD' })"
+    reemplazar: ".update({ currency_code: 'CLP' })"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: reescritura-muta-la-entrada
+    que: rewriteMxPriceClause devuelve un documento nuevo y no muta el content_json original (el que va al respaldo)
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "return { ...node, text: TEXT_REPLACEMENTS[index] }"
+    reemplazar: "node.text = TEXT_REPLACEMENTS[index]; return node"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: parrafo-con-nodos-de-mas
+    que: el párrafo del precio debe tener exactamente 8 nodos; con '<' un párrafo con nodos extra al final se reescribe sin quejarse
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "content.length !== EXPECTED_NODES.length"
+    reemplazar: "content.length < EXPECTED_NODES.length"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: borde
+
+  - id: negrita-no-verificada
+    que: el nodo 0 debe ser '3.1 ' en negrita; ninguna prueba manda el nodo sin negrita
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "return node?.type === 'text' && node.text === spec.text && hasBoldMark(node)"
+    reemplazar: "return node?.type === 'text' && node.text === spec.text"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: borde
+
+  - id: variable-no-verificada
+    que: los nodos variable deben tener el variableId esperado (precio_numero/precio_texto en su lugar); ninguna prueba intercambia variables
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "return node?.type === 'variable' && node.attrs?.variableId === spec.variableId"
+    reemplazar: "return node?.type === 'variable'"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: borde
+
+  # Vuelta 2: la prueba nueva de up() (fakeKnex) solo mira el update de currency_code;
+  # lo que up() escribe en content_json y en el respaldo, y down(), siguen sin medirse.
+
+  - id: up-no-persiste-la-reescritura
+    que: up() guarda el content_json reescrito (cláusula 3.1 en dólares); si guarda el original, las plantillas quedan en USD con la redacción en pesos. «Mexican templates tagged USD» filtra solo los updates de currency_code
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: ".update({ content_json: template.next })"
+    reemplazar: ".update({ content_json: template.content_json })"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: respaldo-guarda-lo-reescrito
+    que: el respaldo guarda el content_json original; si guarda el reescrito, down() no puede restaurar la redacción anterior (dato perdido). El insert del fakeKnex ignora el payload
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "      content_json: template.content_json,\n      note: BACKUP_NOTE"
+    reemplazar: "      content_json: template.next,\n      note: BACKUP_NOTE"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: up-reescribe-todas-las-plantillas
+    que: up() acota la lectura/reescritura a CONTRATO_0016 y CONTRATO_0017; sin el whereIn reescribiría (o reventaría en) cualquier plantilla. El fakeKnex devuelve las mismas filas con o sin filtro y solo registra el whereIn de los updates
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "knex('template').select('id', 'content_json').whereIn('code', MX_CODES)"
+    reemplazar: "knex('template').select('id', 'content_json')"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: default-de-moneda-usd
+    que: la columna nueva nace en CLP para todas las plantillas existentes; con default USD todos los contratos chilenos saldrían en dólares. fakeKnex.hasColumn devuelve true, así que el bloque de esquema nunca corre en prueba
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "defaultTo('CLP')"
+    reemplazar: "defaultTo('USD')"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: check-admite-otra-moneda
+    que: el CHECK es la única defensa en la base contra una moneda distinta de CLP/USD (el servicio lanza al generar, pero la fila ya quedó guardada); no hay base de pruebas y el bloque de esquema no corre con el fakeKnex
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "CHECK (currency_code IN ('CLP', 'USD'))"
+    reemplazar: "CHECK (currency_code IN ('CLP', 'USD', 'MXN'))"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: down-borra-todos-los-respaldos
+    que: down() borra solo los respaldos con la nota de este cambio; sin el where borra también los de 202609040004 y otros (dato perdido). down() no tiene prueba
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "await knex('template_content_backup').where({ note: BACKUP_NOTE }).del()"
+    reemplazar: "await knex('template_content_backup').del()"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  - id: aviso-solo-si-no-hay-ninguna
+    que: up() avisa si falta cualquiera de las dos plantillas; las pruebas solo cubren 2 y 0 filas, así que con 1 fila el aviso puede desaparecer sin que nadie lo note
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "if (mxTemplates.length < MX_CODES.length) {"
+    reemplazar: "if (mxTemplates.length < 1) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: borde
+
+  # Vuelta 3: las pruebas nuevas de up()/down() cazan la vuelta 2; quedan sin medir
+  # la regla «si cualquiera lanza, no actualizar ninguna» (1.3) y la mitad de esquema de down().
+
+  - id: marca-usd-antes-de-reescribir
+    que: up() reescribe las dos plantillas en memoria antes de escribir nada (tarea 1.3); si marca USD primero y una plantilla no calza, la marca ya se emitió. Ninguna prueba corre up() con una plantilla que no calza. Knex envuelve la migración en transacción, así que en la base real el rollback lo mitiga
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "  const rewritten = mxTemplates.map((template) => ({\n    id: template.id,\n    content_json: template.content_json,\n    next: rewriteMxPriceClause(template.content_json)\n  }))\n\n  await knex('template').whereIn('code', MX_CODES).update({ currency_code: 'USD' })\n"
+    reemplazar: "  await knex('template').whereIn('code', MX_CODES).update({ currency_code: 'USD' })\n\n  const rewritten = mxTemplates.map((template) => ({\n    id: template.id,\n    content_json: template.content_json,\n    next: rewriteMxPriceClause(template.content_json)\n  }))\n"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js test/templateCurrencyMigrationClosure.test.js"
+    gravedad: borde
+
+  - id: down-no-quita-la-columna
+    que: down() quita template.currency_code; la prueba de down solo mira updates y deletes, no schemaOps, así que un down que deja la columna pasa verde y un up posterior salta la creación del CHECK (hasColumn true)
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "if (await knex.schema.hasColumn('template', 'currency_code')) {"
+    reemplazar: "if (false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js test/templateCurrencyMigrationClosure.test.js"
+    gravedad: grave
+
+  - id: down-restaura-respaldos-ajenos
+    que: down() restaura solo desde los respaldos con la nota de este cambio; sin el where pisaría plantillas con respaldos de otras migraciones (dato perdido). Debería cazarla el respaldo id-99 de la prueba de down
+    archivo: backend/migrations/202609280001_template_currency_and_mx_price_clause.js
+    buscar: "await knex('template_content_backup').where({ note: BACKUP_NOTE }).select('*')"
+    reemplazar: "await knex('template_content_backup').select('*')"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/templateCurrencyMigration.test.js"
+    gravedad: grave
+
+  # Vuelta 4: la devolución de cierre caza la vuelta 3. Queda sin medir el 404 de
+  # plantilla que el cambio movió antes del preproceso (tarea 2.3).
+
+  - id: generate-sin-404-de-plantilla
+    que: generateAndPersist responde 404 «Plantilla no encontrada.» si la plantilla no existe (tarea 2.3); sin la guarda, templateRow.currency_code revienta con TypeError (500). Ninguna prueba de generateAndPersist hace que getTemplateRow devuelva null; la de mcpServer mockea el servicio
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    const templateRow = await getTemplateRow(db, template.id)\n    if (!templateRow) {"
+    reemplazar: "    const templateRow = await getTemplateRow(db, template.id)\n    if (false) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/documentBuilderService.test.js test/documentBuilderService.currency.test.js"
+    gravedad: borde

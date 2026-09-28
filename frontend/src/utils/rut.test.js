@@ -14,17 +14,16 @@ describe('rut utils', () => {
     expect(r.rutDv).toBe('3')
   })
 
-  it('parseRut accepts without DV and computes it', () => {
+  it('parseRut reads the last character as DV when there is no hyphen', () => {
     const r = parseRut('76543210')
-    expect(r.ok).toBe(true)
-    expect(r.rutDv).toBe('3')
+    expect(r.ok).toBe(false)
+    expect(r.message).toBe('El dígito verificador no corresponde al RUT ingresado.')
   })
 
-  it('parseRut corrects a mistyped digit verificador when body is valid', () => {
+  it('parseRut rejects a mistyped digit verificador', () => {
     const r = parseRut('76.543.210-1')
-    expect(r.ok).toBe(true)
-    expect(r.rutBody).toBe('76543210')
-    expect(r.rutDv).toBe('3')
+    expect(r.ok).toBe(false)
+    expect(r.message).toBe('El dígito verificador no corresponde al RUT ingresado.')
   })
 
   it('formatRut applies thousands separator and hyphen', () => {
