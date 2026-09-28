@@ -15,3 +15,16 @@ recortes:
       Una migración (columna y texto de dos plantillas, con respaldo) y un cambio acotado en
       documentBuilderService: cargar la plantilla antes de formatear el precio. Sin cambios de API
       ni de frontend.
+  - id: precio-entero-estricto
+    objetivo: >
+      Que el precio del contrato (precio_numero) solo se acepte como entero limpio (1290, o agrupado
+      de a tres con un solo separador: 1.290 o 1,290) y que cualquier otra entrada se rechace con un
+      mensaje en español en vez de truncarse sin avisar.
+    depende_de: [moneda-plantilla-usd]
+    fuera: >
+      Decimales o centavos, otros campos numéricos (cantidad_reels, duracion_ejecucion,
+      dias_cesion), el frontend, el MCP y los contratos ya generados.
+    por_que_este_tamano: >
+      Una función pura de parseo y una validación en generateAndPersist, antes de preprocesar. No
+      toca el modelo de datos, la API ni la interfaz; el error sale por el mismo camino que los de
+      validación de hoy.

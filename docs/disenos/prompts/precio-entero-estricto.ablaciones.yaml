@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: usd-coma-de-miles
+    que: el precio en USD sigue saliendo con coma de miles
+    archivo: backend/services/documentBuilderService.js
+    buscar: "USD: { prefix: 'US$', locale: 'en-US' }"
+    reemplazar: "USD: { prefix: 'US$', locale: 'es-CL' }"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: precio-texto-mil
+    que: precio_texto de un precio aceptado con separador (1,290 / 1.290) se escribe "mil doscientos noventa"
+    archivo: backend/utils/numberToWords.js
+    buscar: "if (thousands === 1) parts.push('mil')"
+    reemplazar: "if (thousands === 1) parts.push('un mil')"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

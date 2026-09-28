@@ -53,14 +53,26 @@ muestra que país y moneda son cosas distintas.
 
 ## Recortes
 
-Uno: `moneda-plantilla-usd`, en `moneda-plantilla.recortes.yaml`.
+En `moneda-plantilla.recortes.yaml`:
+1. `moneda-plantilla-usd`: completado y desplegado en pre-prod el 28-sep.
+2. `precio-entero-estricto`: ver más abajo.
+
+## El precio mal escrito (segundo recorte)
+
+`parseIntegerOverride` le quita los puntos a la entrada y aplica `parseInt`. Todo lo que no calza
+lo cambia **sin avisar**: `1,290` → `1`, `1290.50` → `129050`, `12,5` → `12`, `290 USD` → `290`. Con
+las plantillas en dólares el riesgo aumentó, porque ahí lo natural es escribir `1,290`: el contrato
+saldría por **US$1**. Es el mismo patrón del RUT: el sistema decide por el usuario.
+
+**Regla (de Ignacio, 28-sep, como validación de entrada; David eligió el recorte): se rechaza todo lo que no sea un entero limpio.** Se acepta `1290`, o
+el número agrupado de a tres con **un solo tipo** de separador (`1.290`, `1.500.000`, `1,290`,
+`1,500,000`). Todo lo demás (decimales, símbolos, letras, espacios internos, grupos mal formados,
+negativos) se rechaza con un mensaje en español, sin generar el contrato. Se descartó aceptar la
+coma solo en USD: la regla es la misma en las dos monedas.
 
 ## Qué queda fuera
 
 - **Montos con decimales (centavos).** El precio sigue siendo entero, como hoy.
-- **Una entrada escrita con coma de miles** (`1,290`) hoy se lee como `1`, y eso pasa también en
-  CLP. Es un defecto previo, del mismo patrón «el sistema decide por el usuario», y merece su
-  propio recorte.
 - **Elegir la moneda desde la interfaz** de plantillas. El país tampoco se elige ahí: ambos se
   fijan por migración.
 - **Otras monedas.** Agregar una exige migración y código.
