@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del frontend.
+ablaciones:
+  - id: rep-legal-1-sin-validar
+    que: el RUT del representante legal 1 se valida con su dígito verificador
+    archivo: frontend/src/utils/companyFormPayload.js
+    buscar: "const rutLegal1Check = parseOptionalRut(rutLegal1)"
+    reemplazar: "const rutLegal1Check = parseOptionalRut('')"
+    prueba: "cd frontend && npm test"
+  - id: rep-legal-2-sin-validar
+    que: el RUT del representante legal 2 también se valida, aunque el 1 esté bien
+    archivo: frontend/src/utils/companyFormPayload.js
+    buscar: "const rutLegal2Check = parseOptionalRut(rutLegal2)"
+    reemplazar: "const rutLegal2Check = parseOptionalRut('')"
+    prueba: "cd frontend && npm test"

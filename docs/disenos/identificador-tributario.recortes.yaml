@@ -14,3 +14,14 @@ recortes:
     por_que_este_tamano: >
       Dos funciones puras equivalentes y sus pruebas. No toca el modelo de datos, la API ni
       migraciones; los llamadores solo propagan el mensaje de error que ya propagaban.
+  - id: rut-rep-legal-prueba
+    objetivo: >
+      Que una prueba del frontend fije que validateHeadquartersForCompanySubmit (companyFormPayload)
+      rechaza el RUT del representante legal 1 y del 2 cuando el dígito verificador no corresponde,
+      borde que la revisión final de rut-dv-estricto dejó sin cubrir.
+    depende_de: [rut-dv-estricto]
+    fuera: >
+      Cambiar código de producto, el backend y cualquier otra validación.
+    por_que_este_tamano: >
+      Solo un archivo de prueba nuevo. El comportamiento ya es el correcto (verificado el 28-sep);
+      la prueba evita que se pierda sin que nadie lo note.
