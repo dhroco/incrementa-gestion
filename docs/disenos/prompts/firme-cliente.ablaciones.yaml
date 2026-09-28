@@ -1,0 +1,17 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar: el cliente es un archivo nuevo, así
+# que sus mutaciones las escribe el Revisor por ablación mirando el diff. Cada prueba corre la suite
+# completa del backend.
+ablaciones:
+  - id: config-token-desde-entorno
+    que: el cliente toma el token del entorno vía config; hace falta una prueba de isFirmeConfigured que lo cargue desde process.env
+    archivo: backend/config.js
+    buscar: "    FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',\n    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',\n    LOG_LEVEL: 'debug',"
+    reemplazar: "    FIRME_API_TOKEN: '',\n    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',\n    LOG_LEVEL: 'debug',"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: config-entidad-desde-entorno
+    que: la entidad legal también viene del entorno
+    archivo: backend/config.js
+    buscar: "    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',\n    LOG_LEVEL: 'debug',"
+    reemplazar: "    FIRME_LEGAL_ENTITY_ID: '',\n    LOG_LEVEL: 'debug',"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

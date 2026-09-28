@@ -24,6 +24,9 @@ const config = {
     GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+    FIRME_API_URL: process.env.FIRME_API_URL || 'https://staging.api.documentos.firme.cl',
+    FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
+    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
     LOG_LEVEL: 'debug',
     CORS_ORIGIN: 'http://localhost:5173'
   },
@@ -40,6 +43,9 @@ const config = {
     GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+    FIRME_API_URL: process.env.FIRME_API_URL || '',
+    FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
+    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
     LOG_LEVEL: 'info',
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://incrementa-frontend-7yl7vz6hyq-uc.a.run.app'
   },
@@ -56,6 +62,9 @@ const config = {
     GCS_KEY_FILE: process.env.GOOGLE_APPLICATION_CREDENTIALS || null,
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'contratos@incrementa.la',
+    FIRME_API_URL: process.env.FIRME_API_URL || '',
+    FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
+    FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
     LOG_LEVEL: 'error',
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://gestion-contratos.com'
   }

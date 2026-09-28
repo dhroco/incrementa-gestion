@@ -1,0 +1,16 @@
+version: 1
+dominio: firma-firme
+diseno: docs/disenos/firma-firme.md
+recortes:
+  - id: firme-cliente
+    objetivo: >
+      Un cliente de la API de Firme.cl en backend/lib/firmeClient.js que envía un PDF a firma
+      SIMPLE con uno o más firmantes en orden, consulta su estado, descarga el PDF firmado y reúne
+      la evidencia (logs, eventos y certificados de correo), con errores en español.
+    depende_de: []
+    fuera: >
+      Rutas, modelo de datos, estado del contrato, webhooks, GCS, interfaz, MCP y secretos en la
+      nube. El cliente no se usa todavía desde ningún lado.
+    por_que_este_tamano: >
+      Un módulo nuevo y sus pruebas, con fetch inyectado: nada del sistema lo llama aún, así que no
+      puede romper nada. Sirve igual a la opción A (un firmante) y a la B (dos).

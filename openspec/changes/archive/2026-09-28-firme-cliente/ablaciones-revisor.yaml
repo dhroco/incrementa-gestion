@@ -1,0 +1,49 @@
+version: 1
+ablaciones:
+  - id: presigned-403-como-auth-failed
+    que: absoluteRequest distingue una llamada sin Authorization (S3, URLs firmadas) de una llamada a la API con token, para no confundir un 403 de la URL firmada con un rechazo de autenticación
+    archivo: backend/lib/firmeClient.js
+    buscar: "        sentAuth: false,"
+    reemplazar: "        sentAuth: true,"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="403 on the presigned upload is FIRME_API_ERROR at upload-pdf" test/firmeClient.test.js
+    gravedad: grave
+
+  - id: token-no-se-quita-del-detail
+    que: clipDetail borra el token de Firme del texto de detail antes de recortarlo a 200 caracteres, para que el token nunca quede en el mensaje de error
+    archivo: backend/lib/firmeClient.js
+    buscar: "  if (secret) text = text.split(secret).join('')"
+    reemplazar: ""
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="500 on the second signee keeps only the first and clips detail" test/firmeClient.test.js
+    gravedad: grave
+
+  - id: orden-config-antes-que-validacion
+    que: sendForSignature revisa la configuración (FIRME_NOT_CONFIGURED) antes de validar la entrada, tal como exige la spec ("before validating arguments")
+    archivo: backend/lib/firmeClient.js
+    buscar: "    ensureConfigured()\n    validateSendInput(input)"
+    reemplazar: "    validateSendInput(input)\n    ensureConfigured()"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="send without configuration does not call Firme" test/firmeClient.test.js
+    gravedad: borde
+
+  - id: limite-superior-x-y-inclusivo
+    que: isUnitInterval acepta x/y en el rango cerrado 0 a 1 (la spec dice "0 through 1 inclusive"); un firmante con x o y igual a 1 debe seguir siendo válido
+    archivo: backend/lib/firmeClient.js
+    buscar: "value >= 0 && value <= 1"
+    reemplazar: "value >= 0 && value < 1"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="send with one signee makes a single signee and signature request" test/firmeClient.test.js
+    gravedad: borde
+
+  - id: certificado-duplicado-por-email-id
+    que: collectEvidence pide un solo certificado por cada hub_email_id distinto; sin la marca de vistos, pediría un certificado repetido por cada evento con el mismo id
+    archivo: backend/lib/firmeClient.js
+    buscar: "if (isBlank(emailId) || seen.has(emailId)) continue"
+    reemplazar: "if (isBlank(emailId)) continue"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="collectEvidence requests one certificate per distinct email id" test/firmeClient.test.js
+    gravedad: borde
+
+  - id: fetch-que-lanza-sin-traducir
+    que: callFetch atrapa la excepción de fetchImpl y la traduce a FirmeClientError con código FIRME_NETWORK_ERROR, en vez de dejar pasar el error crudo
+    archivo: backend/lib/firmeClient.js
+    buscar: "    try {\n      return await doFetch(url, init)\n    } catch {\n      throw networkError(step, progress)\n    }"
+    reemplazar: "    return await doFetch(url, init)"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="a thrown fetch is FIRME_NETWORK_ERROR" test/firmeClient.test.js
+    gravedad: borde
