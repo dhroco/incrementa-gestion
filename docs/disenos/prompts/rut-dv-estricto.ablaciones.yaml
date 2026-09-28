@@ -1,0 +1,22 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar: lo que rompa la lógica nueva de
+# parseRut lo escribe el Revisor por ablación mirando el diff, porque ese texto aún no existe.
+ablaciones:
+  - id: dv-k-backend
+    que: el dígito verificador 10 se escribe K (backend); hace falta una prueba con un RUT terminado en K
+    archivo: backend/utils/rut.js
+    buscar: "if (mod === 10) return 'K'"
+    reemplazar: "if (mod === 10) return '0'"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/rut.test.js"
+  - id: dv-k-frontend
+    que: el dígito verificador 10 se escribe K (frontend)
+    archivo: frontend/src/utils/rut.js
+    buscar: "if (mod === 10) return 'K'"
+    reemplazar: "if (mod === 10) return '0'"
+    prueba: "cd frontend && npx vitest run src/utils/rut.test.js"
+  - id: rep-legal-pierde-el-dv
+    que: el RUT del representante legal por campos separados se valida con su dígito, no solo con el cuerpo
+    archivo: backend/services/companyService.js
+    buscar: "const combined = `${b}${d}`"
+    reemplazar: "const combined = b"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/companyService.test.js"
