@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del frontend.
+ablaciones:
+  - id: sanitize-invisibles
+    que: el sanitizador sigue eliminando caracteres invisibles (la línea recibe un comentario, pero no cambia)
+    archivo: frontend/src/utils/sanitizePastedPlainText.js
+    buscar: "t = t.replace(/[\\u200B-\\u200F\\u2060\\uFEFF\\u00AD\\u034F\\u061C\\uFFFC\\uFFFD]/gu, '')"
+    reemplazar: "t = t"
+    prueba: "cd frontend && npm test"
+  - id: sanitize-control
+    que: el sanitizador elimina caracteres de control; hace falta la prueba nueva del recorte
+    archivo: frontend/src/utils/sanitizePastedPlainText.js
+    buscar: "t = t.replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]/g, '')"
+    reemplazar: "t = t"
+    prueba: "cd frontend && npm test"

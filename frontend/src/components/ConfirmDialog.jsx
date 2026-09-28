@@ -35,6 +35,7 @@ export function ConfirmDialog({
 
   useEffect(() => {
     if (!open || !shouldAnchor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia la posición anclada cuando el diálogo se cierra
       setAnchoredPos(null)
       return
     }

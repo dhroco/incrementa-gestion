@@ -22,6 +22,7 @@ const VariableCatalog = ({ onVariableSelect, isOpen, onClose }) => {
       );
     }
     
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recalcula la lista filtrada al cambiar la búsqueda o el grupo
     setFilteredVariables(variables);
   }, [searchText, selectedGroup]);
 

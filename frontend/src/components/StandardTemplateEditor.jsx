@@ -119,6 +119,7 @@ export function StandardTemplateEditor({ mode, templateId }) {
 
   useEffect(() => {
     if (mode === 'create' && savedSnapshot == null && !loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fija la línea base de cambios al terminar de cargar en modo crear
       setSavedSnapshot(formDirtySnapshot(currentFormFields))
     }
   }, [mode, loading, savedSnapshot, currentFormFields])

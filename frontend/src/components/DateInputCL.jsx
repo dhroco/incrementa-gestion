@@ -12,6 +12,7 @@ export function DateInputCL({ id, value, onChange, className, disabled, readOnly
   useEffect(() => {
     const expectedDisplay = isoToDdMmYyyy(value) || ''
     const isoFromDisplay = parseDdMmYyyyToIso(display) || ''
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el texto visible cuando cambia el valor externo
     if (value !== isoFromDisplay) setDisplay(expectedDisplay)
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,0 +1,15 @@
+version: 1
+dominio: lint-frontend
+diseno: docs/disenos/lint-frontend.md
+recortes:
+  - id: lint-frontend-cero
+    objetivo: >
+      Que `cd frontend && npm run lint` termine sin errores, sin cambiar el comportamiento de la
+      aplicación, para que el lint vuelva a las pruebas del perfil de AOD.
+    depende_de: []
+    fuera: >
+      Los 13 avisos de exhaustive-deps, reescribir efectos, mover funciones fuera de los archivos
+      de componentes y el backend.
+    por_que_este_tamano: >
+      Borrar código muerto, dos ajustes de configuración de ESLint y comentarios de desactivación
+      justificados. Nada cambia lo que la app hace; la suite del frontend lo comprueba.

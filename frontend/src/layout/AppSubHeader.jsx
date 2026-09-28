@@ -45,7 +45,7 @@ export function AppSubHeader() {
   } = useShell()
   const navMatch =
     enrichmentStatus === 'succeeded' ? resolveMenuMatchForPathname(pathname) : null
-  const navIcon = getSidebarIconForNavItem({
+  const NavIcon = getSidebarIconForNavItem({
     code: navMatch?.code ?? null,
     routePath: navMatch?.routePath ?? pathname
   })
@@ -74,7 +74,7 @@ export function AppSubHeader() {
           </button>
         ) : null}
         <span className="app-subheader__nav-icon" aria-hidden="true">
-          <navIcon.Component />
+          <NavIcon.Component />
         </span>
         <SubheaderIdentity breadcrumb={subHeaderBreadcrumb} fallbackTitle={fallbackTitle} />
       </div>

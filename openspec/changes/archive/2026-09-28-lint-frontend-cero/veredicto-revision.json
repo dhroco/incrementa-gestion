@@ -1,0 +1,24 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan cumple el encargo (aritmética de los 38 errores cuadra, openspec validate pasa, no hay pruebas existentes opuestas), pero le faltaba una prueba que ejecute el escenario del renombre de navIcon; la agregué a tasks.md. Queda un hallazgo de diseño de specs para que el Arquitecto revise antes del apply.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/lint-frontend-cero/specs/frontend-lint-clean/spec.md (Requirement: Subheader icon binding is renamed, Scenario: Subheader still renders the nav icon)",
+      "que": "El escenario exige que `AppSubHeader` siga renderizando `<NavIcon.Component />` tras el renombre `navIcon`→`NavIcon`, pero `tasks.md` no tenía ninguna tarea de prueba que ejecutara ese render; no existe ningún archivo de prueba de `AppSubHeader` hoy (grep confirmado), así que nada protegía este renombre si se rompe (p. ej. si se renombra la asignación pero no el JSX, o viceversa).",
+      "como_arreglar": "Ya agregué la tarea 4.2 a tasks.md: crear `frontend/src/layout/AppSubHeader.test.jsx` (archivo nuevo) que renderice el componente con el patrón `createRoot`/`act`/`flushSync` + `happy-dom` ya usado en `DocumentBuilderPreviewPage.test.jsx` y `SupplierFormSections.contact.test.jsx`, y afirme que el ícono se monta. El desarrollador debe implementarla; no requiere infraestructura nueva, el proyecto ya soporta ese patrón de render (no usa `@testing-library/react`)."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/lint-frontend-cero/specs/frontend-lint-clean/spec.md (escenarios: Company pages drop unread selectors; Preview drops the unread company id; Rest siblings stay in source; Component files that tests import stay in place; Node global in a test file; Intentional patterns are suppressed per line)",
+      "que": "Estos escenarios describen hechos estáticos del código (que un archivo ya no declare/importe un binding, que una línea tenga un comentario de desactivación) y no comportamiento observable en ejecución. No hay manera de \"ejecutarlos\" con una prueba sin leer el código fuente; en la práctica solo quedan cubiertos por la corrida de `npx eslint .` (tareas 1.1/5.1, que confirma 0 errores) y por que la suite existente siga en verde (5.2), no por una prueba dedicada por escenario. No agregué pruebas nuevas para esto porque inventarlas sería una prueba que lee el código fuente (contra la instrucción de no pedir pruebas de más) o un test de render que no verificaría la ausencia del import.",
+      "como_arreglar": "El Arquitecto puede aceptar que estos escenarios queden verificados solo por la corrida de lint + diff de la corrida (no por tests de vitest), o reformularlos en la spec como parte del único requirement de \"Frontend lint exits without errors\" en vez de escenarios propios, para no sugerir que cada uno necesita su propia prueba ejecutable."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/lint-frontend-cero/decisiones.md (C-SU4NYYK)",
+      "que": "La consulta registra `Revisión humana: pendiente`. El proposal, design y tasks ya incorporan la resolución (renombrar `navIcon`→`NavIcon`, no borrarlo), así que el plan es consistente con la decisión tomada, pero la revisión humana formal de esa decisión sigue sin marcarse como cerrada.",
+      "como_arreglar": "No bloquea la corrida: el Arquitecto o Ignacio pueden cerrar la revisión humana de C-SU4NYYK en paralelo; no requiere cambios en los artefactos de esta revisión."
+    }
+  ]
+}

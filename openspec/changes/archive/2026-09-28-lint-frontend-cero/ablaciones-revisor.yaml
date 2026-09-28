@@ -1,0 +1,64 @@
+version: 1
+ablaciones:
+  - id: sanitizer-control-char-gap
+    que: >-
+      el saneo de texto pegado sigue quitando el DEL (U+007F) de la clase de caracteres de
+      control, tal como fija la prueba nueva de sanitizePastedPlainText.controlChars.test.js
+    archivo: frontend/src/utils/sanitizePastedPlainText.js
+    buscar: "\\u000E-\\u001F\\u007F]/g, '')"
+    reemplazar: "\\u000E-\\u001F]/g, '')"
+    prueba: "cd frontend && npx vitest run src/utils/sanitizePastedPlainText.controlChars.test.js"
+    gravedad: borde
+
+  - id: sanitizer-formfeed-gap
+    que: >-
+      el form feed (\f) se sigue convirtiendo en salto de línea antes del saneo de controles,
+      como fija el segundo caso de sanitizePastedPlainText.controlChars.test.js
+    archivo: frontend/src/utils/sanitizePastedPlainText.js
+    buscar: "t = t.replace(/[\\v\\f\\u0085]/g, '\\n')"
+    reemplazar: "t = t.replace(/[\\v\\u0085]/g, '\\n')"
+    prueba: "cd frontend && npx vitest run src/utils/sanitizePastedPlainText.controlChars.test.js"
+    gravedad: borde
+
+  - id: subheader-icon-render-gap
+    que: >-
+      AppSubHeader sigue montando el ícono de navegación tras el renombre navIcon -> NavIcon
+      (la revisión anterior, veredicto-revision.json, ya marcó que este renombre no tenía
+      ninguna prueba que lo cazara antes de que se agregara AppSubHeader.test.jsx)
+    archivo: frontend/src/layout/AppSubHeader.jsx
+    buscar: "<NavIcon.Component />"
+    reemplazar: "null"
+    prueba: "cd frontend && npx vitest run src/layout/AppSubHeader.test.jsx"
+    gravedad: borde
+
+  - id: eslint-rest-siblings-off
+    que: >-
+      ignoreRestSiblings en no-unused-vars sigue siendo necesario para que
+      product_campaigns (ClientUpsertPage.jsx) y social_networks (SupplierUpsertPage.jsx),
+      omitidos a propósito en un rest, no vuelvan a marcarse como error
+    archivo: frontend/eslint.config.js
+    buscar: ", ignoreRestSiblings: true }"
+    reemplazar: " }"
+    prueba: "cd frontend && npx eslint src/pages/ClientUpsertPage.jsx src/pages/SupplierUpsertPage.jsx"
+    gravedad: borde
+
+  - id: eslint-only-export-components-off
+    que: >-
+      el bloque que apaga react-refresh/only-export-components en SupplierFormSections.jsx,
+      ClientFormSections.jsx y DocumentBuilderPage.jsx sigue siendo necesario porque esos
+      archivos exportan helpers que importan pruebas existentes
+    archivo: frontend/eslint.config.js
+    buscar: "  {\n    // Exportan funciones que importan las pruebas existentes; la regla solo afecta el HMR de Vite.\n    files: [\n      'src/pages/SupplierFormSections.jsx',\n      'src/pages/ClientFormSections.jsx',\n      'src/pages/DocumentBuilderPage.jsx',\n    ],\n    rules: {\n      'react-refresh/only-export-components': 'off',\n    },\n  },\n"
+    reemplazar: ""
+    prueba: "cd frontend && npx eslint src/pages/SupplierFormSections.jsx src/pages/ClientFormSections.jsx src/pages/DocumentBuilderPage.jsx"
+    gravedad: borde
+
+  - id: eslint-test-globals-node-off
+    que: >-
+      el bloque que suma globals.node a los archivos **/*.test.{js,jsx} sigue siendo
+      necesario para que `process` en styles.module.css.test.js no quede sin declarar
+    archivo: frontend/eslint.config.js
+    buscar: "        ...globals.node,\n"
+    reemplazar: ""
+    prueba: "cd frontend && npx eslint src/components/RichTextEditor/styles.module.css.test.js"
+    gravedad: borde
