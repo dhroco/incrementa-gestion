@@ -23,51 +23,37 @@ function computeRutDv(rutBody) {
 }
 
 /**
- * Accepts:
- * - with/without dots
- * - with/without hyphen
- * - with/without DV (heuristic: <=8 chars => body-only; >8 => last char is DV)
+ * El último carácter de la entrada compacta es siempre el dígito verificador.
+ * El cuerpo debe ser solo dígitos y de largo 7 u 8. Si el dígito no corresponde
+ * al módulo 11, se rechaza: no se calcula ni se reemplaza.
  *
- * Returns canonical parts: { rut_body, rut_dv } where dv is uppercase.
+ * @returns {{ ok: true, rut_body: string, rut_dv: string } | { ok: false, code: string, message: string }}
  */
 function parseRut(input) {
-  const raw = normalizeRutInput(input)
-  const compact = raw.replace(/[^0-9kK]/g, '')
-  if (!compact) {
+  const upper = normalizeRutInput(input).toUpperCase()
+  if (!upper) {
     return { ok: false, code: 'RUT_EMPTY', message: 'El RUT es obligatorio.' }
   }
 
-  const upper = compact.toUpperCase()
-  let body = ''
-  let dv = ''
+  const dv = upper.slice(-1)
+  const body = upper.slice(0, -1)
 
-  if (upper.length <= 8) {
-    body = upper
-    dv = computeRutDv(body)
-  } else {
-    body = upper.slice(0, -1)
-    dv = upper.slice(-1)
+  if (!/^[0-9]{7,8}$/.test(body)) {
+    return { ok: false, code: 'RUT_INVALID', message: 'El RUT ingresado no es válido.' }
   }
-
-  body = body.replace(/\D/g, '')
-  if (body.length < 7 || body.length > 8) {
+  if (!/^[0-9K]$/.test(dv)) {
     return { ok: false, code: 'RUT_INVALID', message: 'El RUT ingresado no es válido.' }
   }
 
-  const expected = computeRutDv(body)
-  if (!expected) {
-    return { ok: false, code: 'RUT_INVALID', message: 'El RUT ingresado no es válido.' }
-  }
-
-  if (upper.length > 8 && dv !== expected) {
-    // Cuerpo válido: normalizar al DV módulo 11 (típico error de tipeo; mismo criterio que RUT sin DV)
-    dv = expected
-  } else if (upper.length <= 8) {
-    dv = expected
+  if (dv !== computeRutDv(body)) {
+    return {
+      ok: false,
+      code: 'RUT_DV_MISMATCH',
+      message: 'El dígito verificador no corresponde al RUT ingresado.'
+    }
   }
 
   return { ok: true, rut_body: body, rut_dv: dv }
 }
 
 module.exports = { normalizeRutInput, computeRutDv, parseRut }
-

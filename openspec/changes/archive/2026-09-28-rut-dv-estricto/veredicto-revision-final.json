@@ -1,0 +1,12 @@
+{
+  "color": "amarillo",
+  "resumen": "La implementación cumple proposal, specs, tasks y las decisiones de la mesa: parseRut quedó estricto e idéntico en las dos copias, openspec validate --strict pasa y las suites de backend y frontend ya pasaron con este mismo código. Amarillo solo por la ablación de borde que sigue viva en ablaciones.md.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "frontend/src/utils/companyFormPayload.js (validateHeadquartersForCompanySubmit) — ablación front-form-rep-legal-dv-ignorado en ablaciones.md",
+      "que": "La única ablación sobreviviente (marcada ✗ (borde)) es real: ninguna prueba en companyFormPayload.test.js envía un RUT de representante legal con dígito verificador equivocado, así que si el chequeo `if (!rutLegal1Check.ok) {...}` del formulario se rompiera, ninguna prueba lo detectaría. El backend sí rechaza el mismo caso (empresa-rep-legal-error-ignorado), por eso el riesgo queda acotado al formulario del frontend.",
+      "como_arreglar": "El humano decide en «confirmar cierre» si se devuelve a reparar para agregar un caso en companyFormPayload.test.js con rutLegal1 en formato '12.345.678-9' (o dígito que no calza) que confirme `ok: false`, o si se acepta el borde dado que el backend ya bloquea el guardado."
+    }
+  ]
+}
