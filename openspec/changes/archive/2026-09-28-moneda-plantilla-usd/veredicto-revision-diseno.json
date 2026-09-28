@@ -1,0 +1,24 @@
+{
+  "color": "rojo",
+  "resumen": "El Migration Plan dice que primero va el backend nuevo y después la migración, pero ese backend pide t.currency_code en getTemplateRow y la columna todavía no existe: en ese intervalo fallan todas las generaciones y vistas previas de contratos. Lo demás (formato por moneda, reescritura por posición con verificación exacta, respaldo y down acotados por nota, abortar antes de escribir) calza con el diseño.",
+  "hallazgos": [
+    {
+      "gravedad": "alta",
+      "donde": "openspec/changes/moneda-plantilla-usd/design.md (Migration Plan, paso 2) contra backend/services/documentBuilderService.js:380-392",
+      "que": "El diseño promete «primero se despliega el backend nuevo y después se corre la migración». Con ese orden, getTemplateRow hace SELECT de t.currency_code sobre una tabla template que aún no tiene esa columna. PostgreSQL responde «column t.currency_code does not exist» y la llamada termina en 500. getTemplateRow lo usan generateAndPersist (línea 535, generar contrato y dryRun) y la vista previa de plantilla (línea 446), así que las dos se caen para todas las plantillas, también las CLP, mientras la migración no corra. El orden contrario sí es compatible: el backend viejo ignora la columna nueva. Lo peor que pasa con él es que las plantillas 0016 y 0017 ya reescritas salen «de $290 (doscientos noventa dólares…)» hasta que se despliega el backend nuevo. Ninguna prueba lo ve porque todas mockean la base.",
+      "como_arreglar": "Lo decide un humano, porque el orden actual lo pidió dvd en hallazgos-cierre.md. Hay dos salidas: (a) invertir el Migration Plan (migrate:latest primero, backend después) y quitar la tarea 5.1 de ese punto; o (b) mantener el orden y que el backend tolere la falta de la columna, por ejemplo con knex.schema.hasColumn una sola vez al crear el servicio, y si no existe no pedir la columna y dejar currencyCode indefinido, que cae a CLP. Con (b), hasta la migración las MX siguen saliendo en pesos. La (a) es la más simple y no toca código."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/migrations/202609280001_template_currency_and_mx_price_clause.js:164-183",
+      "que": "up hace lectura, reescritura en memoria y escritura del content_json de 0016 y 0017 sin bloquear las filas. La transacción de la migración (read committed) no la serializa contra un PUT /api/standard-templates/:id que entre en ese intervalo. Si pasa, la edición del usuario se pierde en silencio, o la reescritura queda aplicada sobre un documento que ya no es el respaldado. El intervalo es de milisegundos y la migración la corre un humano con el sistema en calma, así que el riesgo es mínimo.",
+      "como_arreglar": "Opcional: leer con .forUpdate() dentro de la transacción de la migración, o dejar anotado en el Migration Plan que no se editen plantillas mientras corre migrate:latest."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "design.md (Risks: moneda y cláusula pueden desalinearse)",
+      "que": "El único respaldo del invariante «plantilla USD ⇔ cláusula en dólares» es que la migración escribe las dos cosas juntas. Después nada lo sostiene: ni la base ni el servicio. El CHECK defiende el dominio de currency_code, pero no la coherencia con el content_json. Está aceptado como riesgo por decisión humana (C-I5PLRN6). Lo dejo solo como constancia de que no hay defensa, no como defecto.",
+      "como_arreglar": "Nada en este cambio. Tenerlo presente en el recorte futuro que muestre la moneda en la ficha de la plantilla."
+    }
+  ]
+}

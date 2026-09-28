@@ -1,0 +1,24 @@
+{
+  "color": "rojo",
+  "resumen": "openspec validate y las pruebas de perfil (353 backend / 124 frontend) pasan con este código, y la devolución de cierre (guarda antes de marcar USD, down quita columna/CHECK) quedó resuelta con templateCurrencyMigrationClosure.test.js. Pero el veredicto de diseño sigue en rojo y el motivo no se corrigió: el Migration Plan de design.md (paso 2) todavía promete desplegar el backend antes de correr la migración, y ese backend nuevo pide t.currency_code en getTemplateRow (documentBuilderService.js:379-392, usado en generateAndPersist y en la vista previa) antes de que la columna exista. Además queda un borde de cobertura marcado en ablaciones.md.",
+  "hallazgos": [
+    {
+      "gravedad": "alta",
+      "donde": "openspec/changes/moneda-plantilla-usd/design.md:109 (Migration Plan, paso 2) contra backend/services/documentBuilderService.js:379-392",
+      "que": "El diseño ordena «primero se despliega el backend nuevo y después se corre la migración» (así quedó tras hallazgos-cierre.md), pero con ese orden getTemplateRow hace SELECT de t.currency_code sobre una tabla template que aún no tiene esa columna: Postgres responde «column t.currency_code does not exist» y la llamada termina en 500. Afecta generar contrato, dryRun (línea 535) y la vista previa de plantilla (línea 446), para cualquier plantilla, también las CLP, durante todo el intervalo entre el deploy y el migrate:latest. Ninguna prueba lo detecta porque todas mockean la base. Este hallazgo ya estaba en veredicto-revision-diseno.json (rojo) y sigue sin corregirse.",
+      "como_arreglar": "Decisión de un humano, porque el orden actual lo pidió dvd en hallazgos-cierre.md: (a) invertir el Migration Plan (migrate:latest primero, backend después) y ajustar la tarea 5.1 en consecuencia; o (b) mantener el orden y que el servicio tolere la columna ausente (por ejemplo con knex.schema.hasColumn una vez al construir el servicio, cayendo a currencyCode indefinido → CLP si no existe)."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/migrations/202609280001_template_currency_and_mx_price_clause.js:164-183",
+      "que": "up lee, reescribe en memoria y escribe el content_json de 0016 y 0017 sin bloquear las filas; no está serializado contra un PUT /api/standard-templates/:id concurrente. Riesgo mínimo (migración manual, sistema en calma). Trasladado de veredicto-revision-diseno.json.",
+      "como_arreglar": "Opcional: .forUpdate() en la transacción de la migración, o anotar en el Migration Plan que no se editen plantillas mientras corre migrate:latest."
+    },
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/moneda-plantilla-usd/ablaciones.md (última línea, ✗ … (borde))",
+      "que": "La ablación ablaciones-revisor/generate-sin-404-de-plantilla sobrevive marcada (borde): quitar la guarda `if (!templateRow) return 404` en generateAndPersist no pone ninguna prueba en rojo, porque ninguna prueba de generateAndPersist hace que getTemplateRow devuelva null (la de mcpServer mockea el service completo). El guard existe en el código (documentBuilderService.js:534-536) pero no está cubierto.",
+      "como_arreglar": "Agregar en backend/test/documentBuilderService.currency.test.js (o el archivo existente que cubre generateAndPersist) un caso con getTemplateRow → null que verifique el 404 «Plantilla no encontrada.». Si se decide no cerrarlo ahora, que quede confirmado en «confirmar cierre»."
+    }
+  ]
+}

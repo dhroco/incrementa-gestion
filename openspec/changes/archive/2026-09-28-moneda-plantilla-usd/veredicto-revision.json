@@ -1,0 +1,24 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan cumple el encargo, `openspec validate moneda-plantilla-usd --strict` pasa y ninguna prueba existente se opone. Completé tasks.md con una prueba por escenario. Queda un escenario que depende de la base («Mexican templates tagged USD») y el proyecto no tiene cómo probarlo sin conectarse a ella.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/moneda-plantilla-usd/specs/document-builder-supplier-context/spec.md (escenario «Mexican templates tagged USD») y el up/down de la migración 202609280001",
+      "que": "El escenario afirma el estado de `template.currency_code` después de correr la migración. El proyecto no tiene infraestructura para probar migraciones: ninguna prueba en backend/test las ejecuta y la regla del encargo prohíbe conectarse a la base. Tampoco hay prueba de que `up` aborte sin escribir si `rewriteMxPriceClause` lanza, ni de que `down` restaure el respaldo. No agregué una tarea de prueba para esto.",
+      "como_arreglar": "El Arquitecto decide una de dos cosas: (a) se acepta que se verifique a mano cuando David aplique `migrate:latest` en pre-producción (revisar currency_code de la 0016 y la 0017, la cláusula 3.1 y las filas de template_content_backup, y probar `migrate:rollback`); o (b) se autoriza una prueba con un knex de mentira que grabe las llamadas, en un archivo nuevo. No hay que inventar esa infraestructura dentro de la corrida."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/services/documentBuilderService.js generateAndPersist (design.md, decisión 3)",
+      "que": "Con `getTemplateRow` antes de `loadCompanyRow`, cuando faltan plantilla y empresa a la vez ahora gana el 404 «Plantilla no encontrada.» en lugar de «Empresa no encontrada.». Revisé las pruebas: los mocks responden según la tabla y no según el orden de las llamadas, y ninguna prueba cubre el caso en que faltan las dos. No hay prueba opuesta.",
+      "como_arreglar": "Nada que corregir. Solo queda anotado para el humano: es un cambio de precedencia a propósito, y ya está en Risks del design."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/moneda-plantilla-usd/tasks.md sección 3",
+      "que": "Las tareas 3.1 y 3.2 no nombraban cada escenario. Además faltaban «Reels count formatted», «Price number formatted and text generated» y el caso de moneda `null` o vacía, que la spec modificada trae.",
+      "como_arreglar": "Ya lo corregí en tasks.md: una prueba por escenario, todas en archivos nuevos y todas ejecutando el comportamiento."
+    }
+  ]
+}
