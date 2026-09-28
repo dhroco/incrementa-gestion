@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAbility } from '@casl/react'
-import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { FormSection } from '../components/CompanyFormSections'
 import { LegalRepSignatureField } from '../components/LegalRepSignatureField'
 import { fetchCompanyDetail } from '../api/companiesApi'
-import { selectEnrichedCompany, selectEnrichedProfile } from '../store/authSlice'
 import { AbilityContext } from '../lib/ability'
 import { formatRut } from '../utils/rut'
 import '../styles/shared-form.css'
@@ -15,8 +13,6 @@ export function CompaniesViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const ability = useAbility(AbilityContext)
-  const profile = useSelector(selectEnrichedProfile)
-  const enrichedCompany = useSelector(selectEnrichedCompany)
 
   const canEdit = ability.can('update', 'Company')
 

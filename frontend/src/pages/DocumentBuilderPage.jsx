@@ -293,6 +293,7 @@ export function DocumentBuilderPage() {
 
   useEffect(() => {
     if (!companyId || !stage1Ok || !stageTemplateOk || !selectedSupplierId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia el dry run cuando faltan datos para consultarlo
       setMissingFieldDefs([])
       setDryRunStatus('idle')
       return undefined

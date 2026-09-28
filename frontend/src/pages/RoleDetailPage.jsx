@@ -35,6 +35,7 @@ export function RoleDetailPage({ mode = 'view' }) {
   const [labelError, setLabelError] = useState(null)
   const [permissionsError, setPermissionsError] = useState(null)
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- useCallback deliberado: loadRole se reutiliza después de guardar
   const loadRole = useCallback(async () => {
     if (!id) {
       setLoading(false)
@@ -61,6 +62,7 @@ export function RoleDetailPage({ mode = 'view' }) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga el rol al montar, como las demás páginas de detalle
     loadRole()
   }, [loadRole])
 

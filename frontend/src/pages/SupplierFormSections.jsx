@@ -111,10 +111,6 @@ function personeriaLabel(type) {
   return 'Sin acreditación'
 }
 
-function supplierTypeLabel(type) {
-  return type === 'empresa' ? 'Empresa' : 'Persona Natural'
-}
-
 export function isSocialNetworkRowComplete(sn) {
   return Boolean(String(sn?.catalog_id || '').trim() && String(sn?.account_name || '').trim())
 }

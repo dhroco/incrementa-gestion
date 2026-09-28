@@ -1,0 +1,12 @@
+{
+  "color": "amarillo",
+  "resumen": "La implementación cumple proposal, design, tasks y specs: lint en 0 errores con los mismos 13 avisos, las dos suites en verde, openspec validate pasa y las ablaciones quedaron todas cazadas. Queda pendiente cerrar la revisión humana de una decisión de la mesa antes de aceptar.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/lint-frontend-cero/decisiones.md (C-SU4NYYK)",
+      "que": "La consulta C-SU4NYYK sigue con «Revisión humana: pendiente». Se decidió (Ignacio) no borrar `navIcon` en `AppSubHeader.jsx` sino renombrarlo a `NavIcon` (líneas 48 y 77), porque sí se usa en JSX (`<navIcon.Component />`) y ESLint no rastrea usos en JSX; borrarlo habría roto el render del ícono del subheader. El Arquitecto registró como precedente que el prompt original (docs/disenos/prompts/lint-frontend-cero.md) se contradecía a sí mismo en este punto (mandaba borrar la asignación en la línea 49 pero también exigía no cambiar comportamiento), y que no había decisión previa en la corrida que lo cubriera.",
+      "como_arreglar": "El humano debe revisar C-SU4NYYK y marcarla como aceptada (o devolverla en «confirmar cierre» si discrepa). La implementación ya sigue esta decisión: `NavIcon` reemplaza a `navIcon` en `AppSubHeader.jsx:48,77`, el import de `getSidebarIconForNavItem` se mantiene, y `AppSubHeader.test.jsx` cubre el render del ícono tras el renombre. No requiere cambios de código, solo el cierre formal de la decisión."
+    }
+  ]
+}

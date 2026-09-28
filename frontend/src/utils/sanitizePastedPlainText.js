@@ -20,9 +20,11 @@ export function sanitizePastedPlainText(raw) {
   t = t.replace(/\r\n?/g, '\n')
   t = t.replace(/[\u2028\u2029]/g, '\n')
   t = t.replace(/[\v\f\u0085]/g, '\n')
+  // eslint-disable-next-line no-misleading-character-class -- elimina a propósito caracteres invisibles, incluido el combinante U+034F
   t = t.replace(/[\u200B-\u200F\u2060\uFEFF\u00AD\u034F\u061C\uFFFC\uFFFD]/gu, '')
   t = t.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/gu, ' ')
   t = t.replace(/\t/g, ' ')
+  // eslint-disable-next-line no-control-regex -- elimina a propósito los caracteres de control de un texto pegado
   t = t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
 
   t = t

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAbility } from '@casl/react'
-import { useSelector } from 'react-redux'
 import { Outlet, useParams } from 'react-router-dom'
 import { fetchCompanyDetail } from '../api/companiesApi'
-import { selectEnrichedCompany, selectEnrichedProfile } from '../store/authSlice'
 import { AbilityContext } from '../lib/ability'
 import { formatRut } from '../utils/rut'
 
@@ -13,8 +11,6 @@ import { formatRut } from '../utils/rut'
 export function CompanyEditLayout() {
   const { id } = useParams()
   const ability = useAbility(AbilityContext)
-  const profile = useSelector(selectEnrichedProfile)
-  const enrichedCompany = useSelector(selectEnrichedCompany)
 
   const allowedToEdit = ability.can('update', 'Company')
 

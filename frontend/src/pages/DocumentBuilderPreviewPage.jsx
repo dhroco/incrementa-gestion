@@ -33,7 +33,7 @@ function normalizeContentJson(raw) {
 export function DocumentBuilderPreviewPage() {
   const templateSelected = useSelector((s) => s.documentBuilder.templateSelected)
   const companyLoader = usePlatformAdminCompaniesLoader()
-  const { companyId, blocked, needsCompanySelection, message: scopeMessage } =
+  const { blocked, needsCompanySelection, message: scopeMessage } =
     usePlatformAdminCompanyScope()
 
   const breadcrumb = useMemo(
@@ -85,7 +85,7 @@ export function DocumentBuilderPreviewPage() {
         const merged = await materializeTemplateDocClient(raw)
         if (!active) return
         setDoc(merged && typeof merged === 'object' ? merged : raw)
-      } catch (e) {
+      } catch {
         if (!active) return
         setDoc(raw)
         setError('No se pudo construir el preview del documento.')
