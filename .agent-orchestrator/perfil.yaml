@@ -1,0 +1,52 @@
+# Perfil de incrementa-gestion para agent-orchestrator. Esquema: docs/perfil.md de aod-framework.
+version: 1
+
+# Sin base de datos: el backend inyecta mocks (312 pruebas, ~1,4 s). DATABASE_URL se quita a propósito:
+# en esta máquina apunta a la base de PRE-PROD (Cloud SQL Auth Proxy en 127.0.0.1:5432).
+pruebas:
+  - cd backend && env -u DATABASE_URL npm test
+  - cd frontend && npm test
+  - cd frontend && npm run lint
+
+# CI/CD, infraestructura, conexión a la base, configuración por entorno y gobierno del proyecto.
+solo_lectura:
+  - .github/workflows/**
+  - infra/**
+  - backend/knexfile.js
+  - backend/db/knex.js
+  - backend/config.js
+  - frontend/config.js
+  - frontend/vite.config.js
+  - openspec/config.yaml
+  - CLAUDE.md
+  - .cursor/rules/**
+  - docs/**
+
+# Las migraciones aplicadas no se editan ni se borran: solo se agregan nuevas.
+solo_añadir:
+  - backend/migrations/**
+
+prohibido:
+  # Nada que se conecte a la base: en local es la de PRE-PROD.
+  comandos:
+    - git push
+    - gcloud
+    - cloud-sql-proxy
+    - npm run migrate:latest
+    - npm run migrate:rollback
+    - npm run seed:run
+    - npx knex
+  archivos:
+    - "**/.env"
+    - "**/.env.*"
+    - "!**/.env.example"
+    - backend/set-env-local.sh
+    - backend/secrets/**
+
+ramas:
+  formato: "{humano}/{cambio}"
+  base: preprod
+
+# Cursor con el mismo modelo que en los otros proyectos (sin esto, Cursor usa Auto).
+modelos:
+  desarrollador: grok-4.7-high
