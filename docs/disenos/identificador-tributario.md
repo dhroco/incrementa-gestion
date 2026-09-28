@@ -47,7 +47,10 @@ Consecuencias aceptadas:
 
 ## Recortes
 
-Un solo recorte: `rut-dv-estricto`, en `identificador-tributario.recortes.yaml`.
+En `identificador-tributario.recortes.yaml`:
+1. `rut-dv-estricto`: completado y desplegado en pre-prod el 28-sep.
+2. `rut-rep-legal-prueba`: una prueba para un borde que quedó sin cubrir (el RUT del representante
+   legal con el dígito equivocado en el formulario de empresa). No cambia código.
 
 ## Qué queda fuera
 
