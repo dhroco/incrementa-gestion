@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "La implementación de backend/lib/firmeClient.js cumple proposal.md, design.md, tasks.md y la spec firme-client: openspec validate firme-cliente --strict pasa, y las suites de backend/frontend ya habían pasado con este mismo código. Las 8 ablaciones (incluidas las 5 de ablaciones-revisor.yaml) quedaron todas cazadas, sin ✗ ni !. Mantengo en amarillo porque hay que incorporar el veredicto de la revisión de diseño previa (veredicto-revision.json), que era amarillo.",
+  "hallazgos": [
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/firme-cliente/veredicto-revision.json",
+      "que": "La revisión de diseño anterior quedó en amarillo porque, en su sandbox, no pudo correr `openspec validate firme-cliente --strict` ni las suites de prueba (tarea 3.1). En esta revisión final sí se corrieron ambas cosas: `openspec validate firme-cliente --strict` responde 'Change is valid', y `pruebas-vistas.mjs resultado` confirma que `cd backend && env -u DATABASE_URL npm test` y `cd frontend && npm test` pasaron con este mismo código el 2026-09-28T20:17. No queda pendiente nada que corregir aquí; se deja constancia para que el humano vea que el hallazgo original ya está saldado.",
+      "como_arreglar": "Ninguna acción adicional requerida; verificado en esta revisión."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/firme-cliente/tasks.md (tareas 2.8 y 2.3)",
+      "que": "La revisión de diseño detectó dos huecos de cobertura (defaults de config/global.fetch e inyección parcial de fetchImpl; y los escenarios 403-en-upload-pdf / progress.signees con solo el firmante anterior) y los corrigió agregando la tarea 2.8 y reescribiendo la 2.3. Verifiqué que backend/test/firmeClient.test.js efectivamente ejercita ambos: 'createFirmeClient() uses config values and global.fetch', 'createFirmeClient({ fetchImpl }) fills apiUrl, token and legalEntityId from config', 'empty string <field> is not replaced by config' (tarea 2.8), y '403 on the presigned upload is FIRME_API_ERROR at upload-pdf', '500 on the second signee keeps only the first and clips detail' (tarea 2.3 revisada).",
+      "como_arreglar": "Ninguna acción adicional requerida; cobertura confirmada en el archivo de pruebas."
+    }
+  ]
+}

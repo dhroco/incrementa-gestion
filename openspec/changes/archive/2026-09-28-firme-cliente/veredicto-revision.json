@@ -1,0 +1,24 @@
+{
+  "color": "amarillo",
+  "resumen": "El recorte firme-cliente cumple el prompt-propose.md (fábrica inyectable, contrato de sendForSignature/getDocument/downloadSignedPdf/collectEvidence, errores en español, sin tocar rutas/services/config); corregí dos huecos de cobertura de pruebas directamente en tasks.md, pero no pude ejecutar `openspec validate` ni las suites de pruebas en este entorno.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/firme-cliente (comando openspec validate firme-cliente --strict)",
+      "que": "Esta revisión corrió en un sandbox que deniega toda ejecución de npm/npx sin superficie de aprobación, así que no pude correr `openspec validate firme-cliente --strict` ni `cd backend && env -u DATABASE_URL npm test` / `cd frontend && npm test` (tarea 3.1). Revisé proposal/design/tasks/spec manualmente y por estructura contra un cambio archivado (`2026-09-28-rut-dv-estricto`) que sí sigue el mismo esquema de `.openspec.yaml` y carpetas.",
+      "como_arreglar": "Antes de aceptar la corrida, el humano (o el desarrollador antes del apply) debe correr `openspec validate firme-cliente --strict` y confirmar que pasa sin errores de esquema."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/firme-cliente/tasks.md (ya corregido)",
+      "que": "Faltaban tareas de prueba para dos escenarios de la spec `firme-client`: 'Defaults come from config and global fetch' e 'Injected fetch is used and config fills the rest' (Requirement: Firme client is a factory with injected dependencies). Ninguna tarea 2.1-2.7 ejercitaba `createFirmeClient()` sin argumentos ni la inyección parcial de `fetchImpl` con el resto tomado de config.",
+      "como_arreglar": "Agregué la tarea 2.8 en tasks.md que cubre ambos escenarios (defaults de config + global.fetch, inyección parcial, string vacío explícito no reemplazado)."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/firme-cliente/tasks.md (ya corregido)",
+      "que": "La tarea 2.3 no cubría el escenario 'Presigned URL failure is not an auth failure' (403 en la subida a S3 debe dar FIRME_API_ERROR con step upload-pdf, no FIRME_AUTH_FAILED) ni verificaba explícitamente que, ante un firmante fallido, `progress.signees` conserve solo los firmantes anteriores (escenario 'A failed signee keeps only earlier signees').",
+      "como_arreglar": "Reescribí la tarea 2.3 para nombrar ambos escenarios explícitamente (500 en el segundo firmante con progress.signees solo con el primero; 403 en upload-pdf como FIRME_API_ERROR, no FIRME_AUTH_FAILED)."
+    }
+  ]
+}
