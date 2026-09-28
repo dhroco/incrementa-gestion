@@ -100,12 +100,35 @@ function formatThousands(n) {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })
 }
 
+const CURRENCY_FORMAT = {
+  CLP: { prefix: '$', locale: 'es-CL' },
+  USD: { prefix: 'US$', locale: 'en-US' }
+}
+
+function resolveCurrencyCode(currencyCode) {
+  if (currencyCode == null || String(currencyCode).trim() === '') return 'CLP'
+  if (currencyCode !== 'CLP' && currencyCode !== 'USD') {
+    throw new Error(`Moneda de plantilla no admitida: ${currencyCode}.`)
+  }
+  return currencyCode
+}
+
+function formatPriceNumber(amount, currencyCode) {
+  const code = resolveCurrencyCode(currencyCode)
+  const { prefix, locale } = CURRENCY_FORMAT[code]
+  const formatted = code === 'CLP'
+    ? formatThousands(amount)
+    : amount.toLocaleString(locale, { maximumFractionDigits: 0 })
+  return `${prefix}${formatted}`
+}
+
 // Variables de tipo fecha: el override llega en ISO (YYYY-MM-DD) desde el
 // formulario o el MCP y debe escribirse como "15 de marzo de 2024" en el contrato.
 // Sin esto el override pisa el valor ya formateado por `buildSubstitutionMap`.
 const DATE_OVERRIDE_KEYS = ['fecha_contrato', 'fecha_escritura', 'fecha_estatuto']
 
-function preprocessMissingFieldOverrides(overrides) {
+function preprocessMissingFieldOverrides(overrides, { currencyCode } = {}) {
+  const resolvedCurrency = resolveCurrencyCode(currencyCode)
   const out = { ...(overrides || {}) }
 
   // Cláusula 2.3: "{{cantidad_reels}} {{formato_reel}}" se escribe como
@@ -138,8 +161,8 @@ function preprocessMissingFieldOverrides(overrides) {
   let priceParsed = null
   if (out.precio_numero != null && String(out.precio_numero).trim() !== '') {
     priceParsed = parseIntegerOverride(out.precio_numero)
-    // Precio con signo '$' y separadores de miles (ej. "$1.000.000").
-    if (priceParsed != null) out.precio_numero = `$${formatThousands(priceParsed)}`
+    // El formato del precio depende de la moneda de la plantilla.
+    if (priceParsed != null) out.precio_numero = formatPriceNumber(priceParsed, resolvedCurrency)
   }
 
   if (priceParsed != null) {
@@ -357,7 +380,15 @@ function createDocumentBuilderService({
   async function getTemplateRow(trx, templateId) {
     return trx('template as t')
       .join('template_standard as ts', 'ts.id', 't.id')
-      .select('t.id', 't.code', 't.name', 't.description', 't.content_json', 't.country_code')
+      .select(
+        't.id',
+        't.code',
+        't.name',
+        't.description',
+        't.content_json',
+        't.country_code',
+        't.currency_code'
+      )
       .where('t.id', templateId)
       .first()
   }
@@ -501,16 +532,18 @@ function createDocumentBuilderService({
     })
     if (!selectCheck.ok) return selectCheck
 
-    const overrides = preprocessMissingFieldOverrides(overridesRaw)
+    const templateRow = await getTemplateRow(db, template.id)
+    if (!templateRow) {
+      return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
+    }
+
+    const overrides = preprocessMissingFieldOverrides(overridesRaw, {
+      currencyCode: templateRow.currency_code
+    })
 
     const companyRow = await loadCompanyRow(db, companyId)
     if (!companyRow) {
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Empresa no encontrada.' }
-    }
-
-    const templateRow = await getTemplateRow(db, template.id)
-    if (!templateRow) {
-      return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
     }
 
     if (

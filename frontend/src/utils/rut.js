@@ -22,19 +22,32 @@ export function computeRutDv(rutBody) {
   return String(mod)
 }
 
+/**
+ * El último carácter de la entrada compacta es siempre el dígito verificador.
+ * El cuerpo debe ser solo dígitos y de largo 7 u 8. Si el dígito no corresponde
+ * al módulo 11, se rechaza: no se calcula ni se reemplaza.
+ *
+ * @returns {{ ok: true, rutBody: string, rutDv: string } | { ok: false, message: string }}
+ */
 export function parseRut(input) {
-  const raw = normalizeRutInput(input)
-  const compact = raw.replace(/[^0-9kK]/g, '')
-  if (!compact) return { ok: false, message: 'El RUT es obligatorio.' }
+  const upper = normalizeRutInput(input).toUpperCase()
+  if (!upper) return { ok: false, message: 'El RUT es obligatorio.' }
 
-  const upper = compact.toUpperCase()
-  const bodyRaw = upper.length <= 8 ? upper : upper.slice(0, -1)
-  const body = bodyRaw.replace(/\D/g, '')
-  if (body.length < 7 || body.length > 8) return { ok: false, message: 'El RUT ingresado no es válido.' }
-  const expected = computeRutDv(body)
-  if (!expected) return { ok: false, message: 'El RUT ingresado no es válido.' }
-  // Si vino cuerpo + DV y el DV no coincidía, se usa el DV módulo 11 (cuerpo válido 7–8 dígitos)
-  return { ok: true, rutBody: body, rutDv: expected }
+  const dv = upper.slice(-1)
+  const body = upper.slice(0, -1)
+
+  if (!/^[0-9]{7,8}$/.test(body)) {
+    return { ok: false, message: 'El RUT ingresado no es válido.' }
+  }
+  if (!/^[0-9K]$/.test(dv)) {
+    return { ok: false, message: 'El RUT ingresado no es válido.' }
+  }
+
+  if (dv !== computeRutDv(body)) {
+    return { ok: false, message: 'El dígito verificador no corresponde al RUT ingresado.' }
+  }
+
+  return { ok: true, rutBody: body, rutDv: dv }
 }
 
 /** RUT opcional: cadena vacía se considera válida (sin partes). */
@@ -93,4 +106,3 @@ export function formatRutInput(input) {
   if (!parsed.ok || !parsed.rutBody) return trimmed
   return formatRut(parsed.rutBody, parsed.rutDv)
 }
-
