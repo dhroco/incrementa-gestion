@@ -1,0 +1,47 @@
+version: 1
+ablaciones:
+  - id: dv-mismatch-check-disabled
+    que: parseRut rechaza un dígito verificador que no corresponde; sin este chequeo, cualquier RUT de representante legal con dígito equivocado pasaría como válido
+    archivo: frontend/src/utils/rut.js
+    buscar: "dv !== computeRutDv(body)"
+    reemplazar: "false"
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.rutLegal.test.js"
+    gravedad: grave
+
+  - id: rep2-check-skipped-after-rep1-ok
+    que: validateHeadquartersForCompanySubmit valida al representante 2 aunque el representante 1 sea correcto; sin la segunda validación, un rutLegal2 con dígito equivocado se aceptaría
+    archivo: frontend/src/utils/companyFormPayload.js
+    buscar: |
+      const rutLegal2Check = parseOptionalRut(rutLegal2)
+      if (!rutLegal2Check.ok) {
+        return { ok: false, message: rutLegal2Check.message || 'RUT del representante legal 2 inválido.' }
+      }
+      return { ok: true }
+    reemplazar: |
+      return { ok: true }
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.rutLegal.test.js"
+    gravedad: borde
+
+  - id: optional-rut-skips-delegation-to-parserut
+    que: parseOptionalRut delega en parseRut cuando el campo no está vacío; si en cambio siempre devuelve ok:true, ningún RUT de representante (vacío o con valor) se rechaza nunca
+    archivo: frontend/src/utils/rut.js
+    buscar: "  if (!compact) return { ok: true, rutBody: '', rutDv: '' }\n  return parseRut(input)"
+    reemplazar: "  return { ok: true, rutBody: '', rutDv: '' }"
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.rutLegal.test.js"
+    gravedad: borde
+
+  - id: body-length-window-narrowed-to-eight
+    que: parseRut acepta cuerpos de 7 u 8 dígitos; el caso 'ocho dígitos sin guion' depende de que un cuerpo de 7 dígitos siga siendo válido en formato para llegar a comparar el dígito verificador
+    archivo: frontend/src/utils/rut.js
+    buscar: "/^[0-9]{7,8}$/"
+    reemplazar: "/^[0-9]{8}$/"
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.rutLegal.test.js"
+    gravedad: borde
+
+  - id: dv-mismatch-message-drift
+    que: el mensaje de rechazo es el texto canónico exacto; la prueba lo fija con toEqual y no solo revisa ok:false
+    archivo: frontend/src/utils/rut.js
+    buscar: "'El dígito verificador no corresponde al RUT ingresado.'"
+    reemplazar: "'El dígito verificador no corresponde al RUT ingresado'"
+    prueba: "cd frontend && npx vitest run src/utils/companyFormPayload.rutLegal.test.js"
+    gravedad: borde

@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "La prueba nueva cubre exactamente los 7 escenarios del spec, no toca código de producto ni pruebas existentes, y ya pasó (cd frontend && npm test, verificado sin cambios de código). Hay dos puntos para que el humano mire antes de cerrar: una ablación marcada '!' y que no pude ejecutar `openspec validate` en esta sesión.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/rut-rep-legal-prueba/ablaciones-revisor.yaml (rep2-check-skipped-after-rep1-ok)",
+      "que": "La ablación quedó marcada '!' en ablaciones.md: el patrón `buscar` (bloque completo con `rutLegal2Check`) no calzó contra frontend/src/utils/companyFormPayload.js, así que nunca se llegó a aplicar ni a correr la prueba contra ese código mutado. Confirmé a mano que el texto SÍ existe en el archivo (líneas 35-37: `const rutLegal2Check = parseOptionalRut(rutLegal2)` ...), por lo que el problema es de indentación/formato del bloque YAML `buscar`, no que falte el chequeo en el producto.",
+      "como_arreglar": "El desarrollador debería ajustar la indentación/espaciado del bloque `buscar` en ablaciones-revisor.yaml para que calce literalmente con companyFormPayload.js y volver a correr esa ablación; el humano debe confirmar que el escenario 'no skip del representante 2' quedó realmente probado por mutación, no solo por la prueba en verde."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/rut-rep-legal-prueba (proceso de revisión)",
+      "que": "No pude ejecutar `npx openspec validate rut-rep-legal-prueba --strict` en esta sesión: el comando quedó bloqueado por falta de superficie de aprobación (sandbox sin nadie que apruebe). No es un hallazgo sobre el contenido del change sino sobre la revisión misma.",
+      "como_arreglar": "Alguien con permisos debe correr `npx openspec validate rut-rep-legal-prueba --strict` antes de cerrar, para confirmar que proposal.md, tasks.md y el delta de specs pasan validación formal."
+    }
+  ]
+}
