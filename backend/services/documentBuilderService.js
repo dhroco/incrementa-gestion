@@ -89,11 +89,29 @@ function getPairFieldForPrimary(primaryKey) {
   return undefined
 }
 
+// Ya no se usa para el precio; sigue en cantidad_reels.
 function parseIntegerOverride(value) {
   const raw = String(value ?? '').replace(/\./g, '').trim()
   if (raw === '') return null
   const n = parseInt(raw, 10)
   return Number.isFinite(n) ? n : null
+}
+
+const PRICE_INPUT_MESSAGE =
+  'El precio debe ser un número entero, sin decimales ni símbolos. Por ejemplo: 1290, 1.290 o 1,290.'
+
+function parsePriceInput(value) {
+  const text = String(value).trim()
+  let digits = null
+  if (/^\d+$/.test(text)) {
+    digits = text
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+    digits = text.replace(/\./g, '')
+  } else if (/^\d{1,3}(,\d{3})+$/.test(text)) {
+    digits = text.replace(/,/g, '')
+  }
+  if (digits == null) return { ok: false, message: PRICE_INPUT_MESSAGE }
+  return { ok: true, value: parseInt(digits, 10) }
 }
 
 function formatThousands(n) {
@@ -160,9 +178,12 @@ function preprocessMissingFieldOverrides(overrides, { currencyCode } = {}) {
 
   let priceParsed = null
   if (out.precio_numero != null && String(out.precio_numero).trim() !== '') {
-    priceParsed = parseIntegerOverride(out.precio_numero)
+    const priceCheck = parsePriceInput(out.precio_numero)
     // El formato del precio depende de la moneda de la plantilla.
-    if (priceParsed != null) out.precio_numero = formatPriceNumber(priceParsed, resolvedCurrency)
+    if (priceCheck.ok) {
+      priceParsed = priceCheck.value
+      out.precio_numero = formatPriceNumber(priceParsed, resolvedCurrency)
+    }
   }
 
   if (priceParsed != null) {
@@ -537,6 +558,21 @@ function createDocumentBuilderService({
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Plantilla no encontrada.' }
     }
 
+    if (
+      overridesRaw.precio_numero != null &&
+      String(overridesRaw.precio_numero).trim() !== ''
+    ) {
+      const priceCheck = parsePriceInput(overridesRaw.precio_numero)
+      if (!priceCheck.ok) {
+        return {
+          ok: false,
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: priceCheck.message
+        }
+      }
+    }
+
     const overrides = preprocessMissingFieldOverrides(overridesRaw, {
       currencyCode: templateRow.currency_code
     })
@@ -736,5 +772,6 @@ module.exports = {
   resolveFieldDefinition,
   validateSelectOverrides,
   preprocessMissingFieldOverrides,
+  parsePriceInput,
   SECONDARY_FIELDS
 }
