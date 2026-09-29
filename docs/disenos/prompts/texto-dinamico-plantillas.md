@@ -55,6 +55,9 @@ En cada variante, el nodo `variable` nuevo copia los `attrs` de formato (`bold`,
 
 ### 3.1 La 2.3
 
+Redacción aprobada por David el 29-sep, incluida «en el o los perfiles» y el «contenido que» de las
+mexicanas.
+
 | Variante | Queda así |
 |---|---|
 | `A` (14 plantillas) | `2.3 ` (negrita) · `En concreto, los Servicios comprenden la generación y publicación de ` · ⟨`servicios_entregables`⟩ · `, en el o los perfiles del Influencer y en el perfil oficial ` · `{{client_product_campaign}}` · `.` |
