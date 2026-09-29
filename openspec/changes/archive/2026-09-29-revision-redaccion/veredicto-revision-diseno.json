@@ -1,0 +1,30 @@
+{
+  "color": "verde",
+  "resumen": "Lo construido cumple el design.md: la verificación de la revisión corre en un solo punto, después de sustituir y antes de reemplazar el duplicado y de armar el PDF, con el mismo hash que usa reviewDraft; la migración calza con los tipos y ON DELETE de draft_document. Solo quedan observaciones menores que no rompen ningún invariante.",
+  "hallazgos": [
+    {
+      "gravedad": "baja",
+      "donde": "backend/services/documentBuilderService.js (requireCurrentReview)",
+      "que": "El invariante «el review_id de un borrador es de la misma empresa, proveedor y plantilla, y del mismo input_hash» solo lo sostiene el WHERE del código. En la base, la FK de draft_document.review_id solo asegura que la revisión exista. Esto es lo que pide el diseño y hoy hay un solo camino de escritura (generateAndPersist), así que no hay carrera. Pero si alguien agrega otra vía que inserte en draft_document, nada en la base lo frena.",
+      "como_arreglar": "Nada en este cambio. Si más adelante aparece otro camino de escritura, evaluar una FK compuesta (id, company_id, supplier_id, template_id) o un trigger."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "frontend/src/pages/DocumentBuilderPage.jsx (efecto del dry run / runReview)",
+      "que": "Cuando cambia el proveedor, la plantilla o el cliente, el efecto del dry run borra reviewResult pero no incrementa reviewGenerationRef. Si en ese momento hay una revisión en curso, su respuesta, que es del proveedor anterior, igual se muestra (por ejemplo «Sin observaciones») y habilita el botón. El servidor la rechaza con REVIEW_REQUIRED, porque filtra por supplier_id y hash, así que no se genera nada indebido. Aun así, la pantalla engaña a la persona. El diseño solo exige descartar la respuesta cuando cambia un campo faltante.",
+      "como_arreglar": "En el efecto del dry run, llamar a clearShownReview() (o incrementar reviewGenerationRef) en vez de solo setReviewResult(null)."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/lib/contractReviewer.js / backend/package.json",
+      "que": "El código importa 'zod/v4', que solo existe desde zod 3.25. package.json sigue declarando \"zod\": \"^3.24.2\". Funciona porque el lock fija la 3.25.76, pero una instalación sin lock podría resolver a 3.24.x y romper el require al arrancar.",
+      "como_arreglar": "Subir el rango de zod en backend/package.json a ^3.25.0."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/services/documentBuilderService.js (requireCurrentReview)",
+      "que": "Los rechazos se devuelven como { ...REVIEW_REQUIRED, resolvedDoc: null }. Esa clave interna viaja en el resultado que reciben el controlador y el mapServiceResult del MCP. Hoy no se serializa como error y no filtra datos, pero mezcla estado interno con la respuesta.",
+      "como_arreglar": "Devolver las constantes de error sin resolvedDoc."
+    }
+  ]
+}

@@ -90,6 +90,35 @@ function createDocumentBuilderController({ documentBuilderService }) {
     return sendOk(res, r.data)
   }
 
+  async function postReview(req, res) {
+    const r = await documentBuilderService.reviewDraft({
+      userId: req.auth.userId,
+      requestedCompanyId: req.query.companyId,
+      body: req.body
+    })
+    if (!r.ok) {
+      if (r.code === 'MISSING_PLACEHOLDERS' && r.status === 422) {
+        return res.status(422).json({
+          error: {
+            code: r.code,
+            message: r.message
+          },
+          meta: {
+            missingFields: r.data?.missingFields ?? [],
+            timestamp: new Date().toISOString()
+          }
+        })
+      }
+      return sendError(res, {
+        status: r.status,
+        code: r.code,
+        message: r.message,
+        meta: r.data ? { ...r.data } : undefined
+      })
+    }
+    return sendOk(res, r.data)
+  }
+
   async function getDownload(req, res) {
     const { id } = req.params
     const r = await documentBuilderService.getGeneratedDocumentForDownload({
@@ -109,6 +138,7 @@ function createDocumentBuilderController({ documentBuilderService }) {
     getTemplates,
     getTemplateDetail,
     postGenerate,
+    postReview,
     getDownload
   }
 }

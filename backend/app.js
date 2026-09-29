@@ -29,6 +29,7 @@ const clientServiceDefault = require('./services/clientService')
 const { createStandardTemplatesService } = require('./services/standardTemplatesService')
 const { createStandardTemplatesController } = require('./controllers/standardTemplatesController')
 const { createDocumentBuilderService } = require('./services/documentBuilderService')
+const { createContractReviewer } = require('./lib/contractReviewer')
 const { gcsService } = require('./services/gcsService')
 const { createDocumentBuilderController } = require('./controllers/documentBuilderController')
 const { buildPackedRulesForUser } = require('./services/abilityService')
@@ -173,7 +174,8 @@ function createApp({
     createDocumentBuilderService({
       db,
       gcsService,
-      getUserProfileIdByUserId: userProfileIdResolver
+      getUserProfileIdByUserId: userProfileIdResolver,
+      contractReviewer: createContractReviewer()
     })
   const documentBuilderController = createDocumentBuilderController({ documentBuilderService })
 
@@ -382,6 +384,11 @@ function createApp({
     '/api/document-builder/generate',
     authorize('use', 'DocumentBuilder'),
     documentBuilderController.postGenerate
+  )
+  app.post(
+    '/api/document-builder/review',
+    authorize('use', 'DocumentBuilder'),
+    documentBuilderController.postReview
   )
   app.get(
     '/api/document-builder/downloads/:id',

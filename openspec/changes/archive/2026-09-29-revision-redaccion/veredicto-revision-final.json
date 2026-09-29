@@ -1,0 +1,24 @@
+{
+  "color": "verde",
+  "resumen": "La implementación cumple proposal.md, design.md, tasks.md y ambas specs: verifiqué el system prompt exacto, la reconciliación verdict/observations, la migración (tipos, ON DELETE NO ACTION en review_id, orden de down), el gate de un solo punto en generateAndPersist antes del reemplazo de duplicado y del PDF, la ruta protegida con authorize('use','DocumentBuilder'), las descripciones exactas del MCP y el flujo del Constructor (clearShownReview en cada campo, descarte de respuesta en vuelo, reenvío de generarIgual al reemplazar duplicado). openspec validate pasa, las pruebas de backend y frontend pasaron con este mismo código (confirmado por el nodo «pruebas», sin necesidad de re-correrlas), y las nueve ablaciones ejecutadas en ablaciones.md están todas cazadas (✓), sin ningún ✗ ni ! sobre una ablación puntual. decisiones.md solo tiene la decisión C-0P8JHYZ, ya resuelta por David (no queda pendiente). No hay hallazgos-cierre.md.",
+  "hallazgos": [
+    {
+      "gravedad": "baja",
+      "donde": "frontend/src/pages/DocumentBuilderPage.jsx:356",
+      "que": "El efecto que relanza el dry run al cambiar proveedor/plantilla/cliente hace `setReviewResult(null)` directo en vez de llamar a `clearShownReview()`, así que no incrementa `reviewGenerationRef`. Si en ese momento hay una revisión en curso para el proveedor/plantilla anterior, su respuesta igual se muestra (por ejemplo «Sin observaciones») y habilita el botón, aunque el servidor la rechazaría con REVIEW_REQUIRED al generar porque filtra por company/supplier/template/input_hash. Ya lo señaló veredicto-revision-diseno.json y lo confirmé en el código actual: sigue presente.",
+      "como_arreglar": "Cambiar esa línea por `clearShownReview()` para que también descarte cualquier revisión en vuelo del proveedor/plantilla anterior."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/lib/contractReviewer.js:3 y backend/package.json:37",
+      "que": "El código importa `zod/v4`, disponible solo desde zod 3.25, pero `package.json` sigue declarando `\"zod\": \"^3.24.2\"`. Hoy funciona porque el lockfile fija 3.25.76, pero una instalación sin ese lock (o un `npm update` dentro del rango declarado) podría resolver a 3.24.x y romper el require al arrancar. Ya lo señaló veredicto-revision-diseno.json y lo confirmé: sigue sin corregirse.",
+      "como_arreglar": "Subir el rango de zod en backend/package.json a ^3.25.0."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/services/documentBuilderService.js:924,936,940 (requireCurrentReview)",
+      "que": "Los rechazos de requireCurrentReview se devuelven como `{ ...REVIEW_REQUIRED, resolvedDoc: null }` (o REVIEW_HAS_OBSERVATIONS), y esa clave interna `resolvedDoc` viaja en el objeto que llega al controlador y al mapeo del MCP. No se serializa como error hoy y no filtra datos, pero mezcla estado interno con la respuesta pública. Ya lo señaló veredicto-revision-diseno.json y lo confirmé: sigue presente.",
+      "como_arreglar": "Devolver las constantes de error sin la clave resolvedDoc."
+    }
+  ]
+}

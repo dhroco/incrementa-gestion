@@ -1,0 +1,24 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan es implementable: openspec validate pasa, no hay pruebas existentes que se opongan de forma irreconciliable, y las pruebas de dynamicText.test.js que hoy están en rojo son las que este mismo recorte deja en verde (autorizado por David el 29-sep). Corregí en tasks.md cinco huecos: cuatro escenarios de las specs sin una tarea de prueba que los ejecutara, y una instrucción de redacción para que el texto agregado a generar_contrato no rompa una prueba existente que verifica su ausencia.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "backend/test/mcpDynamicText.test.js:45",
+      "que": "prueba-opuesta: `assert.equal(generateTool.description.includes('dynamic_text'), false)` exige que la descripción de `generar_contrato` NUNCA contenga la cadena literal `dynamic_text`. La spec de este cambio (backend-mcp-server/spec.md, Requirement «MCP tool generar_contrato») exige agregar al final de esa misma descripción un texto sobre «cuando el contrato tiene textos dinámicos…», y nada en el encargo prohibía explícitamente usar el identificador en snake_case en vez de las palabras «textos dinámicos». Si el desarrollador copia el vocabulario que ya usa `validar_contrato` (`type (text/date/select/number/dynamic_text)`), rompe esta prueba, que no se puede tocar.",
+      "como_arreglar": "Ya corregido en tasks.md 6.3: agregué la instrucción explícita de que el texto agregado debe decir «textos dinámicos» (como en el encargo) y no debe incluir la cadena literal `dynamic_text`, citando la prueba que lo verifica. No requiere acción adicional del Arquitecto salvo confirmar que Cursor respete esa redacción al implementar."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/revision-redaccion/tasks.md (sección 8, antes de mi corrección)",
+      "que": "Cuatro escenarios `#### Scenario` de las specs no tenían ninguna tarea de prueba que los ejecutara: «An empty list forces ok» (contract-review, reconciliación verdict/observations en la dirección observaciones→ok con lista vacía), «Dry run does not require a review» (contract-review, que dryRun con dynamic_text y sin reviewId NO da REVIEW_REQUIRED), «The review route uses the document builder ability» (contract-review, que POST /api/document-builder/review está detrás de authorize('use','DocumentBuilder')) y «The handler reviews and does not generate» (backend-mcp-server, que el handler de revisar_redaccion llama a reviewDraft y no a generateAndPersist).",
+      "como_arreglar": "Ya corregido: agregué las cuatro comprobaciones a tasks.md (8.1, 8.3, 8.5 ampliadas, y 8.7 nueva para el nivel HTTP con el mismo patrón de `documentBuilderApi.test.js`). También agregué 8.8 para el escenario «down reverses both changes» de la migración, con un knex falso que graba operaciones de schema, igual que el patrón ya usado en `templateCurrencyMigrationClosure.test.js` — esto no abre una conexión real ni «corre» la migración contra la base, así que no contradice la restricción de no correr la migración."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "backend/test/dynamicText.test.js:313-395",
+      "que": "informativo, no requiere corrección: las dos pruebas que hoy fallan en rojo (`env -u DATABASE_URL npm test` da 441/443, ambas en este archivo) esperan exactamente `409 REVIEW_REQUIRED` con el mensaje de la sección 2.3 del encargo, y el propio archivo trae un comentario (líneas 308-309) que remite la comprobación de normalización a `documentBuilderService.review.test.js` — coincide con lo que dice la sección 6 del encargo (Ignacio las ajustó, autorizado por David, 29-sep) y con la tarea 8.4 de tasks.md.",
+      "como_arreglar": "Ninguna acción necesaria; dejar constancia para quien apruebe el veredicto de que el estado rojo actual de esas dos pruebas es esperado y se resuelve con este mismo cambio."
+    }
+  ]
+}

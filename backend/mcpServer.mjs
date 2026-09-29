@@ -10,6 +10,7 @@ const supplierService = require('./services/supplierService')
 const clientService = require('./services/clientService')
 const { createStandardTemplatesService } = require('./services/standardTemplatesService')
 const { createDocumentBuilderService } = require('./services/documentBuilderService')
+const { createContractReviewer } = require('./lib/contractReviewer')
 const { gcsService } = require('./services/gcsService')
 const { createContractsQueryService } = require('./services/contractsQueryService')
 const { createContractSigningService } = require('./services/contractSigningService')
@@ -23,7 +24,8 @@ const documentBuilderService = createDocumentBuilderService({
   db,
   gcsService,
   clientService,
-  getUserProfileIdByUserId
+  getUserProfileIdByUserId,
+  contractReviewer: createContractReviewer()
 })
 
 const mcpDeps = {
