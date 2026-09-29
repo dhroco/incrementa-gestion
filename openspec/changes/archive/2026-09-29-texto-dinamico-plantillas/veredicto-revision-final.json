@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "La implementación cumple proposal.md, tasks.md y las specs: la migración reescribe las 21 plantillas con las ocho variantes exactas de servicios_entregables/cuentas_publicacion (verificado nodo por nodo contra specs/template-dynamic-text-clauses/spec.md), no muta el documento de entrada, calcula las 21 reescrituras antes del primer insert, respalda con la nota correcta y down restaura solo esas filas; el listado agrega servicios_entregables al ítem y el filtro agrupa el OR dentro de andWhere como pide contracts-query/spec.md. openspec validate pasa, las pruebas del perfil ya pasaron con este mismo código y las 11 ablaciones quedaron todas cazadas. Quedan vigentes los dos hallazgos del veredicto de diseño (amarillo), que el humano debe mirar antes de aceptar.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "backend/migrations/202609290001_dynamic_text_clauses.js",
+      "que": "up (líneas 872-895) hace un SELECT simple de las 21 plantillas, calcula las reescrituras en memoria y recién después hace INSERT/UPDATE por plantilla, sin .forUpdate() en el SELECT. La transacción de knex (READ COMMITTED, sin bloqueo de fila) no cierra la ventana entre la lectura y la escritura: un PUT /api/standard-templates/:id concurrente sobre una de las 21 plantillas se pierde sin aviso y no queda en template_content_backup (que guarda la versión leída al inicio, no la del PUT concurrente), así que down no la recupera. Es el mismo hallazgo del veredicto-revision-diseno.json, aún presente en el código construido.",
+      "como_arreglar": "Agregar .forUpdate() al SELECT de las 21 plantillas en up, y que Ignacio congele la edición de plantillas estándar mientras aplica la migración (pedir recargar el editor después). Un control optimista real (updated_at/versión) en el PUT de plantillas queda fuera de este cambio."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "frontend/src/pages/ContractsListPage.jsx:23",
+      "que": "formatRedSocial solo exige `entregables !== ''`, sin trim: un servicios_entregables compuesto solo de espacios pasa la condición `typeof === 'string' && entregables !== ''` y deja la celda mostrando puros espacios en vez de la red y cuenta de hoy, el mismo riesgo que design.md dice cubrir pero que el código solo cubre en parte. Sigue igual que en el veredicto-revision-diseno.json.",
+      "como_arreglar": "Cambiar la condición a `entregables.trim() !== ''`, o confirmar que texto-dinamico-base siempre guarda el override ya recortado y dejar constancia de esa garantía."
+    }
+  ]
+}
