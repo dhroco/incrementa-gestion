@@ -104,9 +104,16 @@ Marcela los distinga.
 - **(b)** En las plantillas por evento, ¿el periodo de la 2.2 deja de ser `{{mes_ejecucion}}`? Si es
   así, el listado de contratos pierde el mes de ejecución en esos contratos, porque hoy lo lee de
   ahí.
-- **(c)** ¿Qué pasa con la 2.5 («Instagram» escrito a mano)? Recomiendo arreglarla **en el mismo
-  recorte** que la 2.3: si se hace después, un contrato multi-red sale con una contradicción en una
-  cláusula esencial.
+- **(c)** ~~¿Qué pasa con la 2.5?~~ → **decidido (David, 29-sep): se corrige en el mismo recorte que
+  la 2.3.** Propuesta de redacción (pendiente del visto bueno de David): la 2.5 gana un cuarto texto
+  dinámico, `cuentas_publicacion`, en lugar de «en Instagram a través de su cuenta
+  `{{proveedor_cuenta_social}}`»:
+
+  > 2.5 El Influencer deberá publicar el contenido a través de ⟨**su cuenta de TikTok @dana y su
+  > cuenta de Facebook Dana Rebolledo**⟩. Esta condición es un elemento esencial…
+
+  El agente verifica que cada red de la 2.3 tenga su cuenta en la 2.5, y que las cuentas sean las
+  que el proveedor tiene registradas.
 
 ### 3.3 La revisión del agente
 
@@ -183,7 +190,7 @@ Después, Marcela puede ajustar cualquier plantilla desde el editor.
 1. **`texto-dinamico-base`.** El tipo `dynamic_text` en el catálogo (back y front), el área de
    texto con instrucción, ejemplos y vista previa en el Constructor, y el soporte en el MCP. El
    primer texto es `servicios_entregables`, con la migración de la 2.3 en las 21 plantillas (y de
-   la 2.5, si se decide así en la **(c)**).
+   la 2.5 con `cuentas_publicacion`).
 2. **`revision-redaccion`.** El servicio de revisión con Claude, el paso «Revisar redacción» en el
    Constructor, la herramienta MCP y la evidencia guardada.
 3. **`contrato-por-evento`.** `evento_servicio` y `formato_periodo_publicacion`, con la migración de
