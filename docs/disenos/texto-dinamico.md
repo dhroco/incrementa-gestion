@@ -1,7 +1,7 @@
 # Dominio · texto dinámico en las cláusulas del objeto (2.1, 2.2 y 2.3)
 
 > Propuesta de Ignacio (arquitecto), 29-sep-2026, a partir de la conversación de David con Marcela.
-> **Estado: propuesta.** Las decisiones marcadas «⚖ David» están abiertas. Todavía no hay recortes.
+> **Estado: decidido (29-sep).** Las cinco decisiones de David (a–e) están tomadas. Siguen los recortes.
 
 ## 1. Qué pide el negocio
 
@@ -99,9 +99,10 @@ Marcela los distinga.
 ⚖ **David:**
 - **(a)** ~~¿Evento como texto dinámico o variables fijas?~~ → **decidido (David, 29-sep): texto
   dinámico**, con la regla 4 del agente (qué, fecha, hora y lugar).
-- **(b)** En las plantillas por evento, ¿el periodo de la 2.2 deja de ser `{{mes_ejecucion}}`? Si es
-  así, el listado de contratos pierde el mes de ejecución en esos contratos, porque hoy lo lee de
-  ahí.
+- **(b)** ~~¿La 2.2 por evento deja `{{mes_ejecucion}}`?~~ → **decidido (David, 29-sep): se mantienen
+  las dos cosas.** El periodo de la 2.2 es texto dinámico, y `mes_ejecucion` se sigue pidiendo como
+  dato del contrato para el listado, aunque no aparezca en el texto. El agente revisa que el mes calce
+  con el periodo escrito.
 - **(c)** ~~¿Qué pasa con la 2.5?~~ → **decidido (David, 29-sep): se corrige en el mismo recorte que
   la 2.3.** Redacción aprobada por David el 29-sep: la 2.5 gana un cuarto texto
   dinámico, `cuentas_publicacion`, en lugar de «en Instagram a través de su cuenta
