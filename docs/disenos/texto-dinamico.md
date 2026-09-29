@@ -78,7 +78,7 @@ Cada texto dinámico se define **una sola vez en el catálogo**, no en cada plan
 | `label` | El nombre que ve quien completa |
 | `instruccion` | Qué escribir, en una frase |
 | `ejemplos` | Dos o tres ejemplos reales |
-| `encaje` | La frase de la plantilla que lo rodea. El Constructor la muestra con el hueco resaltado, y el agente la usa para revisar |
+| `contexto` | No va en el catálogo: se calcula de cada plantilla (el párrafo que contiene el texto, con el hueco marcado). El Constructor lo muestra resaltado y el agente lo usa para revisar |
 | `reglas` | Lo que el agente tiene que verificar para ese texto (sección 3.3) |
 
 En el editor de plantillas se inserta como cualquier variable, pero se ve con otro color para que
@@ -122,7 +122,7 @@ antes de `generar_contrato`.
 
 **Qué recibe:**
 - el texto final de la sección SEGUNDO completa (2.1 a 2.8), con los textos dinámicos marcados;
-- la definición de cada texto dinámico (`encaje` y `reglas`);
+- la definición de cada texto dinámico (`contexto` y `reglas`);
 - los datos del contrato que sirven para contrastar: redes y cuentas del proveedor, mes de ejecución
   y fecha del contrato.
 
@@ -162,7 +162,7 @@ bloqueada si trabaja con el agente:
 
 | Paso | Constructor | MCP |
 |---|---|---|
-| Completar un texto dinámico | Área de texto con instrucción, ejemplos y la cláusula alrededor | `verificar_contrato` devuelve el campo con `type: 'dynamic_text'`, `instruccion`, `ejemplos` y `encaje`. El agente le pide el texto a la persona |
+| Completar un texto dinámico | Área de texto con instrucción, ejemplos y la cláusula alrededor | `verificar_contrato` devuelve el campo con `type: 'dynamic_text'`, `instruccion`, `ejemplos` y `contexto`. El agente le pide el texto a la persona |
 | Revisar | Botón «Revisar redacción» | Herramienta nueva `revisar_redaccion` (mismos datos que `generar_contrato`), que devuelve el veredicto y las observaciones |
 | Aceptar una sugerencia | Un clic en «Usar sugerencia» | El agente muestra la sugerencia y, **solo si la persona la acepta**, la pasa como nuevo valor del texto dinámico y vuelve a llamar a `revisar_redaccion` |
 | Generar igual con observaciones | «Generar igual» + motivo | `generar_contrato` con `generarIgual: { motivo }`. El agente **no puede** decidirlo ni escribir el motivo por su cuenta: la persona tiene que pedirlo y dictar el motivo |
@@ -201,20 +201,18 @@ moneda. Si una plantilla no calza, falla sin escribir nada. Son:
 
 Después, Marcela puede ajustar cualquier plantilla desde el editor.
 
-## 4. Recortes propuestos (en orden)
+## 4. Recortes
 
-1. **`texto-dinamico-base`.** El tipo `dynamic_text` en el catálogo (back y front), el área de
-   texto con instrucción, ejemplos y vista previa en el Constructor, y el soporte en el MCP. El
-   primer texto es `servicios_entregables`, con la migración de la 2.3 en las 21 plantillas (y de
-   la 2.5 con `cuentas_publicacion`).
-2. **`revision-redaccion`.** El servicio de revisión con Claude, el paso «Revisar redacción» y
-   «Generar igual» en el Constructor, las herramientas MCP (`revisar_redaccion` y `generarIgual` en
-   `generar_contrato`), el rechazo en el servidor sin revisión, y la evidencia guardada.
-3. **`contrato-por-evento`.** `evento_servicio` y `formato_periodo_publicacion`, con la migración de
-   la 2.1 y la 2.2 en las 6 plantillas por evento, más las reglas 4 y 5 del agente.
+En `texto-dinamico.recortes.yaml`, en este orden:
+1. **`texto-dinamico-base`**: el mecanismo (catálogo, Constructor, editor, MCP) y los dos primeros
+   textos, `servicios_entregables` y `cuentas_publicacion`. No toca plantillas.
+2. **`texto-dinamico-plantillas`**: la migración de la 2.3 (21 plantillas) y de la 2.5 (16).
+3. **`revision-redaccion`**: la revisión con Claude, «Generar igual» y la paridad con el MCP.
+4. **`contrato-por-evento`**: `evento_servicio` y `formato_periodo_publicacion` en las 6
+   plantillas por evento, más `mes_ejecucion` pedido aparte.
 
-Los recortes 1 y 2 se despliegan juntos a producción, para que ningún contrato real salga con texto
-dinámico sin revisar. En pre-prod pueden ir separados.
+Los recortes 2 y 3 van juntos a producción, para que ningún contrato real salga con texto dinámico
+sin revisar. En pre-prod pueden ir por separado.
 
 ## 5. Qué queda fuera
 

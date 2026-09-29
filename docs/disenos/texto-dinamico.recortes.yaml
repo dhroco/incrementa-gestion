@@ -1,0 +1,48 @@
+version: 1
+dominio: texto-dinamico
+diseno: docs/disenos/texto-dinamico.md
+recortes:
+  - id: texto-dinamico-base
+    objetivo: >
+      Que exista el tipo de variable dynamic_text: definido en el catálogo con instrucción y
+      ejemplos, pedido en el Constructor con un área de texto que muestra la cláusula alrededor, y
+      en el MCP con reglas que prohíben al agente redactarlo por su cuenta. Se definen los dos
+      primeros textos, servicios_entregables y cuentas_publicacion. Ninguna plantilla cambia todavía.
+    depende_de: []
+    fuera: >
+      Migrar plantillas, la revisión con Claude, los textos del evento y cualquier cambio en la
+      generación del PDF.
+    por_que_este_tamano: >
+      El mecanismo sin usuarios todavía: como ninguna plantilla lo usa, no cambia ningún contrato.
+      La siguiente corrida solo tiene que migrar texto.
+  - id: texto-dinamico-plantillas
+    objetivo: >
+      Que la 2.3 de las 21 plantillas use servicios_entregables y que la 2.5 de las 16 que dicen
+      «en Instagram» use cuentas_publicacion, con migración verificada y respaldo.
+    depende_de: [texto-dinamico-base]
+    fuera: >
+      La revisión con Claude y los contratos por evento.
+    por_que_este_tamano: >
+      Solo texto de plantillas, con el mismo patrón de migración de moneda-plantilla-usd.
+  - id: revision-redaccion
+    objetivo: >
+      La revisión con Claude antes de generar: el paso «Revisar redacción» y «Generar igual» con
+      motivo en el Constructor, las herramientas MCP equivalentes, el rechazo en el servidor sin
+      revisión y la evidencia guardada con el borrador.
+    depende_de: [texto-dinamico-base]
+    fuera: >
+      Los textos del evento, que agregan reglas al agente en el recorte siguiente.
+    por_que_este_tamano: >
+      Una dependencia nueva y un servicio con su contrato de salida, más dos puntos de entrada
+      (web y MCP) que tienen que quedar iguales.
+  - id: contrato-por-evento
+    objetivo: >
+      Que las 6 plantillas «con Evento» describan el evento en la 2.1 y el formato y periodo en la
+      2.2 con textos dinámicos, que mes_ejecucion se siga pidiendo para el listado, y que el agente
+      revise evento completo y fechas coherentes.
+    depende_de: [texto-dinamico-plantillas, revision-redaccion]
+    fuera: >
+      Las plantillas que no son por evento.
+    por_que_este_tamano: >
+      Dos textos nuevos sobre el mecanismo ya probado, más un dato del contrato que se pide sin estar
+      en el texto.
