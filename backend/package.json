@@ -17,6 +17,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "@casl/ability": "^6.8.1",
     "@fontsource/lora": "^5.0.5",
     "@google-cloud/storage": "^7.19.0",
@@ -27,9 +28,9 @@
     "jose": "^6.2.2",
     "knex": "^3.2.9",
     "multer": "^2.1.1",
-    "pngjs": "^7.0.0",
     "pdf-lib": "^1.17.1",
     "pg": "^8.20.0",
+    "pngjs": "^7.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "resend": "^6.12.4",
