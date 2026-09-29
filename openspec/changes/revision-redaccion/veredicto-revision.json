@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan es implementable y openspec validate pasa, pero 2 pruebas existentes de dynamicText.test.js se oponen al nuevo gate REVIEW_REQUIRED y el desarrollador no puede tocarlas; además falta cubrir en la migración el escenario de down, que este cambio no puede ejecutar.",
+  "hallazgos": [
+    {
+      "gravedad": "alta",
+      "donde": "backend/test/dynamicText.test.js — tests 'Line breaks and double spaces are stored collapsed' (línea ~308) y 'Punctuation is substituted unchanged' (línea ~373)",
+      "que": "prueba-opuesta: ambas llaman a generateWithDoc(...) sin dryRun y sin reviewId sobre un doc con la variable dynamic_text 'servicios_entregables', y afirman result.ok === true. El requirement 'Generating with dynamic text requires a review of the current values' de la spec contract-redaction-review exige que generateAndPersist sin dryRun y sin reviewId vigente devuelva 409 REVIEW_REQUIRED cuando la plantilla tiene dynamic_text, así que estas dos pruebas fallarán tal como están escritas hoy.",
+      "como_arreglar": "El desarrollador no puede modificar backend/test/dynamicText.test.js (regla del encargo). El Arquitecto debe ajustar esas dos pruebas fuera de esta corrida, antes del apply, para pasar un reviewId válido (o dryRun) cuando generan con dynamic_text, o para trasladar esa aserción de sustitución a un camino que no dependa de generateAndPersist completo."
+    },
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/revision-redaccion/specs/contract-redaction-review/spec.md — Requirement 'contract_review table and draft columns', escenario 'Down reverses both changes'",
+      "que": "Este escenario exige correr `up` y después `down` de la migración para verificar que revierte ambos cambios, pero las Restricciones y el Plan de este cambio prohíben correr la migración y conectarse a una base en las pruebas nuevas ('No la corras: la aplica Ignacio', 'la migración no se corre en este change').",
+      "como_arreglar": "No inventar infraestructura de pruebas de migración en esta corrida. El Arquitecto debe decidir si ese escenario se verifica manualmente cuando Ignacio aplique la migración, o si se mueve a una prueba de integración separada fuera del alcance de este cambio."
+    }
+  ]
+}
