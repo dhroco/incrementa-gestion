@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: formato-reel-opciones
+    que: los campos select existentes conservan sus opciones al agregar la rama dynamic_text
+    archivo: backend/services/documentBuilderService.js
+    buscar: "field.options = [...FORMATO_REEL_OPTIONS]"
+    reemplazar: "field.options = []"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: mcp-regla-select
+    que: las reglas actuales del MCP para select siguen en la descripción de validar_contrato
+    archivo: backend/mcpTools.mjs
+    buscar: "queda PROHIBIDO elegir por cuenta propia"
+    reemplazar: "puedes elegir por cuenta propia"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

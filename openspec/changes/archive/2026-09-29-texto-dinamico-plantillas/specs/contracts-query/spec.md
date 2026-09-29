@@ -1,18 +1,4 @@
-# contracts-query Specification
-
-## Purpose
-TBD - created by archiving change consulta-contratos. Update Purpose after archive.
-## Requirements
-### Requirement: Contract overrides database schema
-
-Migration `202606010005_add_contract_overrides.js` SHALL add nullable JSONB column `contract_overrides` to tables `draft_document` and `document`. It SHALL add nullable UUID column `document.client_id` referencing `client.id` with `ON DELETE SET NULL`. It SHALL create GIN indexes `idx_draft_document_contract_overrides` and `idx_document_contract_overrides` on the respective `contract_overrides` columns. The `down` migration SHALL drop the added columns and indexes.
-
-#### Scenario: Migration applies successfully
-
-- **WHEN** `knex migrate:latest` includes migration `202606010005_add_contract_overrides.js`
-- **THEN** columns `draft_document.contract_overrides` and `document.contract_overrides` exist as nullable JSONB
-- **AND** column `document.client_id` exists as nullable UUID FK to `client`
-- **AND** both GIN indexes exist
+## MODIFIED Requirements
 
 ### Requirement: Contract list API
 
@@ -80,31 +66,6 @@ Each item SHALL include at minimum: `id`, `source` (`draft`|`signed`), `supplier
 - **THEN** the list predicate matches that contract
 - **AND** the same ILIKE term is applied to `proveedor_red_social` OR `servicios_entregables`
 
-### Requirement: Contract PDF download API
-
-The backend SHALL expose `GET /api/contracts/:id/pdf?source=draft|signed` protected by `authorize('read', 'Contract')`. Parameter `source` MUST be exactly `draft` or `signed`. For `source=draft`, the controller SHALL load the row from `draft_document` by `id`. For `source=signed`, it SHALL load from `document` by `id`. If the row does not exist, the server SHALL respond HTTP 404 with a Spanish message. On success, the server SHALL download bytes via `gcsService.downloadBuffer`, set `Content-Type: application/pdf`, `Content-Disposition: inline; filename="<sanitized file_name>"`, and return the PDF buffer.
-
-#### Scenario: Download draft PDF
-
-- **WHEN** an authorized user requests `GET /api/contracts/{draftId}/pdf?source=draft` for an existing draft
-- **THEN** the response is HTTP 200 with `Content-Type: application/pdf`
-- **AND** the body is the PDF bytes from GCS
-
-#### Scenario: Download signed PDF
-
-- **WHEN** an authorized user requests `GET /api/contracts/{docId}/pdf?source=signed` for an existing document row
-- **THEN** the response is HTTP 200 with inline PDF content
-
-#### Scenario: Invalid source parameter
-
-- **WHEN** an authorized user requests PDF with `source=invalid`
-- **THEN** the server responds with HTTP 400 and a Spanish validation message
-
-#### Scenario: Missing contract
-
-- **WHEN** an authorized user requests PDF for a non-existent id
-- **THEN** the server responds with HTTP 404
-
 ### Requirement: Contracts query frontend page
 
 The frontend SHALL provide `ContractsListPage` at route `/app/gestion-contratos/consulta-contratos`, gated by `RequireCan I="read" a="Contract"`. On mount, it SHALL load client list via `fetchClientsList()` and template list via `fetchStandardTemplates()` (all templates, not only active). Filter bar SHALL include:
@@ -143,25 +104,3 @@ Changing any filter SHALL reset to page 1. Results table SHALL display columns: 
 
 - **WHEN** a list row has `proveedor_red_social` `Instagram`, `proveedor_cuenta_social` `@acme`, and no `servicios_entregables`
 - **THEN** the Red Social cell shows `Instagram — @acme`
-
-### Requirement: Contracts navigation menu entry
-
-`menuConfig.js` SHALL include under `gestion_contratos` an item with `id: 'consulta_contratos'`, label `Consulta contratos`, path `/app/gestion-contratos/consulta-contratos`, `navCode: 'NAV_ITEM_CONTRATOS_CONSULTA'`, `moduleTitle: 'Consulta contratos'`, and check `{ action: 'read', subject: 'Contract' }`.
-
-#### Scenario: Menu item visible with permission
-
-- **WHEN** a user with `read` on `Contract` views the sidebar under Gestión de Contratos
-- **THEN** item "Consulta contratos" is visible and navigates to the consulta page
-
-### Requirement: Contracts frontend API module
-
-The frontend SHALL provide `contractsApi.js` exporting:
-
-- `fetchContracts({ page, filters, accessToken })` → `GET /api/contracts`
-- `fetchContractPdfBlob({ id, source, accessToken })` → `GET /api/contracts/:id/pdf` returning a Blob
-
-#### Scenario: fetchContracts sends filter query params
-
-- **WHEN** `fetchContracts` is called with filters and page 2
-- **THEN** the request URL includes encoded filter parameters and `page=2`
-

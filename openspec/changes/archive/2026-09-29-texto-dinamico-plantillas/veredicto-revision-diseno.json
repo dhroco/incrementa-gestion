@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "Lo construido cumple el diseño: las ventanas de reemplazo de las 8 variantes calzan nodo por nodo con la redacción de la spec, el input no se muta, up no escribe hasta tener las 21 reescrituras y el OR del filtro va agrupado en ambas subconsultas. Queda una carrera con el editor de plantillas, que la transacción de la migración no cierra y que un humano debe coordinar al aplicarla.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "backend/migrations/202609290001_dynamic_text_clauses.js",
+      "que": "up lee content_json con un SELECT simple, verifica y reescribe en memoria, y después hace UPDATE. La única protección contra una edición concurrente (PUT /api/standard-templates/:id) es esa lectura previa: la transacción de knex, en READ COMMITTED y sin bloqueo de filas, no serializa contra el editor. Si alguien guarda una de las 21 plantillas entre el SELECT y el UPDATE, su edición se pierde sin aviso, y tampoco queda en template_content_backup (el respaldo guarda la versión anterior a esa edición), así que down no la recupera. Además, quien tenga el editor abierto desde antes de la migración y guarde después devuelve la plantilla a la 2.3 vieja: el PUT sobrescribe content_json completo, sin control de versión. Esa segunda ventana no la cierra ningún bloqueo en la migración. El design.md presenta la transacción como defensa suficiente, pero no lo es.",
+      "como_arreglar": "En la migración, usar .forUpdate() en el SELECT de las 21 plantillas para cerrar la ventana corta entre la lectura y la escritura. En la operación, que Ignacio congele la edición de plantillas estándar mientras aplica la migración y pida recargar el editor después. Si se quiere una defensa real contra escrituras obsoletas, el PUT de plantillas necesita un control optimista (updated_at o versión), pero eso queda fuera de este cambio."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "frontend/src/pages/ContractsListPage.jsx",
+      "que": "formatRedSocial toma cualquier string no vacío. Un servicios_entregables con solo espacios deja la celda en blanco y esconde la red y la cuenta de hoy. Es el riesgo que el design.md dice cubrir («un string vacío esconde la red»), y el código lo cubre solo en parte. Depende de si texto-dinamico-base recorta el valor al guardarlo.",
+      "como_arreglar": "Comparar entregables.trim() !== '', o confirmar que el override siempre se guarda recortado."
+    }
+  ]
+}

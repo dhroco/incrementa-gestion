@@ -18,6 +18,7 @@ const {
 } = require('../utils/formatReels')
 const { formatFechaEs } = require('../utils/formatFechaEs')
 const { countryLabel } = require('../utils/identityDocument')
+const { DYNAMIC_TEXT_CATALOG, getDynamicTextDefinition } = require('./dynamicTextCatalog')
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -68,6 +69,16 @@ const VARIABLE_META = {
   formato_reel:    { label: 'Formato de reel',     type: 'select', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
+  servicios_entregables: {
+    label: DYNAMIC_TEXT_CATALOG.servicios_entregables.label,
+    type: 'dynamic_text',
+    source: 'contract'
+  },
+  cuentas_publicacion: {
+    label: DYNAMIC_TEXT_CATALOG.cuentas_publicacion.label,
+    type: 'dynamic_text',
+    source: 'contract'
+  },
 }
 
 function getVariableMeta(key) {
@@ -193,7 +204,82 @@ function preprocessMissingFieldOverrides(overrides, { currencyCode } = {}) {
   return out
 }
 
-function resolveFieldDefinition(key, { clientRow, supplierRow } = {}) {
+const DYNAMIC_TEXT_HOLE = '⟨…⟩'
+
+function nodeContainsVariableId(node, variableId) {
+  if (!isPlainObject(node)) return false
+  if (
+    node.type === 'variable' &&
+    typeof node.attrs?.variableId === 'string' &&
+    String(node.attrs.variableId).trim() === variableId
+  ) {
+    return true
+  }
+  if (!Array.isArray(node.content)) return false
+  return node.content.some((child) => nodeContainsVariableId(child, variableId))
+}
+
+function findFirstParagraphWithVariable(node, variableId) {
+  if (!isPlainObject(node)) return null
+  if (node.type === 'paragraph' && nodeContainsVariableId(node, variableId)) {
+    return node
+  }
+  if (!Array.isArray(node.content)) return null
+  for (const child of node.content) {
+    const found = findFirstParagraphWithVariable(child, variableId)
+    if (found) return found
+  }
+  return null
+}
+
+function walkParagraphContext(node, targetId) {
+  if (!isPlainObject(node)) return ''
+  const t = node.type
+  if (t === 'text' && typeof node.text === 'string') return node.text
+  if (t === 'hardBreak') return '\n'
+  if (t === 'variable' && typeof node.attrs?.variableId === 'string') {
+    const vid = String(node.attrs.variableId).trim()
+    if (!vid) return ''
+    return vid === targetId ? DYNAMIC_TEXT_HOLE : `{{${vid}}}`
+  }
+  if (t === 'embeddedUniversalClause') return ''
+  if (!Array.isArray(node.content)) return ''
+  let inner = ''
+  for (const child of node.content) {
+    inner += walkParagraphContext(child, targetId)
+  }
+  return inner
+}
+
+function dynamicTextContext(templateDoc, variableId) {
+  if (templateDoc == null) return null
+  const paragraph = findFirstParagraphWithVariable(templateDoc, variableId)
+  if (!paragraph) return null
+  return walkParagraphContext(paragraph, variableId).replace(/\s+$/u, '')
+}
+
+function normalizeDynamicTextOverrides(overrides) {
+  const out = { ...(overrides || {}) }
+  for (const key of Object.keys(out)) {
+    if (getVariableMeta(key).type !== 'dynamic_text') continue
+    const value = out[key]
+    if (value == null || String(value) === '') continue
+    const normalized = String(value).trim().replace(/\s+/g, ' ')
+    if (normalized.length > 500) {
+      const label = getDynamicTextDefinition(key)?.label ?? getVariableMeta(key).label
+      return {
+        ok: false,
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: `El texto de «${label}» no puede superar los 500 caracteres.`
+      }
+    }
+    out[key] = normalized
+  }
+  return { ok: true, overrides: out }
+}
+
+function resolveFieldDefinition(key, { clientRow, supplierRow, templateDoc } = {}) {
   const meta = getVariableMeta(key)
   const pairField = getPairFieldForPrimary(key)
   const field = { key, label: meta.label, type: meta.type, source: meta.source ?? 'contract' }
@@ -224,12 +310,21 @@ function resolveFieldDefinition(key, { clientRow, supplierRow } = {}) {
     }
   }
 
+  if (meta.type === 'dynamic_text') {
+    const def = getDynamicTextDefinition(key)
+    field.instruccion = def?.instruccion ?? ''
+    field.ejemplos = def ? [...def.ejemplos] : []
+    field.contexto = dynamicTextContext(templateDoc, key)
+  }
+
   return field
 }
 
-function buildMissingFields(missingKeys, { clientRow, supplierRow } = {}) {
+function buildMissingFields(missingKeys, { clientRow, supplierRow, templateDoc } = {}) {
   const normalized = normalizeMissingKeys(missingKeys)
-  return normalized.map((key) => resolveFieldDefinition(key, { clientRow, supplierRow }))
+  return normalized.map((key) =>
+    resolveFieldDefinition(key, { clientRow, supplierRow, templateDoc })
+  )
 }
 
 function isNonEmptyOverride(value) {
@@ -573,7 +668,10 @@ function createDocumentBuilderService({
       }
     }
 
-    const overrides = preprocessMissingFieldOverrides(overridesRaw, {
+    const dynamicTextCheck = normalizeDynamicTextOverrides(overridesRaw)
+    if (!dynamicTextCheck.ok) return dynamicTextCheck
+
+    const overrides = preprocessMissingFieldOverrides(dynamicTextCheck.overrides, {
       currencyCode: templateRow.currency_code
     })
 
@@ -606,7 +704,13 @@ function createDocumentBuilderService({
         status: 422,
         code: 'MISSING_PLACEHOLDERS',
         message: 'Faltan variables requeridas en la plantilla.',
-        data: { missingFields: buildMissingFields(missing, { clientRow, supplierRow: supplier }) }
+        data: {
+          missingFields: buildMissingFields(missing, {
+            clientRow,
+            supplierRow: supplier,
+            templateDoc: mergedDoc
+          })
+        }
       }
     }
 

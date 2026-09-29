@@ -83,6 +83,9 @@ const VariableCatalog = ({ onVariableSelect, isOpen, onClose }) => {
               >
                 <div className={styles['variable-item-header']}>
                   <span className={styles['variable-label']}>{variable.label}</span>
+                  {variable.type === 'dynamic_text' ? (
+                    <span className={styles['variable-kind-label']}>Texto dinámico</span>
+                  ) : null}
                   <span className={`${styles['variable-group-badge']} ${variable.group}`}>
                     {variable.groupLabel}
                   </span>

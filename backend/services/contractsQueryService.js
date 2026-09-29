@@ -50,7 +50,12 @@ function applySharedFilters(q, filters, alias) {
 
   if (filters.redSocialSearch) {
     const term = `%${filters.redSocialSearch}%`
-    q.andWhereRaw(`${prefix}contract_overrides->>'proveedor_red_social' ILIKE ?`, [term])
+    q.andWhere(function redSocialWhere() {
+      this.whereRaw(`${prefix}contract_overrides->>'proveedor_red_social' ILIKE ?`, [term]).orWhereRaw(
+        `${prefix}contract_overrides->>'servicios_entregables' ILIKE ?`,
+        [term]
+      )
+    })
   }
 
   return q
@@ -149,7 +154,8 @@ function mapContractListItem(row) {
     mes_ejecucion: overrides.mes_ejecucion ?? null,
     proveedor_red_social: overrides.proveedor_red_social ?? null,
     proveedor_cuenta_social: overrides.proveedor_cuenta_social ?? null,
-    precio_numero: overrides.precio_numero ?? null
+    precio_numero: overrides.precio_numero ?? null,
+    servicios_entregables: overrides.servicios_entregables ?? null
   }
 }
 

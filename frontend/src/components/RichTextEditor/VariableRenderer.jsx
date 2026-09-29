@@ -2,10 +2,13 @@ import React from 'react'
 import { NodeViewWrapper, useCurrentEditor } from '@tiptap/react'
 import styles from './styles.module.css'
 import { nodeHasMark, selectVariableNodeAt } from './inlineFormatting'
+import { getVariableById } from '../../data/variableCatalog'
 
 const VariableRenderer = ({ node, getPos, selected }) => {
   const { editor } = useCurrentEditor()
   const { variableId, label, group } = node.attrs
+  const catalogEntry = getVariableById(variableId)
+  const dataKind = catalogEntry?.type === 'dynamic_text' ? 'dynamic_text' : undefined
   const bold = nodeHasMark(node, 'bold')
   const italic = nodeHasMark(node, 'italic')
   const underline = nodeHasMark(node, 'underline')
@@ -37,6 +40,7 @@ const VariableRenderer = ({ node, getPos, selected }) => {
         title={`${group}: ${label}`}
         data-variable-id={variableId}
         data-group={group}
+        data-kind={dataKind}
         data-uppercase={uppercase ? 'true' : undefined}
         data-bold={bold ? 'true' : undefined}
       >
