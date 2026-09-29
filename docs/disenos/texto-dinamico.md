@@ -105,7 +105,7 @@ Marcela los distinga.
   así, el listado de contratos pierde el mes de ejecución en esos contratos, porque hoy lo lee de
   ahí.
 - **(c)** ~~¿Qué pasa con la 2.5?~~ → **decidido (David, 29-sep): se corrige en el mismo recorte que
-  la 2.3.** Propuesta de redacción (pendiente del visto bueno de David): la 2.5 gana un cuarto texto
+  la 2.3.** Redacción aprobada por David el 29-sep: la 2.5 gana un cuarto texto
   dinámico, `cuentas_publicacion`, en lugar de «en Instagram a través de su cuenta
   `{{proveedor_cuenta_social}}`»:
 
