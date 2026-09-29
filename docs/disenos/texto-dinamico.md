@@ -153,9 +153,26 @@ principio del RUT y del precio: el sistema no decide por el usuario.
 **Evidencia.** Cada revisión se guarda con el borrador: fecha, modelo, textos revisados y veredicto.
 
 ⚖ **David:**
-- **(d)** ¿Generar el PDF exige la última revisión en `ok`? ¿O se permite «generar igual» dejando
-  registrado quién lo hizo y por qué? Recomiendo **permitirlo con registro**: la revisión es una
-  ayuda, y quien firma es Yerko.
+- **(d)** ~~¿Generar exige la revisión en `ok`?~~ → **decidido (David, 29-sep): se permite «generar
+  igual», con registro.** Hay que escribir un motivo, y queda anotado quién lo hizo, cuándo y con qué
+  observaciones abiertas. La generación sin ninguna revisión previa **no** se permite.
+
+**Paridad entre el Constructor y el MCP (David, 29-sep).** El PDF se genera por los dos caminos, así
+que el MCP tiene que poder hacer todo lo que hace el Constructor, para que Marcela no quede
+bloqueada si trabaja con el agente:
+
+| Paso | Constructor | MCP |
+|---|---|---|
+| Completar un texto dinámico | Área de texto con instrucción, ejemplos y la cláusula alrededor | `verificar_contrato` devuelve el campo con `type: 'dynamic_text'`, `instruccion`, `ejemplos` y `encaje`. El agente le pide el texto a la persona |
+| Revisar | Botón «Revisar redacción» | Herramienta nueva `revisar_redaccion` (mismos datos que `generar_contrato`), que devuelve el veredicto y las observaciones |
+| Aceptar una sugerencia | Un clic en «Usar sugerencia» | El agente muestra la sugerencia y, **solo si la persona la acepta**, la pasa como nuevo valor del texto dinámico y vuelve a llamar a `revisar_redaccion` |
+| Generar igual con observaciones | «Generar igual» + motivo | `generar_contrato` con `generarIgual: { motivo }`. El agente **no puede** decidirlo ni escribir el motivo por su cuenta: la persona tiene que pedirlo y dictar el motivo |
+
+Las reglas del agente MCP se escriben en las descripciones de las herramientas, como las de hoy
+para los `select`: está prohibido redactar un texto dinámico por su cuenta, aceptar una sugerencia
+sin preguntar o saltarse la revisión. Además, `generar_contrato` rechaza en el servidor lo que no
+tenga una revisión para los valores actuales, así que la regla no depende de que el agente la
+cumpla.
 - **(e)** ~~Tecnología y costo~~ → **decidido (David, 29-sep): se usa la API de Claude** (sección 3.4).
 
 ### 3.4 Con qué se hace la revisión
@@ -191,8 +208,9 @@ Después, Marcela puede ajustar cualquier plantilla desde el editor.
    texto con instrucción, ejemplos y vista previa en el Constructor, y el soporte en el MCP. El
    primer texto es `servicios_entregables`, con la migración de la 2.3 en las 21 plantillas (y de
    la 2.5 con `cuentas_publicacion`).
-2. **`revision-redaccion`.** El servicio de revisión con Claude, el paso «Revisar redacción» en el
-   Constructor, la herramienta MCP y la evidencia guardada.
+2. **`revision-redaccion`.** El servicio de revisión con Claude, el paso «Revisar redacción» y
+   «Generar igual» en el Constructor, las herramientas MCP (`revisar_redaccion` y `generarIgual` en
+   `generar_contrato`), el rechazo en el servidor sin revisión, y la evidencia guardada.
 3. **`contrato-por-evento`.** `evento_servicio` y `formato_periodo_publicacion`, con la migración de
    la 2.1 y la 2.2 en las 6 plantillas por evento, más las reglas 4 y 5 del agente.
 
