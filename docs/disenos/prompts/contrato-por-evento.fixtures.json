@@ -1,0 +1,172 @@
+{
+  "_nota": "Párrafos exactos leídos de pre-prod (solo lectura) el 29-sep-2026, antes de cualquier cambio en la 2.1 y la 2.2. Cada variante indica en qué plantillas aparece idéntica.",
+  "clausula_2_1": {
+    "negrita": {
+      "plantillas": [
+        "CONTRATO_0003",
+        "CONTRATO_0006",
+        "CONTRATO_0009"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.1 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "En consideración a lo expuesto en la cláusula anterior, las Partes establecen la fórmula de trabajo entre ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            },
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": " y el Influencer, en virtud de la cual, esta último prestará servicios de generación de contenido para redes sociales, en los cuales publicará videos y recomendaciones del Producto (en adelante, los “Servicios”).",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "normal": {
+      "plantillas": [
+        "CONTRATO_0012",
+        "CONTRATO_0015",
+        "CONTRATO_0017"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.1 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "En consideración a lo expuesto en la cláusula anterior, las Partes establecen la fórmula de trabajo entre ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            }
+          },
+          {
+            "text": " y el Influencer, en virtud de la cual, esta último prestará servicios de generación de contenido para redes sociales, en los cuales publicará videos y recomendaciones del Producto (en adelante, los “Servicios”).",
+            "type": "text"
+          }
+        ]
+      }
+    }
+  },
+  "clausula_2_2": {
+    "CL": {
+      "plantillas": [
+        "CONTRATO_0003",
+        "CONTRATO_0006",
+        "CONTRATO_0009",
+        "CONTRATO_0012",
+        "CONTRATO_0015"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.2 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "Dicho contenido deberá ser publicitado a través de las redes sociales del Influencer (i.e. “Instagram, Facebook y/o Tik Tok”), bajo el formato de Historia o Reel, durante el mes de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Mes de ejecución",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "mes_ejecucion"
+            }
+          },
+          {
+            "text": ".",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "MX": {
+      "plantillas": [
+        "CONTRATO_0017"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.2 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "Dicho contenido deberá ser publicitado a través de las redes sociales del Influencer (i.e. “Instagram, Facebook y/o Tik Tok”), bajo el formato de Publicación de video, Story o Reel, durante el periodo que se indique expresamente en el presente Contrato o en los Anexos correspondientes, según resulte aplicable.",
+            "type": "text"
+          }
+        ]
+      }
+    }
+  }
+}

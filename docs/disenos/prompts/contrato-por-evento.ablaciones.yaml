@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: revisor-regla-redes
+    que: las reglas actuales del revisor siguen al agregar la 6 y la 7
+    archivo: backend/lib/contractReviewer.js
+    buscar: "'5. Registro formal: sin abreviaturas, emojis ni lenguaje coloquial.',"
+    reemplazar: "'5. Registro formal.',"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: catalogo-entregables-intacto
+    que: la entrada servicios_entregables no cambia al agregar las del evento
+    archivo: backend/services/dynamicTextCatalog.js
+    buscar: "'cinco (5) reels en TikTok y cuatro (4) reels en Facebook',"
+    reemplazar: "'cinco reels en TikTok',"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
