@@ -1,0 +1,129 @@
+version: 1
+ablaciones:
+  - id: review-route-sin-authorize
+    que: "POST /api/document-builder/review queda protegido por authorize('use', 'DocumentBuilder'), igual que /generate"
+    archivo: backend/app.js
+    buscar: "  app.post(\n    '/api/document-builder/review',\n    authorize('use', 'DocumentBuilder'),\n    documentBuilderController.postReview\n  )"
+    reemplazar: "  app.post(\n    '/api/document-builder/review',\n    documentBuilderController.postReview\n  )"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderApi.review.test.js
+    gravedad: grave
+
+  - id: require-current-review-sin-input-hash
+    que: "generar exige una revisión del input_hash de los valores ACTUALES, no de cualquier revisión previa de esa empresa/proveedor/plantilla"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "        template_id: prepared.template.id,\n        input_hash: inputHash\n      })"
+    reemplazar: "        template_id: prepared.template.id\n      })"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.review.test.js --test-name-pattern="A review of different values is rejected"
+    gravedad: grave
+
+  - id: require-current-review-sin-company-id
+    que: "el reviewId debe corresponder a una revisión de la MISMA empresa (acota por company_id), no solo por proveedor/plantilla/hash"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "        id: reviewId,\n        company_id: prepared.companyId,\n        supplier_id: prepared.supplierId,"
+    reemplazar: "        id: reviewId,\n        supplier_id: prepared.supplierId,"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.review.test.js --test-name-pattern="A valid motivo is stored with the review"
+    gravedad: grave
+
+  - id: migracion-down-orden-invertido
+    que: "down() de 202609290002_contract_review saca antes las columnas de draft_document (review_id, review_override_reason) y recién después borra contract_review, porque review_id referencia esa tabla"
+    archivo: backend/migrations/202609290002_contract_review.js
+    buscar: "exports.down = async function down(knex) {\n  await knex.schema.alterTable('draft_document', (table) => {\n    table.dropColumn('review_id')\n    table.dropColumn('review_override_reason')\n  })\n  await knex.schema.dropTableIfExists('contract_review')\n}"
+    reemplazar: "exports.down = async function down(knex) {\n  await knex.schema.dropTableIfExists('contract_review')\n  await knex.schema.alterTable('draft_document', (table) => {\n    table.dropColumn('review_id')\n    table.dropColumn('review_override_reason')\n  })\n}"
+    prueba: cd backend && env -u DATABASE_URL node --test test/contractReviewMigration.test.js --test-name-pattern="down reverses both changes"
+    gravedad: grave
+
+  - id: motivo-limite-nueve-caracteres
+    que: "el motivo de «Generar igual» exige al menos 10 caracteres tras trim, no 9"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "      if (motivo.length < 10) return { ...REVIEW_HAS_OBSERVATIONS, resolvedDoc: null }"
+    reemplazar: "      if (motivo.length < 9) return { ...REVIEW_HAS_OBSERVATIONS, resolvedDoc: null }"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.review.test.js --test-name-pattern="Nine characters are not enough"
+    gravedad: borde
+
+  - id: verdict-sin-reconciliar
+    que: "el verdict final se reconcilia a partir de la lista de observations (una lista vacía siempre da ok, y viceversa), no se confía en el verdict crudo del modelo"
+    archivo: backend/lib/contractReviewer.js
+    buscar: "    const verdict = observations.length > 0 ? 'observaciones' : 'ok'"
+    reemplazar: "    const verdict = response.parsed_output.verdict"
+    prueba: cd backend && env -u DATABASE_URL node --test test/contractReviewer.test.js --test-name-pattern="An empty list forces ok"
+    gravedad: borde
+
+  - id: review-draft-sin-review-not-needed
+    que: "reviewDraft responde REVIEW_NOT_NEEDED (y no llama al revisor) cuando la plantilla no tiene ningún dynamic_text"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    if (collectDynamicTextIds(prepared.mergedDoc).length === 0) {"
+    reemplazar: "    if (false) {"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.review.test.js --test-name-pattern="A template without dynamic text is not reviewed"
+    gravedad: borde
+
+  - id: mcp-generar-contrato-sin-review-id
+    que: "generar_contrato reenvía el reviewId recibido al body de generateAndPersist"
+    archivo: backend/mcpTools.mjs
+    buscar: "      if (reviewId !== undefined) body.reviewId = reviewId"
+    reemplazar: ""
+    prueba: cd backend && env -u DATABASE_URL node --test test/mcpRevision.test.js --test-name-pattern="Generate accepts a review and forbids writing the motivo"
+    gravedad: borde
+
+  - id: frontend-can-generate-ignora-observaciones
+    que: "«Generar PDF y guardar» no se habilita mientras la revisión tenga observaciones abiertas (solo con verdict ok, o sin dynamic_text)"
+    archivo: frontend/src/pages/DocumentBuilderPage.jsx
+    buscar: "    (!hasDynamicText || reviewResult?.verdict === 'ok')"
+    reemplazar: "    true"
+    prueba: cd frontend && npx vitest run src/pages/DocumentBuilderPage.review.test.jsx -t "Using a suggestion clears the review"
+    gravedad: borde
+
+  - id: frontend-motivo-limite-nueve
+    que: "«Generar igual» exige al menos 10 caracteres (tras trim) antes de enviar generarIgual, no 9"
+    archivo: frontend/src/pages/DocumentBuilderPage.jsx
+    buscar: "      if (generarIgual && motivo.trim().length < 10) return false"
+    reemplazar: "      if (generarIgual && motivo.trim().length < 9) return false"
+    prueba: cd frontend && npx vitest run src/pages/DocumentBuilderPage.review.test.jsx -t "Generar igual sends the motivo"
+    gravedad: borde
+
+  - id: reviewdraft-observations-sin-jsonb-stringify
+    que: "reviewDraft guarda observations como jsonb serializado (JSON.stringify), no como Array de JS crudo: pg trata un Array sin serializar como literal de arreglo Postgres, no como JSON válido para una columna jsonb"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "        observations: JSON.stringify(reviewed.observations),"
+    reemplazar: "        observations: reviewed.observations,"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.reviewPersistence.test.js --test-name-pattern="An empty observation list is stored as a jsonb array"
+    gravedad: grave
+
+  - id: require-current-review-sin-validar-uuid
+    que: "requireCurrentReview rechaza un reviewId sin forma de uuid con 409 REVIEW_REQUIRED antes de consultar la base, en vez de dejar que la query llegue a Postgres y falle con invalid input syntax for type uuid (500)"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    if (!isUuidText(reviewId)) return { ...REVIEW_REQUIRED, resolvedDoc: null }"
+    reemplazar: ""
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.reviewPersistence.test.js --test-name-pattern="A reviewId that is not a uuid is REVIEW_REQUIRED"
+    gravedad: grave
+
+  - id: migracion-review-id-restrict-en-vez-de-no-action
+    que: "draft_document.review_id referencia contract_review.id con ON DELETE NO ACTION (aprobado en C-0P8JHYZ), no RESTRICT: NO ACTION difiere la verificación al final de la sentencia y tolera que la misma cascada de borrar una empresa o un proveedor elimine la revisión y el borrador juntos; RESTRICT la evalúa de inmediato y rompe ese borrado"
+    archivo: backend/migrations/202609290002_contract_review.js
+    buscar: "      .inTable('contract_review')\n      .onDelete('NO ACTION')"
+    reemplazar: "      .inTable('contract_review')\n      .onDelete('RESTRICT')"
+    prueba: cd backend && env -u DATABASE_URL node --test test/contractReviewOnDelete.test.js
+    gravedad: grave
+
+  - id: frontend-reemplazar-pierde-motivo
+    que: "onConfirmReplaceDuplicate reenvía el generarIgual pendiente al reemplazar un borrador duplicado, para que un 409 DUPLICATE_DRAFT tras «Generar igual» no deje al usuario sin forma de reemplazar sin cerrar las observaciones"
+    archivo: frontend/src/pages/DocumentBuilderPage.jsx
+    buscar: "    await executeGenerate({ overwrite: true, generarIgual: pendingGenerarIgualRef.current })"
+    reemplazar: "    await executeGenerate({ overwrite: true })"
+    prueba: cd frontend && npx vitest run src/pages/DocumentBuilderPage.reviewFollowup.test.jsx -t "Replacing a duplicate resends the motivo"
+    gravedad: borde
+
+  - id: reviewdraft-fuerza-dryrun-false
+    que: "reviewDraft descarta el dryRun del body recibido y siempre prepara con dryRun:false, para que un POST /api/document-builder/review con dryRun:true igual llame al revisor e inserte la fila, en vez de responder un 200 { valid:true } sin revisar"
+    archivo: backend/services/documentBuilderService.js
+    buscar: "      body: { ...body, dryRun: false }"
+    reemplazar: "      body"
+    prueba: cd backend && env -u DATABASE_URL node --test test/documentBuilderService.reviewDryRun.test.js --test-name-pattern="A dry run body still reviews"
+    gravedad: borde
+
+  - id: frontend-review-race-descarta-respuesta-vieja
+    que: "runReview descarta la respuesta de una revisión en curso si reviewGenerationRef cambió mientras tanto (porque el usuario editó un campo), para no mostrar «Sin observaciones» ni habilitar «Generar PDF y guardar» con una revisión de un texto que ya no está en pantalla"
+    archivo: frontend/src/pages/DocumentBuilderPage.jsx
+    buscar: "    if (generation !== reviewGenerationRef.current) return"
+    reemplazar: ""
+    prueba: cd frontend && npx vitest run src/pages/DocumentBuilderPage.reviewFollowup.test.jsx -t "A field edit discards an in-flight review"
+    gravedad: borde

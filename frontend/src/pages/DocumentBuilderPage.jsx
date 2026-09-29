@@ -9,6 +9,7 @@ import { fetchClientsList } from '../api/clientsApi'
 import {
   fetchDocumentBuilderTemplates,
   postDocumentBuilderGenerate,
+  postDocumentBuilderReview,
   downloadDocumentBuilderPdf
 } from '../api/documentBuilderApi'
 import { AbilityContext } from '../lib/ability'
@@ -215,6 +216,12 @@ export function DocumentBuilderPage() {
   const [missingFieldDefs, setMissingFieldDefs] = useState([])
   /** @type {'idle' | 'loading' | 'ready' | 'needs_fields'} */
   const [dryRunStatus, setDryRunStatus] = useState('idle')
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewResult, setReviewResult] = useState(null)
+  const [showMotivo, setShowMotivo] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const reviewGenerationRef = useRef(0)
+  const pendingGenerarIgualRef = useRef(false)
 
   const stage1Ok = Boolean(selectedSupplierId)
   const stageTemplateOk = Boolean(templateSelected?.id && templateSelected?.kind)
@@ -346,6 +353,9 @@ export function DocumentBuilderPage() {
     let active = true
     dispatch(clearMissingFields())
     setMissingFieldDefs([])
+    setReviewResult(null)
+    setShowMotivo(false)
+    setMotivo('')
     setDryRunStatus('loading')
 
     const body = {
@@ -400,16 +410,27 @@ export function DocumentBuilderPage() {
     })
   }, [missingFieldDefs, missingFields])
 
+  const hasDynamicText = missingFieldDefs.some((field) => field.type === 'dynamic_text')
+
   const canGenerate =
     stageTemplateOk &&
     !generating &&
     dryRunStatus !== 'loading' &&
     dryRunStatus !== 'idle' &&
-    (dryRunStatus === 'ready' || (dryRunStatus === 'needs_fields' && allMissingFieldsFilled))
+    (dryRunStatus === 'ready' || (dryRunStatus === 'needs_fields' && allMissingFieldsFilled)) &&
+    (!hasDynamicText || reviewResult?.verdict === 'ok')
+
+  const clearShownReview = useCallback(() => {
+    reviewGenerationRef.current += 1
+    setReviewResult(null)
+    setShowMotivo(false)
+    setMotivo('')
+  }, [])
 
   const executeGenerate = useCallback(
-    async ({ overwrite = false } = {}) => {
+    async ({ overwrite = false, generarIgual = false } = {}) => {
       if (!companyId || !stage1Ok || !stageTemplateOk || !selectedSupplierId) return false
+      if (generarIgual && motivo.trim().length < 10) return false
       setGenerating(true)
       setError(null)
       const body = {
@@ -423,6 +444,12 @@ export function DocumentBuilderPage() {
       if (overwrite) {
         body.overwrite = true
       }
+      if (hasDynamicText && reviewResult?.reviewId) {
+        body.reviewId = reviewResult.reviewId
+      }
+      if (generarIgual) {
+        body.generarIgual = { motivo: motivo.trim() }
+      }
       const res = await postDocumentBuilderGenerate(body, { companyId })
       setGenerating(false)
       if (res.ok) {
@@ -435,12 +462,14 @@ export function DocumentBuilderPage() {
                   created_at: null,
                   status: 'draft'
                 }
+          pendingGenerarIgualRef.current = generarIgual
           setDuplicateDraft(existing)
           return false
         }
         const docs = res.data?.documents
         dispatch(setGeneratedDocuments(Array.isArray(docs) ? docs : []))
         dispatch(clearMissingFields())
+        pendingGenerarIgualRef.current = false
         setDuplicateDraft(null)
         return true
       }
@@ -448,6 +477,7 @@ export function DocumentBuilderPage() {
         const existing =
           (res.existing && typeof res.existing === 'object' ? res.existing : null) ??
           (res.meta?.existing && typeof res.meta.existing === 'object' ? res.meta.existing : null)
+        pendingGenerarIgualRef.current = generarIgual
         setDuplicateDraft(
           existing ?? {
             file_name: '—',
@@ -474,7 +504,10 @@ export function DocumentBuilderPage() {
     [
       companyId,
       dispatch,
+      hasDynamicText,
       missingFields,
+      motivo,
+      reviewResult,
       selectedSupplierId,
       selectedClientId,
       stage1Ok,
@@ -483,15 +516,71 @@ export function DocumentBuilderPage() {
     ]
   )
 
+  const runReview = useCallback(async () => {
+    if (!companyId || !stage1Ok || !stageTemplateOk || !selectedSupplierId || reviewing) return
+    setReviewing(true)
+    setError(null)
+    clearShownReview()
+    const generation = reviewGenerationRef.current
+    const body = {
+      supplierId: selectedSupplierId,
+      template: templateSelected,
+      missingFieldOverrides: missingFields
+    }
+    if (selectedClientId) {
+      body.clientId = selectedClientId
+    }
+    const res = await postDocumentBuilderReview(body, { companyId })
+    setReviewing(false)
+    if (generation !== reviewGenerationRef.current) return
+    if (res.ok) {
+      setReviewResult({
+        reviewId: res.data?.reviewId,
+        verdict: res.data?.verdict,
+        observations: Array.isArray(res.data?.observations) ? res.data.observations : []
+      })
+      return
+    }
+    setError(res.message ?? 'No se pudo revisar la redacción.')
+  }, [
+    clearShownReview,
+    companyId,
+    missingFields,
+    reviewing,
+    selectedClientId,
+    selectedSupplierId,
+    stage1Ok,
+    stageTemplateOk,
+    templateSelected
+  ])
+
+  const applySuggestion = useCallback(
+    (observation) => {
+      if (!observation?.dynamicTextId) return
+      dispatch(setMissingField({ key: observation.dynamicTextId, value: observation.suggestion ?? '' }))
+      clearShownReview()
+    },
+    [clearShownReview, dispatch]
+  )
+
+  const onGenerarIgual = useCallback(async () => {
+    if (!showMotivo) {
+      setShowMotivo(true)
+      return
+    }
+    await executeGenerate({ generarIgual: true })
+  }, [executeGenerate, showMotivo])
+
   const runGenerate = useCallback(async () => {
     await executeGenerate()
   }, [executeGenerate])
 
   const onConfirmReplaceDuplicate = useCallback(async () => {
-    await executeGenerate({ overwrite: true })
+    await executeGenerate({ overwrite: true, generarIgual: pendingGenerarIgualRef.current })
   }, [executeGenerate])
 
   const onCancelDuplicateDialog = useCallback(() => {
+    pendingGenerarIgualRef.current = false
     setDuplicateDraft(null)
   }, [])
 
@@ -786,6 +875,7 @@ export function DocumentBuilderPage() {
                   value={missingFields[field.key] ?? ''}
                   overrides={missingFields}
                   onChange={(next) => {
+                    clearShownReview()
                     if (typeof next === 'object' && next !== null) {
                       for (const [key, val] of Object.entries(next)) {
                         dispatch(setMissingField({ key, value: val }))
@@ -797,6 +887,52 @@ export function DocumentBuilderPage() {
                 />
               </label>
             ))}
+          </div>
+        ) : null}
+        {stageTemplateOk && hasDynamicText ? (
+          <div className="db-review">
+            <button
+              type="button"
+              className="btn"
+              disabled={reviewing}
+              onClick={() => void runReview()}
+            >
+              {reviewing ? 'Revisando…' : 'Revisar redacción'}
+            </button>
+            {reviewResult?.verdict === 'ok' ? <p className="db-muted">Sin observaciones</p> : null}
+            {reviewResult?.verdict === 'observaciones' ? (
+              <>
+                <ul>
+                  {reviewResult.observations.map((observation, index) => {
+                    const label =
+                      missingFieldDefs.find((field) => field.key === observation.dynamicTextId)?.label ||
+                      observation.dynamicTextId
+                    return (
+                      <li key={`${observation.dynamicTextId}-${index}`}>
+                        <p>{label}</p>
+                        <p>{observation.clause}</p>
+                        <p>{observation.problem}</p>
+                        <p>{observation.suggestion}</p>
+                        <button type="button" className="btn" onClick={() => applySuggestion(observation)}>
+                          Usar sugerencia
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <button type="button" className="btn" onClick={() => void onGenerarIgual()}>
+                  Generar igual
+                </button>
+                {showMotivo ? (
+                  <textarea
+                    className="clause-input"
+                    aria-label="Motivo para generar igual"
+                    value={motivo}
+                    onChange={(event) => setMotivo(event.target.value)}
+                  />
+                ) : null}
+              </>
+            ) : null}
           </div>
         ) : null}
         {stageTemplateOk ? (

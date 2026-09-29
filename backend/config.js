@@ -27,6 +27,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || 'https://staging.api.documentos.firme.cl',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'debug',
     CORS_ORIGIN: 'http://localhost:5173'
   },
@@ -46,6 +47,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || '',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'info',
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://incrementa-frontend-7yl7vz6hyq-uc.a.run.app'
   },
@@ -65,6 +67,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || '',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'error',
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://gestion-contratos.com'
   }

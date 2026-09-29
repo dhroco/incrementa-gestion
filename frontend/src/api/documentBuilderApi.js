@@ -40,6 +40,10 @@ export async function postDocumentBuilderGenerate(payload, { companyId, signal }
   return apiPost(withCompany(companyId, '/api/document-builder/generate'), payload, { signal })
 }
 
+export async function postDocumentBuilderReview(payload, { companyId, signal } = {}) {
+  return apiPost(withCompany(companyId, '/api/document-builder/review'), payload, { signal })
+}
+
 /**
  * @returns {Promise<Blob>}
  */

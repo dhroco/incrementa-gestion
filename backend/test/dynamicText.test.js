@@ -305,7 +305,12 @@ test('Missing fields include metadata', async () => {
   assert.ok(dynamic.instruccion)
 })
 
-test('Line breaks and double spaces are stored collapsed', async () => {
+// Desde revision-redaccion, generar con textos dinámicos exige una revisión.
+// La normalización al guardar se prueba con revisión en documentBuilderService.review.test.js.
+const REVIEW_REQUIRED_MESSAGE =
+  'Revisa la redacción antes de generar: no hay una revisión de los textos actuales.'
+
+test('Generating with a dynamic text and no review is rejected (collapsed spaces)', async () => {
   const doc = {
     type: 'doc',
     content: [
@@ -315,16 +320,17 @@ test('Line breaks and double spaces are stored collapsed', async () => {
       }
     ]
   }
-  const { result, insertedPayload } = await generateWithDoc(doc, {
+  const { result, uploadCalled, insertedPayload } = await generateWithDoc(doc, {
     missingFieldOverrides: {
       servicios_entregables: '  cinco (5) reels\n\nen   TikTok  '
     }
   })
-  assert.equal(result.ok, true)
-  assert.equal(
-    insertedPayload.contract_overrides.servicios_entregables,
-    'cinco (5) reels en TikTok'
-  )
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 409)
+  assert.equal(result.code, 'REVIEW_REQUIRED')
+  assert.equal(result.message, REVIEW_REQUIRED_MESSAGE)
+  assert.equal(uploadCalled, false)
+  assert.equal(insertedPayload, null)
 })
 
 test('501 characters are rejected', async () => {
@@ -370,7 +376,7 @@ test('500 characters pass', async () => {
   assert.equal(result.data.valid, true)
 })
 
-test('Punctuation is substituted unchanged', async () => {
+test('Generating with a dynamic text and no review is rejected (punctuation)', async () => {
   const doc = {
     type: 'doc',
     content: [
@@ -380,10 +386,13 @@ test('Punctuation is substituted unchanged', async () => {
       }
     ]
   }
-  const { result, insertedPayload } = await generateWithDoc(doc, {
+  const { result, uploadCalled, insertedPayload } = await generateWithDoc(doc, {
     missingFieldOverrides: { servicios_entregables: FRASE_ENTREGABLES }
   })
-  assert.equal(result.ok, true)
-  assert.equal(insertedPayload.contract_overrides.servicios_entregables, FRASE_ENTREGABLES)
-  assert.ok(snapshotText(insertedPayload.content_snapshot).includes(FRASE_ENTREGABLES))
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 409)
+  assert.equal(result.code, 'REVIEW_REQUIRED')
+  assert.equal(result.message, REVIEW_REQUIRED_MESSAGE)
+  assert.equal(uploadCalled, false)
+  assert.equal(insertedPayload, null)
 })

@@ -19,6 +19,44 @@ const {
 const { formatFechaEs } = require('../utils/formatFechaEs')
 const { countryLabel } = require('../utils/identityDocument')
 const { DYNAMIC_TEXT_CATALOG, getDynamicTextDefinition } = require('./dynamicTextCatalog')
+const { createContractReviewer } = require('../lib/contractReviewer')
+const { collectDynamicTextIds, buildContractReviewInput } = require('../lib/contractReviewInput')
+
+const REVIEW_NOT_NEEDED = {
+  ok: false,
+  status: 400,
+  code: 'REVIEW_NOT_NEEDED',
+  message: 'Esta plantilla no tiene textos dinámicos que revisar.'
+}
+
+const REVIEW_UNAVAILABLE = {
+  ok: false,
+  status: 503,
+  code: 'REVIEW_UNAVAILABLE',
+  message: 'No se pudo revisar la redacción en este momento. Intenta de nuevo en unos minutos.'
+}
+
+const REVIEW_REQUIRED = {
+  ok: false,
+  status: 409,
+  code: 'REVIEW_REQUIRED',
+  message: 'Revisa la redacción antes de generar: no hay una revisión de los textos actuales.'
+}
+
+const REVIEW_HAS_OBSERVATIONS = {
+  ok: false,
+  status: 409,
+  code: 'REVIEW_HAS_OBSERVATIONS',
+  message: 'La revisión tiene observaciones. Corrige el texto o usa «Generar igual» indicando el motivo.'
+}
+
+// Forma textual que Postgres acepta en una columna uuid. Otra cosa hace fallar la query
+// con `invalid input syntax for type uuid` (500); se rechaza antes, como REVIEW_REQUIRED.
+const UUID_TEXT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuidText(value) {
+  return UUID_TEXT.test(value)
+}
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
@@ -474,13 +512,20 @@ function createDocumentBuilderService({
   supplierService = supplierServiceDefault,
   clientService = clientServiceDefault,
   gcsService,
-  getUserProfileIdByUserId
+  getUserProfileIdByUserId,
+  contractReviewer
 }) {
   if (!gcsService) {
     throw new Error('gcsService is required')
   }
   if (!getUserProfileIdByUserId) {
     throw new Error('getUserProfileIdByUserId is required')
+  }
+
+  let reviewer = contractReviewer ?? null
+  function getContractReviewer() {
+    if (!reviewer) reviewer = createContractReviewer()
+    return reviewer
   }
 
   async function resolveCompany(userId, requestedCompanyId) {
@@ -577,7 +622,7 @@ function createDocumentBuilderService({
     }
   }
 
-  async function generateAndPersist({ userId, requestedCompanyId, body }) {
+  async function prepareGeneration({ userId, requestedCompanyId, body }) {
     const gate = await resolveCompany(userId, requestedCompanyId)
     if (!gate.ok) return gate
     const { companyId } = gate
@@ -724,60 +769,92 @@ function createDocumentBuilderService({
       }
     }
 
+    return {
+      ok: true,
+      ready: true,
+      companyId,
+      supplierId,
+      template,
+      body,
+      overrides,
+      supplier,
+      clientRow,
+      createdBy,
+      templateRow,
+      mergedDoc,
+      map
+    }
+  }
+
+  async function replaceActiveDuplicate({ companyId, supplierId, templateId, overwrite }) {
     const { year, month } = yearMonthInSantiago()
     const duplicateScope = {
       companyId,
       supplierId,
-      templateId: template.id,
+      templateId,
       year,
       month
     }
     const existingDuplicate = await findActiveDuplicateDraft(db, duplicateScope)
 
-    if (existingDuplicate) {
-      if (body?.overwrite !== true) {
-        return {
-          ok: false,
-          status: 409,
-          code: 'DUPLICATE_DRAFT',
-          message:
-            'Ya existe un contrato generado para este proveedor con esta plantilla en el mismo mes.',
-          data: {
-            existing: {
-              id: existingDuplicate.id,
-              file_name: existingDuplicate.file_name,
-              created_at: existingDuplicate.created_at,
-              status: existingDuplicate.status
-            }
+    if (!existingDuplicate) return { ok: true }
+
+    if (overwrite !== true) {
+      return {
+        ok: false,
+        status: 409,
+        code: 'DUPLICATE_DRAFT',
+        message:
+          'Ya existe un contrato generado para este proveedor con esta plantilla en el mismo mes.',
+        data: {
+          existing: {
+            id: existingDuplicate.id,
+            file_name: existingDuplicate.file_name,
+            created_at: existingDuplicate.created_at,
+            status: existingDuplicate.status
           }
         }
-      }
-
-      const existingForOverwrite = await findActiveDuplicateDraft(db, duplicateScope)
-      if (existingForOverwrite) {
-        try {
-          await gcsService.deleteFile({ gcsPath: existingForOverwrite.gcs_path })
-        } catch {
-          return {
-            ok: false,
-            status: 500,
-            code: 'GCS_DELETE_FAILED',
-            message: 'No se pudo reemplazar el documento anterior. Intente nuevamente.'
-          }
-        }
-
-        await db.transaction(async (trx) => {
-          const row = await findActiveDuplicateDraft(trx, duplicateScope)
-          if (row) {
-            await trx('draft_document').where({ id: row.id }).delete()
-          }
-        })
       }
     }
 
-    const templateName = sanitizeFilePart(templateRow.name || 'plantilla')
-    const resolvedDoc = applySubstitutionsToTipTapDoc(mergedDoc, map)
+    const existingForOverwrite = await findActiveDuplicateDraft(db, duplicateScope)
+    if (existingForOverwrite) {
+      try {
+        await gcsService.deleteFile({ gcsPath: existingForOverwrite.gcs_path })
+      } catch {
+        return {
+          ok: false,
+          status: 500,
+          code: 'GCS_DELETE_FAILED',
+          message: 'No se pudo reemplazar el documento anterior. Intente nuevamente.'
+        }
+      }
 
+      await db.transaction(async (trx) => {
+        const row = await findActiveDuplicateDraft(trx, duplicateScope)
+        if (row) {
+          await trx('draft_document').where({ id: row.id }).delete()
+        }
+      })
+    }
+
+    return { ok: true }
+  }
+
+  async function persistDraft({
+    resolvedDoc,
+    companyId,
+    supplierId,
+    template,
+    templateRow,
+    supplier,
+    clientRow,
+    createdBy,
+    overrides,
+    reviewId,
+    reviewOverrideReason
+  }) {
+    const templateName = sanitizeFilePart(templateRow.name || 'plantilla')
     const pdfBytes = await buildPdfBytesFromTipTapWithReactPdf(resolvedDoc)
 
     const rutPart =
@@ -811,6 +888,8 @@ function createDocumentBuilderService({
         status: 'draft',
         created_by: createdBy,
         contract_overrides: overrides,
+        review_id: reviewId,
+        review_override_reason: reviewOverrideReason,
         // Snapshot materializado (variables ya sustituidas) para re-render determinista al firmar.
         content_snapshot: resolvedDoc
       })
@@ -831,6 +910,150 @@ function createDocumentBuilderService({
         ]
       }
     }
+  }
+
+  async function requireCurrentReview(prepared) {
+    const resolvedDoc = applySubstitutionsToTipTapDoc(prepared.mergedDoc, prepared.map)
+    const { inputHash } = await buildContractReviewInput({
+      templateDoc: prepared.mergedDoc,
+      substitutedDoc: resolvedDoc,
+      overrides: prepared.overrides,
+      supplier: prepared.supplier
+    })
+    const reviewId = prepared.body?.reviewId != null ? String(prepared.body.reviewId).trim() : ''
+    if (!isUuidText(reviewId)) return { ...REVIEW_REQUIRED, resolvedDoc: null }
+
+    const reviewRow = await db('contract_review')
+      .where({
+        id: reviewId,
+        company_id: prepared.companyId,
+        supplier_id: prepared.supplierId,
+        template_id: prepared.template.id,
+        input_hash: inputHash
+      })
+      .first()
+
+    if (!reviewRow) return { ...REVIEW_REQUIRED, resolvedDoc: null }
+
+    if (reviewRow.verdict === 'observaciones') {
+      const motivo = String(prepared.body?.generarIgual?.motivo ?? '').trim()
+      if (motivo.length < 10) return { ...REVIEW_HAS_OBSERVATIONS, resolvedDoc: null }
+      return {
+        ok: true,
+        resolvedDoc,
+        reviewId: reviewRow.id,
+        reviewOverrideReason: motivo
+      }
+    }
+
+    return {
+      ok: true,
+      resolvedDoc,
+      reviewId: reviewRow.id,
+      reviewOverrideReason: null
+    }
+  }
+
+  async function reviewDraft({ userId, requestedCompanyId, body }) {
+    const prepared = await prepareGeneration({
+      userId,
+      requestedCompanyId,
+      body: { ...body, dryRun: false }
+    })
+    if (!prepared.ready) return prepared
+
+    if (collectDynamicTextIds(prepared.mergedDoc).length === 0) {
+      return { ...REVIEW_NOT_NEEDED }
+    }
+
+    const resolvedDoc = applySubstitutionsToTipTapDoc(prepared.mergedDoc, prepared.map)
+    const { payload, inputHash } = await buildContractReviewInput({
+      templateDoc: prepared.mergedDoc,
+      substitutedDoc: resolvedDoc,
+      overrides: prepared.overrides,
+      supplier: prepared.supplier
+    })
+
+    const activeReviewer = getContractReviewer()
+    if (typeof activeReviewer.isReviewerConfigured === 'function' && !activeReviewer.isReviewerConfigured()) {
+      return { ...REVIEW_UNAVAILABLE }
+    }
+
+    let reviewed
+    try {
+      reviewed = await activeReviewer.review(payload)
+    } catch {
+      return { ...REVIEW_UNAVAILABLE }
+    }
+
+    const [ins] = await db('contract_review')
+      .insert({
+        company_id: prepared.companyId,
+        supplier_id: prepared.supplierId,
+        template_id: prepared.template.id,
+        created_by: prepared.createdBy,
+        input_hash: inputHash,
+        verdict: reviewed.verdict,
+        observations: JSON.stringify(reviewed.observations),
+        reviewed_text: payload.sectionText,
+        model: reviewed.model
+      })
+      .returning(['id'])
+
+    const reviewId = ins && typeof ins === 'object' ? ins.id : ins
+
+    return {
+      ok: true,
+      data: {
+        reviewId,
+        verdict: reviewed.verdict,
+        observations: reviewed.observations
+      }
+    }
+  }
+
+  async function generateAndPersist({ userId, requestedCompanyId, body }) {
+    const prepared = await prepareGeneration({ userId, requestedCompanyId, body })
+    if (!prepared.ready) return prepared
+
+    const hasDynamicText = collectDynamicTextIds(prepared.mergedDoc).length > 0
+    let resolvedDoc
+    let reviewId = null
+    let reviewOverrideReason = null
+
+    if (hasDynamicText) {
+      const gate = await requireCurrentReview(prepared)
+      if (!gate.ok) return gate
+      resolvedDoc = gate.resolvedDoc
+      reviewId = gate.reviewId
+      reviewOverrideReason = gate.reviewOverrideReason
+    }
+
+    const replaced = await replaceActiveDuplicate({
+      companyId: prepared.companyId,
+      supplierId: prepared.supplierId,
+      templateId: prepared.template.id,
+      overwrite: prepared.body?.overwrite
+    })
+    if (!replaced.ok) return replaced
+
+    if (!hasDynamicText) {
+      resolvedDoc = applySubstitutionsToTipTapDoc(prepared.mergedDoc, prepared.map)
+    }
+
+    return persistDraft({
+      resolvedDoc,
+      companyId: prepared.companyId,
+      supplierId: prepared.supplierId,
+      template: prepared.template,
+      templateRow: prepared.templateRow,
+      supplier: prepared.supplier,
+      clientRow: prepared.clientRow,
+      createdBy: prepared.createdBy,
+      overrides: prepared.overrides,
+      reviewId,
+      reviewOverrideReason
+    })
   }
 
   async function getGeneratedDocumentForDownload({ userId, requestedCompanyId, documentId }) {
@@ -862,6 +1085,7 @@ function createDocumentBuilderService({
     listEligibleTemplates,
     getTemplateDetail,
     generateAndPersist,
+    reviewDraft,
     getGeneratedDocumentForDownload
   }
 }

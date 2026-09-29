@@ -409,20 +409,60 @@ export function registerMcpTools(server, deps) {
   )
 
   server.tool(
-    'generar_contrato',
-    'Genera el PDF del contrato y lo persiste como borrador en GCS y base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
+    'revisar_redaccion',
+    'Úsala cuando validar_contrato devuelve campos dynamic_text, con todos los campos completos y antes de generar_contrato. Devuelve reviewId, verdict y observations. Muéstrale a la persona cada observación con su sugerencia. Está PROHIBIDO aplicar una sugerencia sin que la persona la acepte de forma explícita. Si la persona acepta, pasa la sugerencia como nuevo valor del texto dinámico y vuelve a llamar a revisar_redaccion.',
     contractParams,
-    async ({ companyId, supplierId, templateId, missingFieldOverrides, overwrite, clientId }) => {
-      const result = await documentBuilderService.generateAndPersist({
+    async ({ companyId, supplierId, templateId, missingFieldOverrides, clientId }) => {
+      const result = await documentBuilderService.reviewDraft({
         userId: MCP_USER_ID,
         requestedCompanyId: companyId,
         body: {
           supplierId,
           template: { kind: 'standard', id: templateId },
           missingFieldOverrides,
-          overwrite,
           clientId
         }
+      })
+      return jsonToolResult(mapServiceResult(result))
+    }
+  )
+
+  server.tool(
+    'generar_contrato',
+    'Genera el PDF del contrato y lo persiste como borrador en GCS y base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option. Con textos dinámicos, generar exige el reviewId de la última revisión de los valores actuales. generarIgual solo se usa si la persona lo pide y el motivo lo dicta la persona: está PROHIBIDO decidirlo o redactarlo por cuenta propia.',
+    {
+      ...contractParams,
+      reviewId: z.string().optional().describe('Id de la última revisión de los valores actuales'),
+      generarIgual: z
+        .object({
+          motivo: z.string()
+        })
+        .optional()
+        .describe('Motivo dictado por la persona para generar con observaciones abiertas')
+    },
+    async ({
+      companyId,
+      supplierId,
+      templateId,
+      missingFieldOverrides,
+      overwrite,
+      clientId,
+      reviewId,
+      generarIgual
+    }) => {
+      const body = {
+        supplierId,
+        template: { kind: 'standard', id: templateId },
+        missingFieldOverrides,
+        overwrite,
+        clientId
+      }
+      if (reviewId !== undefined) body.reviewId = reviewId
+      if (generarIgual !== undefined) body.generarIgual = generarIgual
+      const result = await documentBuilderService.generateAndPersist({
+        userId: MCP_USER_ID,
+        requestedCompanyId: companyId,
+        body
       })
       return jsonToolResult(mapServiceResult(result))
     }
