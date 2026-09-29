@@ -149,7 +149,7 @@ principio del RUT y del precio: el sistema no decide por el usuario.
 - **(d)** ¿Generar el PDF exige la última revisión en `ok`? ¿O se permite «generar igual» dejando
   registrado quién lo hizo y por qué? Recomiendo **permitirlo con registro**: la revisión es una
   ayuda, y quien firma es Yerko.
-- **(e)** Tecnología y costo, en la sección 3.4.
+- **(e)** ~~Tecnología y costo~~ → **decidido (David, 29-sep): se usa la API de Claude** (sección 3.4).
 
 ### 3.4 Con qué se hace la revisión
 
@@ -165,7 +165,7 @@ forma.
   - aceptar que el texto de la sección SEGUNDO sale a Anthropic. Ese texto incluye el nombre de la
     marca y la cuenta del influencer, pero no RUT, direcciones ni precio.
 
-  Las tres cosas son del umbral de David: stack, costos y datos personales.
+  Las tres cosas son del umbral de David: stack, costos y datos personales. **Aceptadas por David el 29-sep.**
 - **Por qué no usar solo el agente del MCP:** el flujo web no lo tiene. Además, quien escribe el
   texto no debería ser quien lo revisa.
 
