@@ -167,7 +167,10 @@ Responde con verdict "ok" y observations vacía si no hay nada que corregir. Si 
 
 Ninguna prueba existente cambia. **No modifiques ningún archivo de prueba existente.** Las pruebas
 de `generateAndPersist` usan plantillas sin textos dinámicos, así que tienen que seguir pasando sin
-revisión. `mcpServer.test.js` busca frases exactas en las descripciones: solo agrega texto. Si
+revisión. En `backend/test/dynamicText.test.js`, dos pruebas generan con un texto dinámico **sin
+revisión** y esperan `409 REVIEW_REQUIRED` con el mensaje exacto de la sección 2.3, sin insert ni
+subida: hoy están en rojo y este recorte las deja en verde (Ignacio las ajustó, autorizado por
+David, 29-sep). No las modifiques. `mcpServer.test.js` busca frases exactas en las descripciones: solo agrega texto. Si
 cualquier prueba existente falla, **no la ajustes: consulta a la mesa.**
 
 ## 7. Pruebas nuevas
@@ -189,6 +192,11 @@ cualquier prueba existente falla, **no la ajustes: consulta a la mesa.**
   - con motivo válido, genera y guarda `review_id` y `review_override_reason`; con `ok`, genera y
     guarda `review_id`;
   - una plantilla sin textos dinámicos genera sin `reviewId`.
+  - con una revisión `ok`, un valor con saltos de línea y espacios dobles
+    (`'  cinco (5) reels\n\nen   TikTok  '`) se guarda en `contract_overrides` como
+    `'cinco (5) reels en TikTok'`, y una frase con comas y paréntesis aparece tal cual en
+    `content_snapshot`. Esto lo medían dos pruebas de `dynamicText.test.js` que ahora esperan
+    `REVIEW_REQUIRED`.
 - **`backend/test/mcpRevision.test.js`**: `revisar_redaccion` existe y su descripción incluye
   `PROHIBIDO aplicar una sugerencia sin que la persona la acepte`. `generar_contrato` acepta
   `reviewId` y `generarIgual`, y su descripción incluye `PROHIBIDO decidirlo o redactarlo por cuenta propia`.
