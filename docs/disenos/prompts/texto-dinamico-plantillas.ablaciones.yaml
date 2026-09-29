@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: listado-precio
+    que: el ítem del listado sigue trayendo el precio al agregar servicios_entregables
+    archivo: backend/services/contractsQueryService.js
+    buscar: "precio_numero: overrides.precio_numero ?? null"
+    reemplazar: "precio_numero: null"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: listado-fecha
+    que: el ítem del listado sigue trayendo la fecha del contrato
+    archivo: backend/services/contractsQueryService.js
+    buscar: "fecha_contrato: overrides.fecha_contrato ?? null,"
+    reemplazar: "fecha_contrato: null,"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
