@@ -97,10 +97,8 @@ Marcela los distinga.
 - En las 15 plantillas que no son por evento, la 2.1 y la 2.2 quedan como están.
 
 ⚖ **David:**
-- **(a)** ¿El evento va como texto dinámico, o como 4 variables fijas (nombre del evento, fecha, hora
-  y lugar)? El texto dinámico da libertad. Las variables fijas se equivocan menos y permiten
-  validar fechas. **Recomiendo texto dinámico con revisión**, porque el evento puede tener más de
-  una jornada o sede.
+- **(a)** ~~¿Evento como texto dinámico o variables fijas?~~ → **decidido (David, 29-sep): texto
+  dinámico**, con la regla 4 del agente (qué, fecha, hora y lugar).
 - **(b)** En las plantillas por evento, ¿el periodo de la 2.2 deja de ser `{{mes_ejecucion}}`? Si es
   así, el listado de contratos pierde el mes de ejecución en esos contratos, porque hoy lo lee de
   ahí.
