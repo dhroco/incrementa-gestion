@@ -1,0 +1,639 @@
+{
+  "_nota": "Párrafos exactos leídos de pre-prod (solo lectura) el 29-sep-2026. Cada variante indica en qué plantillas aparece idéntica.",
+  "clausula_2_3": {
+    "A": {
+      "plantillas": [
+        "CONTRATO_0001",
+        "CONTRATO_0002",
+        "CONTRATO_0003",
+        "CONTRATO_0004",
+        "CONTRATO_0005",
+        "CONTRATO_0006",
+        "CONTRATO_0007",
+        "CONTRATO_0009",
+        "CONTRATO_0010",
+        "CONTRATO_0011",
+        "CONTRATO_0012",
+        "CONTRATO_0013",
+        "CONTRATO_0014",
+        "CONTRATO_0015"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.3 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "En concreto, los Servicios comprenden la generación y publicación de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Cantidad de reels",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "cantidad_reels"
+            }
+          },
+          {
+            "text": " ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Formato de reel",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "formato_reel"
+            }
+          },
+          {
+            "text": " en el perfil de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_red_social"
+            }
+          },
+          {
+            "text": " del Influencer y en el perfil oficial ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "client",
+              "label": "Producto/Campaña",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "client_product_campaign"
+            }
+          },
+          {
+            "text": ".",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "A_colaboracion": {
+      "plantillas": [
+        "CONTRATO_0008"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.3 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "En concreto, los Servicios comprenden la generación y publicación de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Cantidad de reels",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "cantidad_reels"
+            }
+          },
+          {
+            "text": " ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Formato de reel",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "formato_reel"
+            }
+          },
+          {
+            "text": " en el perfil de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_red_social"
+            }
+          },
+          {
+            "text": " del Influencer y en el perfil oficial ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "client",
+              "label": "Producto/Campaña",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "client_product_campaign"
+            }
+          },
+          {
+            "text": " bajo la colaboración pagada.",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "MX": {
+      "plantillas": [
+        "CONTRATO_0016",
+        "CONTRATO_0017"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.3 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "En concreto, los Servicios comprenden la generación y publicación de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Cantidad de reels",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "cantidad_reels"
+            }
+          },
+          {
+            "text": " ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Formato de reel",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "formato_reel"
+            }
+          },
+          {
+            "text": " en ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_red_social"
+            }
+          },
+          {
+            "text": ", que debe ser publicado tanto en el perfil de Instagram del Influencer, como en el de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "client",
+              "label": "Marca",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "client_brand"
+            }
+          },
+          {
+            "text": ", bajo la modalidad de “colaboración pagada” identificando la cuenta ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "client",
+              "label": "Cuenta marca",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "client_brand_account"
+            }
+          },
+          {
+            "text": ".",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "PL": {
+      "plantillas": [
+        "PL0001",
+        "PL0002",
+        "PL0003",
+        "PL0004"
+      ],
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.3 En concreto, los Servicios comprenden la generación y publicación de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "contrato",
+              "label": "Cantidad de reels",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "cantidad_reels"
+            }
+          },
+          {
+            "text": " reel en el perfil de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_red_social"
+            }
+          },
+          {
+            "text": " del Influencer y en el perfil oficial ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "client",
+              "label": "Cuenta marca",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "client_brand_account"
+            }
+          },
+          {
+            "text": ".",
+            "type": "text"
+          }
+        ]
+      }
+    }
+  },
+  "clausula_cuenta": {
+    "A_negrita": {
+      "plantillas": [
+        "CONTRATO_0001",
+        "CONTRATO_0002",
+        "CONTRATO_0003",
+        "CONTRATO_0004",
+        "CONTRATO_0005",
+        "CONTRATO_0006",
+        "CONTRATO_0007",
+        "CONTRATO_0008",
+        "CONTRATO_0009"
+      ],
+      "numero": "2.5",
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.5 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "El Influencer deberá publicar el contenido en Instagram a través de su cuenta ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Cuenta Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_cuenta_social"
+            }
+          },
+          {
+            "text": " Esta condición es un elemento esencial del siguiente acuerdo, debido a que los seguidores con los que cuenta el Influencer en esa cuenta, son la razón principal de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            },
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": " para celebrar el presente Contrato.",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "A": {
+      "plantillas": [
+        "CONTRATO_0010",
+        "CONTRATO_0011",
+        "CONTRATO_0012",
+        "CONTRATO_0013",
+        "CONTRATO_0014",
+        "CONTRATO_0015"
+      ],
+      "numero": "2.5",
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.5 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "El Influencer deberá publicar el contenido en Instagram a través de su cuenta ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Cuenta Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_cuenta_social"
+            }
+          },
+          {
+            "text": " Esta condición es un elemento esencial del siguiente acuerdo, debido a que los seguidores con los que cuenta el Influencer en esa cuenta, son la razón principal de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            }
+          },
+          {
+            "text": " para celebrar el presente Contrato.",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "MX": {
+      "plantillas": [
+        "CONTRATO_0016"
+      ],
+      "numero": "2.5",
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.5 ",
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "text": "El Influencer se obliga a publicar el contenido en Instagram a través de su cuenta ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Cuenta Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_cuenta_social"
+            }
+          },
+          {
+            "text": ". Esta condición es un elemento esencial del siguiente acuerdo, debido a que los seguidores con los que cuenta el Influencer en esa cuenta, son la razón principal de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            }
+          },
+          {
+            "text": " para celebrar el presente Contrato.",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    "PL": {
+      "plantillas": [
+        "PL0001",
+        "PL0002",
+        "PL0003",
+        "PL0004"
+      ],
+      "numero": "2.6",
+      "parrafo": {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "text": "2.6 El Influencer deberá publicar el contenido en ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_red_social"
+            }
+          },
+          {
+            "text": " a través de su cuenta  ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "proveedor",
+              "label": "Cuenta Red Social",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "proveedor_cuenta_social"
+            }
+          },
+          {
+            "text": ". Esta condición es un elemento esencial del siguiente acuerdo, debido a que los seguidores con los que cuenta el Influencer en esa cuenta, son la razón principal de ",
+            "type": "text"
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "bold": false,
+              "group": "empresa",
+              "label": "Nombre Comercial",
+              "italic": false,
+              "underline": false,
+              "uppercase": false,
+              "variableId": "company_nombre_comercial"
+            }
+          },
+          {
+            "text": " para celebrar el presente Contrato.",
+            "type": "text"
+          }
+        ]
+      }
+    }
+  }
+}
