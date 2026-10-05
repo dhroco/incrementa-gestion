@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(diff:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(openspec:*)",
+      "Bash(lsof:*)",
+      "Bash(nc:*)",
+      "Bash(pkill:*)",
+      "Bash(touch:*)",
+      "Bash(tee:*)",
+      "Bash(cp:*)",
+      "Bash(open:*)",
+      "Bash(cd:*)",
+      "Bash(echo:*)",
+      "Bash(export:*)",
+      "Bash(bash:*)",
+      "Bash(command:*)",
+      "Bash(npm:*)",
+      "Bash(cloud-sql-proxy:*)",
+      "Bash(psql:*)",
+      "Bash(curl:*)",
+      "WebFetch",
+      "WebSearch",
+      "Read(~/Workspaces/incrementa-estado/**)"
+    ],
+    "ask": [
+      "Bash(gcloud secrets versions access:*)"
+    ]
+  }
+}
