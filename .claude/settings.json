@@ -30,7 +30,6 @@
       "Bash(cd:*)",
       "Bash(echo:*)",
       "Bash(export:*)",
-      "Bash(bash:*)",
       "Bash(command:*)",
       "Bash(npm:*)",
       "Bash(cloud-sql-proxy:*)",
@@ -38,10 +37,42 @@
       "Bash(curl:*)",
       "WebFetch",
       "WebSearch",
-      "Read(~/Workspaces/incrementa-estado/**)"
+      "Read(~/Workspaces/incrementa-estado/**)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(git worktree:*)",
+      "Bash(npx:*)",
+      "Bash(bash scripts/*)",
+      "Bash(bash infra/*)",
+      "Bash(gcloud config list:*)",
+      "Bash(gcloud auth list:*)",
+      "Bash(gcloud projects describe:*)",
+      "Bash(gcloud run services describe:*)",
+      "Bash(gcloud run services list:*)",
+      "Bash(gcloud run revisions list:*)",
+      "Bash(gcloud run revisions describe:*)",
+      "Bash(gcloud logging read:*)",
+      "Bash(gcloud sql instances describe:*)",
+      "Bash(gcloud sql instances list:*)",
+      "Bash(gcloud secrets list:*)",
+      "Bash(gcloud secrets describe:*)"
     ],
     "ask": [
-      "Bash(gcloud secrets versions access:*)"
+      "Bash(gcloud secrets versions access:*)",
+      "Bash(gcloud run deploy:*)",
+      "Bash(gcloud run services update:*)",
+      "Bash(gcloud run services replace:*)",
+      "Bash(gcloud run services delete:*)",
+      "Bash(gcloud sql instances delete:*)",
+      "Bash(gcloud sql import:*)",
+      "Bash(gcloud sql export:*)",
+      "Bash(gcloud projects add-iam-policy-binding:*)",
+      "Bash(gcloud iam:*)",
+      "Bash(gcloud secrets versions add:*)",
+      "Bash(gcloud secrets delete:*)",
+      "Bash(docker push:*)",
+      "Bash(docker system prune:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
