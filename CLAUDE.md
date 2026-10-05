@@ -100,7 +100,7 @@ Todo bajo `/api` y protegido por JWT (salvo `/` y `/health`, públicos). Definid
 GCP Cloud Run (backend Express + frontend nginx), Cloud SQL (PostgreSQL 16), GCS, Artifact Registry, Secret Manager. CI/CD con GitHub Actions + **Workload Identity Federation** (keyless, sin llaves JSON).
 
 - Rama **`main`** = integración (sin deploy). Rama **`preprod`** → despliega a Pre-Prod (`.github/workflows/deploy-preprod.yml`, proyecto `incrementa-gestion-dev`). Rama **`prod`** → Producción en la nube del cliente (proyecto/tenant propios; workflow análogo por crear).
-- El deploy sigue un orden de 5 pasos por dependencia de URLs: build+push backend → deploy backend → build+push frontend con `VITE_API_BASE_URL` = URL del backend → deploy frontend → update backend `CORS_ORIGIN` = URL del frontend.
+- El deploy despliega **tres** servicios de Cloud Run (`incrementa-backend`, `incrementa-mcp`, `incrementa-frontend`) en 6 pasos encadenados por dependencia de URLs: build+push backend → deploy MCP → deploy backend → build+push frontend con `VITE_API_BASE_URL` = URL del backend → deploy frontend → update backend `CORS_ORIGIN` = URL del frontend.
 - Ver `docs/arquitectura-entornos.html` y los manuales de producción en `docs/`.
 
 ### Gotchas conocidos (ya resueltos, no re-romper)
@@ -112,6 +112,13 @@ GCP Cloud Run (backend Express + frontend nginx), Cloud SQL (PostgreSQL 16), GCS
 
 ## Flujo de trabajo del proyecto
 
-- **Gestión de cambios con OpenSpec:** los cambios se proponen y aplican bajo `openspec/changes/` (`propose` → `apply`), con specs en `openspec/specs/`. El contexto, reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
-- Cursor lee `.cursor/rules/*.mdc` (contexto de proyecto, sistema de diseño frontend, convenciones de backend y gotchas). No lee `CLAUDE.md`. Comandos y skills OpenSpec en `.cursor/commands/` y `.cursor/skills/`.
-- **Roles de colaboración:** Claude = arquitecto/PM y revisor (propone, especifica, revisa); Cursor = implementa el código de producto vía OpenSpec.
+- **Desarrollo con AOD** (desde el 28-sep-2026): Claude (Ignacio) diseña y prepara lo que entra; el orquestador AOD (agente Pedro) ejecuta las corridas con Cursor; las compuertas las aprueba David. Reemplaza el `propose`→`apply` manual de OpenSpec; las corridas siguen dejando sus artefactos en `openspec/changes/<cambio>/`.
+- **Diseño y recortes:** `docs/disenos/<dominio>.md` (diseño), `<dominio>.recortes.yaml` (plan) y, por recorte, `prompts/<recorte>.md` (se usa tal cual en el `propose`) y `prompts/<recorte>.ablaciones.yaml`. Se entregan commiteados en la rama `planes`; a AOD se le pasa solo el hash.
+- **Pruebas protegidas:** una corrida falla si cambia una prueba que existía al empezar. Las que deban cambiar se modifican antes, en un commit aparte y con autorización del dueño; las pruebas nuevas van siempre en archivos nuevos.
+- **Ablaciones:** el campo `prueba` corre la suite completa (`cd backend && env -u DATABASE_URL npm test` / `cd frontend && npm test`) o un archivo nuevo, nunca uno existente. Un `buscar` de varias líneas usa `|2` o comillas dobles con `\n`.
+- **Migraciones:** ninguna corrida las ejecuta (`knex`/`migrate` prohibidos; `knexfile.js`, `db/knex.js` y `config.js` son de solo lectura para las corridas). Las aplica el arquitecto contra pre-prod por el Cloud SQL Auth Proxy, antes del deploy del código que las usa. Las de plantillas reescriben `content_json` con una función pura, verifican el texto exacto antes de modificar y respaldan en `template_content_backup`.
+- **Recortes encadenados:** si un recorte deja pruebas en rojo que implementa otro, el siguiente no se lanza desde `preprod` hasta que el primero esté fusionado, o se lanza sobre su rama; al entregar un hash se indica siempre la base.
+- **`.jsx`:** antes de borrar una variable «sin uso», buscar que no aparezca en JSX (el lint no tiene `react/jsx-uses-vars`).
+- **PRs:** cada corrida termina en una rama `david/<recorte>`; el arquitecto abre el PR a `preprod` y lo fusiona David.
+- El contexto, las reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
+- Cursor lee `.cursor/rules/*.mdc` (contexto de proyecto, sistema de diseño frontend, convenciones de backend y gotchas). No lee `CLAUDE.md`.
