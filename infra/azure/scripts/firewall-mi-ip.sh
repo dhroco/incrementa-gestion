@@ -17,7 +17,7 @@ if [[ ! "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
-ACTUAL="$(az postgres flexible-server firewall-rule show -g "$RG" -n "$SERVIDOR" --rule-name "$REGLA" \
+ACTUAL="$(az postgres flexible-server firewall-rule show -g "$RG" --server-name "$SERVIDOR" --name "$REGLA" \
   --query startIpAddress -o tsv 2>/dev/null || true)"
 
 if [[ "$ACTUAL" == "$IP" ]]; then
@@ -26,6 +26,6 @@ if [[ "$ACTUAL" == "$IP" ]]; then
 fi
 
 echo "IP actual: $IP (en la regla: ${ACTUAL:-ninguna}). Actualizando…"
-az postgres flexible-server firewall-rule create -g "$RG" -n "$SERVIDOR" --rule-name "$REGLA" \
+az postgres flexible-server firewall-rule create -g "$RG" --server-name "$SERVIDOR" --name "$REGLA" \
   --start-ip-address "$IP" --end-ip-address "$IP" --output none
 echo "Listo: $SERVIDOR acepta conexiones desde $IP."
