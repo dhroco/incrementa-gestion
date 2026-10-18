@@ -1,0 +1,121 @@
+name: Infraestructura Pre-Prod (Bicep)
+
+# Aplica infra/azure/main.bicep a rg-incrementa-preprod. Solo se ejecuta a mano.
+#
+# Corre en el environment `infra-preprod`, que exige la aprobación de David, en dos
+# momentos:
+#   1. "Ver cambios": aprobar para ejecutar el what-if (no cambia nada).
+#   2. "Aplicar": revisar el what-if del paso anterior y aprobar para aplicarlo.
+#
+# Entra a Azure con OIDC (identidad id-incrementa-github-infra-preprod), sin claves.
+# La clave de PostgreSQL es el secreto INCREMENTA_PG_CLAVE del environment infra-preprod.
+# Los demás secretos (DATABASE-URL, RESEND-API-KEY) viven en Key Vault y no pasan por aquí.
+
+on:
+  workflow_dispatch:
+    inputs:
+      secretosCargados:
+        description: 'Container Apps con su configuración real (true) o con la imagen de ejemplo (false, solo la primera vez)'
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: infra-preprod
+  cancel-in-progress: false
+
+env:
+  RG: rg-incrementa-preprod
+  BACKEND_APP: ca-incrementa-backend
+  PARAMETROS: infra/azure/preprod.bicepparam
+  PLANTILLA: infra/azure/main.bicep
+
+jobs:
+  ver-cambios:
+    name: Ver cambios (what-if)
+    runs-on: ubuntu-latest
+    environment: infra-preprod
+    outputs:
+      imagen: ${{ steps.imagen.outputs.imagen }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Entrar a Azure (OIDC, sin claves)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_INFRA }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Bicep no debe pisar la imagen que dejó el último despliegue: se lee la que está
+      # corriendo y se pasa tal cual.
+      - name: Leer la imagen que está corriendo
+        id: imagen
+        env:
+          SECRETOS_CARGADOS: ${{ inputs.secretosCargados }}
+        run: |
+          IMAGEN="$(az containerapp show -g "$RG" -n "$BACKEND_APP" \
+            --query 'properties.template.containers[0].image' -o tsv 2>/dev/null || true)"
+          echo "Imagen actual: ${IMAGEN:-(ninguna)}"
+          if [ "$SECRETOS_CARGADOS" = "true" ] && { [ -z "$IMAGEN" ] || [[ "$IMAGEN" == mcr.microsoft.com/* ]]; }; then
+            echo "::error::Con secretosCargados=true hace falta una imagen propia en el ACR. Corre primero el despliegue (o el workflow con secretosCargados=false)."
+            exit 1
+          fi
+          [[ "$IMAGEN" == mcr.microsoft.com/* ]] && IMAGEN=''
+          echo "imagen=$IMAGEN" >> "$GITHUB_OUTPUT"
+
+      - name: What-if
+        env:
+          INCREMENTA_PG_CLAVE: ${{ secrets.INCREMENTA_PG_CLAVE }}
+          SECRETOS_CARGADOS: ${{ inputs.secretosCargados }}
+          IMAGEN: ${{ steps.imagen.outputs.imagen }}
+        run: |
+          az deployment group what-if -g "$RG" \
+            --template-file "$PLANTILLA" \
+            --parameters "$PARAMETROS" \
+            --parameters secretosCargados="$SECRETOS_CARGADOS" imagenBackend="$IMAGEN" \
+            --result-format FullResourcePayloads \
+            | tee what-if.txt
+          {
+            echo '### What-if (pre-prod)'
+            echo '```'
+            sed -E 's/\x1B\[[0-9;]*m//g' what-if.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  aplicar:
+    name: Aplicar
+    needs: ver-cambios
+    runs-on: ubuntu-latest
+    environment: infra-preprod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Entrar a Azure (OIDC, sin claves)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_INFRA }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Aplicar Bicep
+        env:
+          INCREMENTA_PG_CLAVE: ${{ secrets.INCREMENTA_PG_CLAVE }}
+          SECRETOS_CARGADOS: ${{ inputs.secretosCargados }}
+          IMAGEN: ${{ needs.ver-cambios.outputs.imagen }}
+        run: |
+          az deployment group create -g "$RG" \
+            --name "infra-${GITHUB_RUN_NUMBER}" \
+            --template-file "$PLANTILLA" \
+            --parameters "$PARAMETROS" \
+            --parameters secretosCargados="$SECRETOS_CARGADOS" imagenBackend="$IMAGEN" \
+            --query properties.outputs -o json | tee salidas.json
+          {
+            echo '### Salidas'
+            echo '```json'
+            cat salidas.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
