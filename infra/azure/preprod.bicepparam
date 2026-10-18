@@ -21,7 +21,8 @@ param postgresAdminClave = readEnvironmentVariable('INCREMENTA_PG_CLAVE')
 param postgresSku = 'Standard_B1ms'
 param postgresTier = 'Burstable'
 
-// Primera aplicación: false. Después de cargar los secretos y publicar la imagen: true,
-// con imagenBackend = la imagen que esté corriendo.
-param secretosCargados = false
+// Secretos cargados en Key Vault e imagen propia en el ACR (desde 2026-10-18): true.
+// imagenBackend se pasa al aplicar con la imagen que esté corriendo (infra.yml lo hace solo);
+// si se aplica a mano, pasar: --parameters imagenBackend=<imagen actual>.
+param secretosCargados = true
 param imagenBackend = ''
