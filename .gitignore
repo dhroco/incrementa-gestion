@@ -109,4 +109,4 @@ venv.bak/
 infra/route53-changes.json
 
 # Datos de base de datos
-postgresql-credenciales.txt
+postgresql-credenciales*.txt
