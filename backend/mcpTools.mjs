@@ -321,7 +321,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'firmar_contrato_electronico',
-    'Firma electrónicamente un contrato pendiente. Agrega la página de firma al PDF, lo sube a GCS, crea el registro de documento firmado y envía el PDF firmado por email al correo de la Empresa. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
+    'Firma electrónicamente un contrato pendiente. Agrega la página de firma al PDF, lo guarda en el almacenamiento de documentos, crea el registro de documento firmado y envía el PDF firmado por email al correo de la Empresa. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
     {
       draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) pendiente de firma')
     },
@@ -410,7 +410,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'generar_contrato',
-    'Genera el PDF del contrato y lo persiste como borrador en GCS y base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
+    'Genera el PDF del contrato y lo persiste como borrador en el almacenamiento de documentos y en la base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
     contractParams,
     async ({ companyId, supplierId, templateId, missingFieldOverrides, overwrite, clientId }) => {
       const result = await documentBuilderService.generateAndPersist({

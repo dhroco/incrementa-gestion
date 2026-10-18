@@ -153,7 +153,7 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
   }
 
   const storageService = {
-    getSignedUrl: async () => 'https://storage.googleapis.com/signed-url'
+    getSignedUrl: async () => 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url'
   }
 
   const server = createMockServer()
@@ -403,7 +403,7 @@ test('obtener_url_contrato returns signed URL for existing draft', async () => {
   const storageService = {
     getSignedUrl: async (args) => {
       signedUrlArgs = args
-      return 'https://storage.googleapis.com/signed-url'
+      return 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url'
     }
   }
 
@@ -434,7 +434,7 @@ test('obtener_url_contrato returns signed URL for existing draft', async () => {
   assert.equal(result.ok, true)
   assert.equal(result.data.documentId, DRAFT_ID)
   assert.equal(result.data.file_name, 'Contrato_test.pdf')
-  assert.equal(result.data.signedUrl, 'https://storage.googleapis.com/signed-url')
+  assert.equal(result.data.signedUrl, 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url')
   assert.equal(result.data.expiresInMinutes, 60)
   assert.ok(result.data.expiresAt)
   assert.deepEqual(signedUrlArgs, {

@@ -12,14 +12,13 @@ const config = {
   local: {
     PORT: 3000,
     HOST: 'localhost',
-    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:Incrementa2026!@35.199.66.217:5432/incrementa',
+    // En local se carga con set-env-local.sh y apunta a la base de pre-prod en Azure.
+    DATABASE_URL: process.env.DATABASE_URL,
     OIDC_ISSUER_URL:
       process.env.OIDC_ISSUER_URL ||
       'https://login.microsoftonline.com/60322b4a-13bf-4f19-89ae-efe4a54ffed6/v2.0',
     OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'dc734f4a-5f25-4e88-b728-aab4715f2122',
-    GRAPH_TENANT_ID: process.env.GRAPH_TENANT_ID || '60322b4a-13bf-4f19-89ae-efe4a54ffed6',
-    GRAPH_CLIENT_ID: process.env.GRAPH_CLIENT_ID || 'dc734f4a-5f25-4e88-b728-aab4715f2122',
-    GRAPH_CLIENT_SECRET: process.env.GRAPH_CLIENT_SECRET || '',
+    GRAPH_ENABLED: process.env.GRAPH_ENABLED !== 'false',
     AZURE_STORAGE_ACCOUNT: process.env.AZURE_STORAGE_ACCOUNT || 'stincrementapreprod',
     AZURE_STORAGE_CONTAINER_DOCUMENTOS: process.env.AZURE_STORAGE_CONTAINER_DOCUMENTOS || 'documentos',
     AZURE_STORAGE_CONTAINER_FIRMADOS: process.env.AZURE_STORAGE_CONTAINER_FIRMADOS || 'firmados',
@@ -37,9 +36,7 @@ const config = {
     DATABASE_URL: process.env.DATABASE_URL,
     OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || '',
     OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'incrementa-backend',
-    GRAPH_TENANT_ID: process.env.GRAPH_TENANT_ID || '',
-    GRAPH_CLIENT_ID: process.env.GRAPH_CLIENT_ID || '',
-    GRAPH_CLIENT_SECRET: process.env.GRAPH_CLIENT_SECRET || '',
+    GRAPH_ENABLED: process.env.GRAPH_ENABLED !== 'false',
     AZURE_STORAGE_ACCOUNT: process.env.AZURE_STORAGE_ACCOUNT || 'stincrementapreprod',
     AZURE_STORAGE_CONTAINER_DOCUMENTOS: process.env.AZURE_STORAGE_CONTAINER_DOCUMENTOS || 'documentos',
     AZURE_STORAGE_CONTAINER_FIRMADOS: process.env.AZURE_STORAGE_CONTAINER_FIRMADOS || 'firmados',
@@ -49,7 +46,8 @@ const config = {
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
     LOG_LEVEL: 'info',
-    CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://incrementa-frontend-7yl7vz6hyq-uc.a.run.app'
+    // En Azure la inyecta la Container App: la URL de Static Web Apps del entorno.
+    CORS_ORIGIN: process.env.CORS_ORIGIN || ''
   },
   prod: {
     PORT: process.env.PORT || 3000,
@@ -57,9 +55,7 @@ const config = {
     DATABASE_URL: process.env.DATABASE_URL,
     OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || '',
     OIDC_AUDIENCE: process.env.OIDC_AUDIENCE || 'incrementa-backend',
-    GRAPH_TENANT_ID: process.env.GRAPH_TENANT_ID || '',
-    GRAPH_CLIENT_ID: process.env.GRAPH_CLIENT_ID || '',
-    GRAPH_CLIENT_SECRET: process.env.GRAPH_CLIENT_SECRET || '',
+    GRAPH_ENABLED: process.env.GRAPH_ENABLED !== 'false',
     AZURE_STORAGE_ACCOUNT: process.env.AZURE_STORAGE_ACCOUNT || '',
     AZURE_STORAGE_CONTAINER_DOCUMENTOS: process.env.AZURE_STORAGE_CONTAINER_DOCUMENTOS || 'documentos',
     AZURE_STORAGE_CONTAINER_FIRMADOS: process.env.AZURE_STORAGE_CONTAINER_FIRMADOS || 'firmados',

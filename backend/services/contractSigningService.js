@@ -252,7 +252,7 @@ function createContractSigningService({
     try {
       originalBuffer = await storageService.downloadBuffer({ gcsPath: draft.gcs_path })
     } catch (err) {
-      console.error('[contractSigningService] GCS download failed:', err)
+      console.error('[contractSigningService] Storage download failed:', err)
       return {
         ok: false,
         status: 500,
@@ -347,7 +347,7 @@ function createContractSigningService({
         contentType: 'application/pdf'
       })
     } catch (err) {
-      console.error('[contractSigningService] GCS upload failed:', err)
+      console.error('[contractSigningService] Storage upload failed:', err)
       return {
         ok: false,
         status: 500,

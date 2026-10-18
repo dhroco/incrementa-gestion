@@ -16,7 +16,8 @@ const config = {
     LOG_LEVEL: 'debug'
   },
   dev: {
-    API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'https://dev.gaf.lat',
+    // Se fija al compilar: el workflow de despliegue pasa la URL del backend del entorno.
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? '',
     APP_NAME: 'Sistema de Gestión de Contratos',
     DEBUG: true,
     LOG_LEVEL: 'info'
