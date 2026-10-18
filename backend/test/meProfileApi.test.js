@@ -64,7 +64,7 @@ function createTestMeController(overrides = {}) {
   const db = overrides.db ?? createProfileDbStub()
   db.fn = { now: () => new Date() }
 
-  const gcsService = overrides.gcsService ?? {
+  const storageService = overrides.storageService ?? {
     deleteFile: async () => {},
     uploadBuffer: async ({ gcsPath, contentType }) => {
       assert.ok(gcsPath.startsWith(`avatars/${PROFILE_ID}/`))
@@ -74,7 +74,7 @@ function createTestMeController(overrides = {}) {
     getSignedUrl: async ({ gcsPath }) => `https://signed.example/${gcsPath}`
   }
 
-  return createMeController({ db, gcsService })
+  return createMeController({ db, storageService })
 }
 
 test('PUT /api/me/profile returns 401 without authentication', async () => {

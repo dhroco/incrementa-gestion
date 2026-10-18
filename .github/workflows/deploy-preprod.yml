@@ -1,8 +1,9 @@
-name: Deploy Pre-Prod
+name: Deploy Pre-Prod (GCP, desactivado)
 
+# Desactivado por la migración a Azure: ya no corre con cada push a preprod.
+# Se mantiene solo como respaldo manual hasta apagar GCP (fase 9).
 on:
-  push:
-    branches: [preprod]
+  workflow_dispatch:
 
 permissions:
   id-token: write

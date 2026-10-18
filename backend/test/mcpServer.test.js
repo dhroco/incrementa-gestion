@@ -152,8 +152,8 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
     return PROFILE_ID
   }
 
-  const gcsService = {
-    getSignedUrl: async () => 'https://storage.googleapis.com/signed-url'
+  const storageService = {
+    getSignedUrl: async () => 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url'
   }
 
   const server = createMockServer()
@@ -165,7 +165,7 @@ test('MCP tools use MCP_USER_ID and return JSON responses', async () => {
     documentBuilderService,
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService,
+    storageService,
     getUserProfileIdByUserId
   })
 
@@ -256,7 +256,7 @@ test('listar_plantillas passes supplier_type and status active to standardTempla
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -321,7 +321,7 @@ test('obtener_plantilla returns template metadata and plain text content', async
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID,
     tipTapDocToPlainTextAsync
   })
@@ -360,7 +360,7 @@ test('obtener_plantilla returns NOT_FOUND for unknown template id', async () => 
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID,
     tipTapDocToPlainTextAsync: async () => ''
   })
@@ -400,10 +400,10 @@ test('obtener_url_contrato returns signed URL for existing draft', async () => {
   const { registerMcpTools } = await import('../mcpTools.mjs')
 
   let signedUrlArgs = null
-  const gcsService = {
+  const storageService = {
     getSignedUrl: async (args) => {
       signedUrlArgs = args
-      return 'https://storage.googleapis.com/signed-url'
+      return 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url'
     }
   }
 
@@ -422,7 +422,7 @@ test('obtener_url_contrato returns signed URL for existing draft', async () => {
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService,
+    storageService,
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -434,7 +434,7 @@ test('obtener_url_contrato returns signed URL for existing draft', async () => {
   assert.equal(result.ok, true)
   assert.equal(result.data.documentId, DRAFT_ID)
   assert.equal(result.data.file_name, 'Contrato_test.pdf')
-  assert.equal(result.data.signedUrl, 'https://storage.googleapis.com/signed-url')
+  assert.equal(result.data.signedUrl, 'https://stincrementapreprod.blob.core.windows.net/documentos/signed-url')
   assert.equal(result.data.expiresInMinutes, 60)
   assert.ok(result.data.expiresAt)
   assert.deepEqual(signedUrlArgs, {
@@ -456,7 +456,7 @@ test('obtener_url_contrato returns NOT_FOUND for unknown draft', async () => {
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: { getSignedUrl: async () => 'https://example.com' },
+    storageService: { getSignedUrl: async () => 'https://example.com' },
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -490,7 +490,7 @@ test('listar_catalogo_redes returns catalog items from supplierService', async (
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -519,7 +519,7 @@ test('crear_proveedor description documents catalog_id for social networks', asy
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -573,7 +573,7 @@ test('MCP supplier tools document and validate contact fields', async () => {
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -656,7 +656,7 @@ test('obtener_url_contrato returns GCS_PATH_MISSING when draft has no gcs_path',
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: { getSignedUrl: async () => 'https://example.com' },
+    storageService: { getSignedUrl: async () => 'https://example.com' },
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -678,7 +678,7 @@ test('listar_documentos_pendientes_firma returns pending drafts', async () => {
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService: stubContractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => PROFILE_ID
   })
 
@@ -711,7 +711,7 @@ test('firmar_contrato_electronico uses MCP profile as signer', async () => {
     documentBuilderService: {},
     contractsQueryService: stubContractsQueryService,
     contractSigningService,
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async (userId) => {
       assert.equal(userId, MCP_USER_ID)
       return PROFILE_ID

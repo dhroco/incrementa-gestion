@@ -102,11 +102,11 @@ test('getContractPdf loads signed document without status column', async () => {
     return {}
   }
 
-  const gcsService = {
+  const storageService = {
     downloadBuffer: async () => Buffer.from('%PDF')
   }
 
-  const service = createContractsQueryService({ db, gcsService })
+  const service = createContractsQueryService({ db, storageService })
   const result = await service.getContractPdf({ id: 'doc1', source: 'signed' })
 
   assert.equal(result.ok, true)

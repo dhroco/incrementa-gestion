@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto')
 const { sendError } = require('../http/responses')
 const { isValidEmail } = require('../utils/validation')
 const { db: defaultDb } = require('../db/knex')
-const { gcsService: defaultGcsService } = require('../services/gcsService')
+const { storageService: defaultStorageService } = require('../services/storageService')
 
 const ALLOWED_AVATAR_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
@@ -64,7 +64,7 @@ function createAvatarUploadRouteHandler(options = {}) {
   }
 }
 
-function createMeController({ db = defaultDb, gcsService = defaultGcsService } = {}) {
+function createMeController({ db = defaultDb, storageService = defaultStorageService } = {}) {
   return {
     putProfile: async (req, res) => {
       const { contact_email: contactEmail, widget_preferences: widgetPreferences } = req.body ?? {}
@@ -165,13 +165,13 @@ function createMeController({ db = defaultDb, gcsService = defaultGcsService } =
 
       if (profile.avatar_gcs_path) {
         try {
-          await gcsService.deleteFile({ gcsPath: profile.avatar_gcs_path })
+          await storageService.deleteFile({ gcsPath: profile.avatar_gcs_path })
         } catch {
           // best-effort cleanup
         }
       }
 
-      await gcsService.uploadBuffer({
+      await storageService.uploadBuffer({
         buffer: file.buffer,
         gcsPath,
         contentType: file.mimetype
@@ -179,7 +179,7 @@ function createMeController({ db = defaultDb, gcsService = defaultGcsService } =
 
       await db('user_profile').where({ id: profile.id }).update({ avatar_gcs_path: gcsPath })
 
-      const avatarUrl = await gcsService.getSignedUrl({ gcsPath, expiresInMinutes: 1440 })
+      const avatarUrl = await storageService.getSignedUrl({ gcsPath, expiresInMinutes: 1440 })
       return res.status(200).json({ ok: true, avatar_url: avatarUrl })
     }
   }

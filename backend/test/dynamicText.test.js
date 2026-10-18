@@ -188,7 +188,7 @@ async function generateWithDoc(templateDoc, bodyExtra, hooks = {}) {
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {
           uploadCalled = true
         },

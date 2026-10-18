@@ -68,9 +68,9 @@ function createDbStub({ companyExists = true, existingSignature = null } = {}) {
 }
 
 test('POST /api/companies/:id/legal-rep-signatures/:repIndex: 403 sin grant update', async () => {
-  const gcsService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
+  const storageService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
   const db = createDbStub()
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -89,13 +89,13 @@ test('POST /api/companies/:id/legal-rep-signatures/:repIndex: 403 sin grant upda
 })
 
 test('POST: acepta PNG transparente y no expone gcs_path', async () => {
-  const gcsService = {
+  const storageService = {
     uploadBuffer: async () => {},
     deleteFile: async () => {},
     getSignedUrl: async () => 'https://signed.example/firmas/.../sig.png'
   }
   const db = createDbStub({ existingSignature: null })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -116,9 +116,9 @@ test('POST: acepta PNG transparente y no expone gcs_path', async () => {
 })
 
 test('POST: rechaza “JPEG con Content-Type png” por magic bytes', async () => {
-  const gcsService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
+  const storageService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
   const db = createDbStub({ existingSignature: null })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -139,9 +139,9 @@ test('POST: rechaza “JPEG con Content-Type png” por magic bytes', async () =
 })
 
 test('POST: rechaza PNG opaco (fondo sin transparencia)', async () => {
-  const gcsService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
+  const storageService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
   const db = createDbStub({ existingSignature: null })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -161,9 +161,9 @@ test('POST: rechaza PNG opaco (fondo sin transparencia)', async () => {
 })
 
 test('POST: rechaza PNG >500KB', async () => {
-  const gcsService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
+  const storageService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'x' }
   const db = createDbStub({ existingSignature: null })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -196,14 +196,14 @@ test('POST: rechaza PNG >500KB', async () => {
 })
 
 test('DELETE: elimina la firma registrada', async () => {
-  const gcsService = {
+  const storageService = {
     uploadBuffer: async () => {},
     deleteFile: async () => {},
     getSignedUrl: async () => 'x'
   }
 
   const db = createDbStub({ existingSignature: { gcs_path: 'firmas-representantes/c1/1/old.png' } })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,
@@ -219,9 +219,9 @@ test('DELETE: elimina la firma registrada', async () => {
 
 
 test('POST: acepta PNG con fondo casi transparente (alfa bajo, no exactamente 0)', async () => {
-  const gcsService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'https://signed' }
+  const storageService = { uploadBuffer: async () => {}, deleteFile: async () => {}, getSignedUrl: async () => 'https://signed' }
   const db = createDbStub({ existingSignature: null })
-  const service = createLegalRepSignatureService({ db, gcsService })
+  const service = createLegalRepSignatureService({ db, storageService })
 
   const app = createApp({
     requireAuth: authOk,

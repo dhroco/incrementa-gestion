@@ -1,7 +1,7 @@
 const crypto = require('crypto')
 const { PNG } = require('pngjs')
 const { db: defaultDb } = require('../db/knex')
-const { gcsService: defaultGcsService } = require('./gcsService')
+const { storageService: defaultStorageService } = require('./storageService')
 
 const MAX_SIGNATURE_BYTES = 500 * 1024
 const PNG_MAGIC_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -94,7 +94,7 @@ function buildSignatureGcsPath({ companyId, repIndex, uuid }) {
   return `firmas-representantes/${companyId}/${repIndex}/${uuid}.png`
 }
 
-function createLegalRepSignatureService({ db = defaultDb, gcsService = defaultGcsService } = {}) {
+function createLegalRepSignatureService({ db = defaultDb, storageService = defaultStorageService } = {}) {
   async function uploadSignature({ companyId, repIndex, userProfileId, signatureBuffer }) {
     const parsed = parseRepIndex(repIndex)
     if (!parsed) {
@@ -117,7 +117,7 @@ function createLegalRepSignatureService({ db = defaultDb, gcsService = defaultGc
     const uuid = crypto.randomUUID()
     const gcs_path = buildSignatureGcsPath({ companyId, repIndex: parsed, uuid })
 
-    await gcsService.uploadBuffer({
+    await storageService.uploadBuffer({
       buffer: Buffer.from(signatureBuffer),
       gcsPath: gcs_path,
       contentType: 'image/png'
@@ -138,13 +138,13 @@ function createLegalRepSignatureService({ db = defaultDb, gcsService = defaultGc
 
     if (existing?.gcs_path && existing.gcs_path !== gcs_path) {
       try {
-        await gcsService.deleteFile({ gcsPath: existing.gcs_path })
+        await storageService.deleteFile({ gcsPath: existing.gcs_path })
       } catch {
         // best-effort cleanup
       }
     }
 
-    const url = await gcsService.getSignedUrl({ gcsPath: gcs_path, expiresInMinutes: 60 })
+    const url = await storageService.getSignedUrl({ gcsPath: gcs_path, expiresInMinutes: 60 })
     return { ok: true, data: { rep_index: parsed, url } }
   }
 
@@ -164,7 +164,7 @@ function createLegalRepSignatureService({ db = defaultDb, gcsService = defaultGc
     }
 
     try {
-      await gcsService.deleteFile({ gcsPath: row.gcs_path })
+      await storageService.deleteFile({ gcsPath: row.gcs_path })
     } catch {
       // ignore
     }

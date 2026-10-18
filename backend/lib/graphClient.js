@@ -1,18 +1,27 @@
 const config = require('../config')
+const { getAzureCredential } = require('./azureCredential')
 
 const { normalizeAuthEmail } = require('./normalizeAuthEmail')
 
 /**
  * Cliente Microsoft Graph (app-only): lookup de usuarios por email en solo lectura.
+ *
+ * El token lo pide la credencial de Azure: en Azure, la managed identity del backend, que
+ * tiene el permiso de aplicación `User.Read.All` en su tenant; en local, la sesión de
+ * `az login`. No hay client secret.
  */
 
-const TOKEN_REFRESH_MARGIN_MS = 10_000
+const GRAPH_SCOPE = 'https://graph.microsoft.com/.default'
+const TOKEN_REFRESH_MARGIN_MS = 60_000
 
 /** @type {{ accessToken: string | null, expiresAt: number }} */
 let tokenCache = { accessToken: null, expiresAt: 0 }
 
 /** @type {GraphClient | null} */
 let clientSingleton = null
+
+/** Credencial inyectada por las pruebas; en uso normal es la de lib/azureCredential. */
+let credentialOverride = null
 
 class GraphClientError extends Error {
   /**
@@ -28,7 +37,7 @@ class GraphClientError extends Error {
 }
 
 function isGraphConfigured() {
-  return Boolean(config.GRAPH_TENANT_ID && config.GRAPH_CLIENT_ID && config.GRAPH_CLIENT_SECRET)
+  return config.GRAPH_ENABLED !== false
 }
 
 /**
@@ -54,51 +63,28 @@ function mapGraphError(status, bodyText) {
   })
 }
 
-async function fetchClientCredentialsToken() {
-  const url = `https://login.microsoftonline.com/${config.GRAPH_TENANT_ID}/oauth2/v2.0/token`
-  const body = new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: config.GRAPH_CLIENT_ID,
-    client_secret: config.GRAPH_CLIENT_SECRET,
-    scope: 'https://graph.microsoft.com/.default'
-  })
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  })
-
-  const text = await res.text()
-  if (!res.ok) {
-    throw new GraphClientError(
-      'No se pudo autenticar contra Microsoft Graph (revise GRAPH_TENANT_ID, GRAPH_CLIENT_ID y GRAPH_CLIENT_SECRET).',
-      { status: res.status, code: 'GRAPH_TOKEN_FAILED' }
-    )
-  }
-
-  let data
-  try {
-    data = JSON.parse(text)
-  } catch {
-    throw new GraphClientError('Respuesta inválida al obtener token de Microsoft Graph.', {
-      code: 'GRAPH_TOKEN_PARSE_FAILED'
-    })
-  }
-
-  const expiresInSec = Number(data.expires_in) || 60
-  tokenCache = {
-    accessToken: data.access_token,
-    expiresAt: Date.now() + expiresInSec * 1000
-  }
-  return tokenCache.accessToken
-}
-
 async function getAccessToken() {
   if (tokenCache.accessToken && Date.now() < tokenCache.expiresAt - TOKEN_REFRESH_MARGIN_MS) {
     return tokenCache.accessToken
   }
-  return fetchClientCredentialsToken()
+  const credential = credentialOverride ?? getAzureCredential()
+  let result
+  try {
+    result = await credential.getToken(GRAPH_SCOPE)
+  } catch {
+    result = null
+  }
+  if (!result?.token) {
+    throw new GraphClientError(
+      'No se pudo obtener un token para Microsoft Graph (revise la identidad del backend y su permiso User.Read.All).',
+      { code: 'GRAPH_TOKEN_FAILED' }
+    )
+  }
+  tokenCache = {
+    accessToken: result.token,
+    expiresAt: Number(result.expiresOnTimestamp) || Date.now() + 60_000
+  }
+  return tokenCache.accessToken
 }
 
 class GraphClient {
@@ -179,9 +165,13 @@ function getGraphClient() {
   return clientSingleton
 }
 
-function resetGraphClientForTests() {
+/**
+ * @param {{ credential?: { getToken: (scope: string) => Promise<{ token: string, expiresOnTimestamp: number } | null> } | null }} [opts]
+ */
+function resetGraphClientForTests({ credential = null } = {}) {
   clientSingleton = null
   tokenCache = { accessToken: null, expiresAt: 0 }
+  credentialOverride = credential
 }
 
 module.exports = {

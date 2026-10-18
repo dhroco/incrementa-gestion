@@ -1,0 +1,116 @@
+name: Deploy Pre-Prod (Azure)
+
+# Push a `preprod` → imagen del backend al ACR → MCP → backend → frontend a Static Web Apps.
+# Entra a Azure con OIDC federado (identidad id-incrementa-github-deploy-preprod): no hay
+# ninguna clave guardada en GitHub. Solo actualiza imágenes y contenido; la infraestructura la
+# cambia infra.yml.
+#
+# Requisito: las Container Apps tienen que estar configuradas con el Bicep en modo
+# secretosCargados=true (registro, variables y secretos). Este workflow solo cambia la imagen.
+
+on:
+  push:
+    branches: [preprod]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-azure-preprod
+  cancel-in-progress: false
+
+env:
+  RG: rg-incrementa-preprod
+  ACR: acrincrementapreprod
+  ACR_SERVER: acrincrementapreprod.azurecr.io
+  BACKEND_APP: ca-incrementa-backend
+  MCP_APP: ca-incrementa-mcp
+  SWA: swa-incrementa-preprod
+  NODE_VERSION: '22'
+  # App registration del login (incrementa-gestion-dev). No es secreto.
+  LOGIN_CLIENT_ID: dc734f4a-5f25-4e88-b728-aab4715f2122
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Entrar a Azure (OIDC, sin claves)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID_DEPLOY }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # --- Backend y MCP: una sola imagen ---
+      - name: Construir y publicar la imagen del backend
+        run: |
+          az acr login --name "$ACR"
+          IMAGEN="$ACR_SERVER/backend:${GITHUB_SHA}"
+          docker build -t "$IMAGEN" -t "$ACR_SERVER/backend:preprod" ./backend
+          docker push "$IMAGEN"
+          docker push "$ACR_SERVER/backend:preprod"
+          echo "IMAGEN=$IMAGEN" >> "$GITHUB_ENV"
+
+      - name: Actualizar el MCP
+        run: az containerapp update -g "$RG" -n "$MCP_APP" --image "$IMAGEN" --output none
+
+      - name: Actualizar el backend
+        run: az containerapp update -g "$RG" -n "$BACKEND_APP" --image "$IMAGEN" --output none
+
+      - name: Comprobar que el backend responde
+        run: |
+          FQDN="$(az containerapp show -g "$RG" -n "$BACKEND_APP" --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "BACKEND_URL=https://$FQDN" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            if curl -fsS "https://$FQDN/health" > /dev/null; then
+              echo "Backend en línea: https://$FQDN"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::El backend no respondió /health en 5 minutos."
+          exit 1
+
+      # --- Frontend ---
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Compilar el frontend
+        working-directory: frontend
+        env:
+          ENVIRONMENT: dev
+          VITE_API_BASE_URL: ${{ env.BACKEND_URL }}
+          VITE_AZURE_CLIENT_ID: ${{ env.LOGIN_CLIENT_ID }}
+          VITE_AZURE_AUTHORITY: https://login.microsoftonline.com/${{ vars.AZURE_TENANT_ID }}
+          VITE_AZURE_API_SCOPE: api://${{ env.LOGIN_CLIENT_ID }}/access_as_user
+        run: |
+          npm ci
+          npm run build
+
+      - name: Pedir el token de despliegue de Static Web Apps
+        run: |
+          TOKEN="$(az staticwebapp secrets list -g "$RG" -n "$SWA" --query properties.apiKey -o tsv)"
+          echo "::add-mask::$TOKEN"
+          echo "SWA_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Publicar el frontend
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
+          action: upload
+          app_location: frontend/dist
+          output_location: ''
+          skip_app_build: true
+          skip_api_build: true
+
+      - name: Resumen
+        run: |
+          echo "Imagen:   $IMAGEN"
+          echo "Backend:  $BACKEND_URL"
+          echo "MCP:      https://$(az containerapp show -g "$RG" -n "$MCP_APP" --query properties.configuration.ingress.fqdn -o tsv)/mcp"
+          echo "Frontend: https://$(az staticwebapp show -g "$RG" -n "$SWA" --query defaultHostname -o tsv)"

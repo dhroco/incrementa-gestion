@@ -473,11 +473,11 @@ function createDocumentBuilderService({
   db,
   supplierService = supplierServiceDefault,
   clientService = clientServiceDefault,
-  gcsService,
+  storageService,
   getUserProfileIdByUserId
 }) {
-  if (!gcsService) {
-    throw new Error('gcsService is required')
+  if (!storageService) {
+    throw new Error('storageService is required')
   }
   if (!getUserProfileIdByUserId) {
     throw new Error('getUserProfileIdByUserId is required')
@@ -756,7 +756,7 @@ function createDocumentBuilderService({
       const existingForOverwrite = await findActiveDuplicateDraft(db, duplicateScope)
       if (existingForOverwrite) {
         try {
-          await gcsService.deleteFile({ gcsPath: existingForOverwrite.gcs_path })
+          await storageService.deleteFile({ gcsPath: existingForOverwrite.gcs_path })
         } catch {
           return {
             ok: false,
@@ -793,7 +793,7 @@ function createDocumentBuilderService({
       fileName: file_name
     })
 
-    await gcsService.uploadBuffer({
+    await storageService.uploadBuffer({
       buffer: Buffer.from(pdfBytes),
       gcsPath: gcs_path,
       contentType: 'application/pdf'
@@ -847,7 +847,7 @@ function createDocumentBuilderService({
       return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Documento no encontrado.' }
     }
 
-    const buffer = await gcsService.downloadBuffer({ gcsPath: row.gcs_path })
+    const buffer = await storageService.downloadBuffer({ gcsPath: row.gcs_path })
 
     return {
       ok: true,

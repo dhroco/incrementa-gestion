@@ -66,7 +66,7 @@ test('listPendingSignature returns mapped items', async () => {
     { raw: (sql) => sql }
   )
 
-  const service = createContractSigningService({ db, gcsService: {}, emailService: {} })
+  const service = createContractSigningService({ db, storageService: {}, emailService: {} })
   const result = await service.listPendingSignature()
 
   assert.equal(result.ok, true)
@@ -98,7 +98,7 @@ test('signContract rejects already signed draft', async () => {
 
   const service = createContractSigningService({
     db,
-    gcsService: {},
+    storageService: {},
     emailService: { sendSignedContractEmail: async () => ({ ok: true }) }
   })
 
@@ -216,7 +216,7 @@ test('signContract succeeds and logs email failure without rollback', async () =
     await fn(trx)
   }
 
-  const gcsService = {
+  const storageService = {
     downloadBuffer: async () => pdfBuffer,
     uploadBuffer: async () => 'contratos-firmados/signed.pdf'
   }
@@ -228,7 +228,7 @@ test('signContract succeeds and logs email failure without rollback', async () =
     }
   }
 
-  const service = createContractSigningService({ db, gcsService, emailService })
+  const service = createContractSigningService({ db, storageService, emailService })
   const result = await service.signContract({
     draftDocumentId: DRAFT_ID,
     signerUserProfileId: PROFILE_ID
@@ -350,7 +350,7 @@ test('signContract does not catalog-check persisted formato_reel render form', a
 
   const service = createContractSigningService({
     db,
-    gcsService: {
+    storageService: {
       downloadBuffer: async () => pdfBuffer,
       uploadBuffer: async () => 'contratos-firmados/signed.pdf'
     },
