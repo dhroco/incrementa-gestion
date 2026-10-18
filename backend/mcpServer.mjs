@@ -10,18 +10,18 @@ const supplierService = require('./services/supplierService')
 const clientService = require('./services/clientService')
 const { createStandardTemplatesService } = require('./services/standardTemplatesService')
 const { createDocumentBuilderService } = require('./services/documentBuilderService')
-const { gcsService } = require('./services/gcsService')
+const { storageService } = require('./services/storageService')
 const { createContractsQueryService } = require('./services/contractsQueryService')
 const { createContractSigningService } = require('./services/contractSigningService')
 const emailService = require('./services/emailService')
 const { tipTapDocToPlainTextAsync } = require('./utils/tipTapPlainText')
 
 const standardTemplatesService = createStandardTemplatesService({ db })
-const contractsQueryService = createContractsQueryService({ db, gcsService })
-const contractSigningService = createContractSigningService({ db, gcsService, emailService })
+const contractsQueryService = createContractsQueryService({ db, storageService })
+const contractSigningService = createContractSigningService({ db, storageService, emailService })
 const documentBuilderService = createDocumentBuilderService({
   db,
-  gcsService,
+  storageService,
   clientService,
   getUserProfileIdByUserId
 })
@@ -34,7 +34,7 @@ const mcpDeps = {
   documentBuilderService,
   contractsQueryService,
   contractSigningService,
-  gcsService,
+  storageService,
   getUserProfileIdByUserId,
   tipTapDocToPlainTextAsync
 }

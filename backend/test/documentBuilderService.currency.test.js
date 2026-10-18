@@ -124,7 +124,7 @@ function baseGenerateArgs(bodyExtra = {}) {
   }
 }
 
-function gcsService() {
+function storageService() {
   return {
     uploadBuffer: async () => {},
     downloadBuffer: async () => Buffer.alloc(0),
@@ -207,7 +207,7 @@ test('USD template stores US dollar price', async () => {
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: gcsService(),
+      storageService: storageService(),
       getUserProfileIdByUserId: async () => PROFILE_ID
     })
 
@@ -235,7 +235,7 @@ test('CLP template stores Chilean price', async () => {
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: gcsService(),
+      storageService: storageService(),
       getUserProfileIdByUserId: async () => PROFILE_ID
     })
 
@@ -285,7 +285,7 @@ test('getTemplateRow selects template currency_code', async () => {
     const service = createDocumentBuilderService({
       db,
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: gcsService(),
+      storageService: storageService(),
       getUserProfileIdByUserId: async () => PROFILE_ID
     })
 

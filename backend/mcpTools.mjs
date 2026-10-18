@@ -60,7 +60,7 @@ function formatCompanyRut(row) {
  *   documentBuilderService: object,
  *   contractsQueryService: object,
  *   contractSigningService: object,
- *   gcsService: object,
+ *   storageService: object,
  *   getUserProfileIdByUserId: (userId: string) => Promise<string | null>,
  *   tipTapDocToPlainTextAsync: (doc: unknown) => Promise<string>
  * }} deps
@@ -74,7 +74,7 @@ export function registerMcpTools(server, deps) {
     documentBuilderService,
     contractsQueryService,
     contractSigningService,
-    gcsService,
+    storageService,
     getUserProfileIdByUserId,
     tipTapDocToPlainTextAsync
   } = deps
@@ -467,7 +467,7 @@ export function registerMcpTools(server, deps) {
 
         let signedUrl
         try {
-          signedUrl = await gcsService.getSignedUrl({
+          signedUrl = await storageService.getSignedUrl({
             gcsPath: row.gcs_path,
             expiresInMinutes
           })

@@ -24,7 +24,7 @@ test('Description lists dynamic text and forbids drafting it', async () => {
     documentBuilderService: {},
     contractsQueryService: {},
     contractSigningService: {},
-    gcsService: {},
+    storageService: {},
     getUserProfileIdByUserId: async () => null
   })
 

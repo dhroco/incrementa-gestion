@@ -216,7 +216,7 @@ test('redSocialSearch matches a network named only in servicios_entregables', as
     }
   }
   const db = createFilterDb([tiktokOnly, instagram])
-  const service = createContractsQueryService({ db, gcsService: {} })
+  const service = createContractsQueryService({ db, storageService: {} })
 
   const result = await service.listContracts({
     page: 1,

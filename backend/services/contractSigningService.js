@@ -1,7 +1,7 @@
 const crypto = require('crypto')
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib')
 const { db: defaultDb } = require('../db/knex')
-const { gcsService: defaultGcsService } = require('./gcsService')
+const { storageService: defaultStorageService } = require('./storageService')
 const emailServiceDefault = require('./emailService')
 const { yearMonthInSantiago } = require('./documentBuilderService')
 const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTapReactPdf')
@@ -155,7 +155,7 @@ async function appendSignaturePage(
 
 function createContractSigningService({
   db = defaultDb,
-  gcsService = defaultGcsService,
+  storageService = defaultStorageService,
   emailService = emailServiceDefault
 } = {}) {
   async function listPendingSignature() {
@@ -250,7 +250,7 @@ function createContractSigningService({
 
     let originalBuffer
     try {
-      originalBuffer = await gcsService.downloadBuffer({ gcsPath: draft.gcs_path })
+      originalBuffer = await storageService.downloadBuffer({ gcsPath: draft.gcs_path })
     } catch (err) {
       console.error('[contractSigningService] GCS download failed:', err)
       return {
@@ -288,7 +288,7 @@ function createContractSigningService({
           if (!key) continue
 
           try {
-            const buf = await gcsService.downloadBuffer({ gcsPath: row.gcs_path })
+            const buf = await storageService.downloadBuffer({ gcsPath: row.gcs_path })
             if (buf) {
               signatureImages[key] = buf
               stampInjected = true
@@ -341,7 +341,7 @@ function createContractSigningService({
     const newFileName = `${documentId}_firmado.pdf`
 
     try {
-      await gcsService.uploadBuffer({
+      await storageService.uploadBuffer({
         buffer: signedBuffer,
         gcsPath: newGcsPath,
         contentType: 'application/pdf'

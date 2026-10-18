@@ -1,5 +1,5 @@
 const { db: defaultDb } = require('../db/knex')
-const { gcsService: defaultGcsService } = require('./gcsService')
+const { storageService: defaultStorageService } = require('./storageService')
 
 const DEFAULT_PAGE_SIZE = 18
 const MAX_PAGE_SIZE = 100
@@ -159,7 +159,7 @@ function mapContractListItem(row) {
   }
 }
 
-function createContractsQueryService({ db = defaultDb, gcsService = defaultGcsService } = {}) {
+function createContractsQueryService({ db = defaultDb, storageService = defaultStorageService } = {}) {
   async function listContracts({ page = 1, pageSize = DEFAULT_PAGE_SIZE, filters = {} } = {}) {
     const safePage = parsePositiveInt(page, 1)
     let safePageSize = parsePositiveInt(pageSize, DEFAULT_PAGE_SIZE)
@@ -232,7 +232,7 @@ function createContractsQueryService({ db = defaultDb, gcsService = defaultGcsSe
       }
     }
 
-    const buffer = await gcsService.downloadBuffer({ gcsPath: row.gcs_path })
+    const buffer = await storageService.downloadBuffer({ gcsPath: row.gcs_path })
     return {
       ok: true,
       data: {

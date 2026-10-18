@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan de migración a Azure</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+
+  :root {
+    --ground:        #FAFBFC;
+    --ground-raised: #FFFFFF;
+    --ground-sunken: #F0F3F5;
+    --ink:           #12171C;
+    --ink-soft:      #4A5560;
+    --ink-faint:     #7C8894;
+    --rule:          #DCE2E7;
+    --rule-strong:   #C3CCD4;
+    --accent:        #0B5CAD;
+    --accent-soft:   #E4EEF8;
+    --si:            #1E6F49;
+    --si-soft:       #E4F1EA;
+    --no:            #9E3325;
+    --no-soft:       #F6E7E4;
+    --aviso:         #8A5A00;
+    --aviso-soft:    #F8EEDC;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D1114; --ground-raised: #141A1F; --ground-sunken: #1A2127;
+      --ink: #E2E8ED; --ink-soft: #A3AFBA; --ink-faint: #74818D;
+      --rule: #262F37; --rule-strong: #38434D;
+      --accent: #6CB0F0; --accent-soft: #142230;
+      --si: #5CBE8A; --si-soft: #12271C; --no: #E08272; --no-soft: #2B1714;
+      --aviso: #D9A441; --aviso-soft: #2A2113;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0D1114; --ground-raised: #141A1F; --ground-sunken: #1A2127;
+    --ink: #E2E8ED; --ink-soft: #A3AFBA; --ink-faint: #74818D;
+    --rule: #262F37; --rule-strong: #38434D;
+    --accent: #6CB0F0; --accent-soft: #142230;
+    --si: #5CBE8A; --si-soft: #12271C; --no: #E08272; --no-soft: #2B1714;
+    --aviso: #D9A441; --aviso-soft: #2A2113;
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .hoja { max-width: 1060px; margin: 0 auto; padding: 0 26px 100px; }
+
+  header.portada { padding: 70px 0 34px; border-bottom: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 18px; }
+  .marca { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 5vw, 3.2rem);
+    line-height: 1.08; letter-spacing: -0.015em; text-wrap: balance; max-width: 22ch; }
+  .bajada { font-size: 1.1rem; color: var(--ink-soft); max-width: 68ch; }
+  .procedencia { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--ink-faint);
+    border-left: 2px solid var(--rule-strong); padding-left: 14px; max-width: 66ch; }
+
+  section { padding: 46px 0; border-bottom: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 20px; }
+  section:last-of-type { border-bottom: none; }
+  .rubro { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); display: flex; align-items: center; gap: 12px; }
+  .rubro::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.55rem, 3.2vw, 2.05rem);
+    line-height: 1.18; letter-spacing: -0.01em; text-wrap: balance; max-width: 26ch; }
+  h3 { font-family: var(--sans); font-weight: 600; font-size: 1.02rem; margin-top: 6px; }
+  p { max-width: 70ch; }
+  .prosa { display: flex; flex-direction: column; gap: 13px; }
+  code { font-family: var(--mono); font-size: 0.855em; background: var(--ground-sunken);
+    padding: 1px 5px; border-radius: 2px; }
+  strong { font-weight: 600; }
+  ul, ol { padding-left: 1.15em; max-width: 70ch; }
+  li { margin-bottom: 0.35em; }
+  li::marker { color: var(--ink-faint); }
+
+  .marco { overflow-x: auto; border: 1px solid var(--rule); background: var(--ground-raised); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 400; background: var(--ground-sunken); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.ident { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  .suave { color: var(--ink-soft); }
+
+  .et { display: inline-block; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 2px; white-space: nowrap; }
+  .et.si    { background: var(--si-soft);    color: var(--si); }
+  .et.no    { background: var(--no-soft);    color: var(--no); }
+  .et.aviso { background: var(--aviso-soft); color: var(--aviso); }
+
+  figure { border: 1px solid var(--rule); background: #FFFFFF; padding: 22px 22px 16px;
+    display: flex; flex-direction: column; gap: 14px; overflow-x: auto; }
+  figure svg { display: block; width: 100%; min-width: 640px; height: auto; }
+  figcaption { font-size: 14px; line-height: 1.5; color: #4A5560; max-width: 80ch; }
+
+  .nota { background: var(--ground-sunken); border-left: 3px solid var(--accent);
+    padding: 16px 18px; font-size: 15px; }
+  .nota.alerta { border-left-color: var(--aviso); background: var(--aviso-soft); }
+
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); }
+  .cifra { background: var(--ground-raised); padding: 15px 16px 13px; display: flex; flex-direction: column; gap: 2px; }
+  .cifra b { font-family: var(--serif); font-weight: 400; font-size: 1.75rem; line-height: 1;
+    font-variant-numeric: tabular-nums; }
+  .cifra span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); }
+
+  footer { border-top: 1px solid var(--rule); margin-top: 40px; padding-top: 20px; font-family: var(--mono);
+    font-size: 12px; line-height: 1.75; color: var(--ink-faint); max-width: 78ch; }
+
+  .lamina { border: 1px solid var(--rule); background: #FFFFFF; padding: 14px; align-self: center;
+    width: min(1280px, calc(100vw - 32px)); overflow-x: auto; }
+  .lamina svg { display: block; width: 100%; min-width: 880px; height: auto; }
+  .zonas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); }
+  .zona { background: var(--ground-raised); padding: 16px 18px; }
+  .zona h4 { font-family: var(--sans); font-size: 0.98rem; font-weight: 600; margin-bottom: 6px; }
+  .zona p { font-size: 14.5px; color: var(--ink-soft); max-width: none; }
+  .zona p + p { margin-top: 10px; }
+
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .la-titulo { font-size: 20px; font-weight: 600; }
+  .la-sub, .la-ley { font-size: 12.5px; }
+  .la-gt  { font-size: 13px; font-weight: 600; }
+  .la-et  { font-size: 13px; font-weight: 600; }
+  .la-ets { font-size: 11.5px; }
+  .la-ic  { font-size: 12px; font-weight: 700; }
+  .la-fl  { font-size: 11.5px; font-weight: 500; paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; stroke-linejoin: round; }
+
+  @media (max-width: 640px) {
+    .hoja { padding: 0 16px 60px; }
+    header.portada { padding-top: 44px; }
+    section { padding: 34px 0; }
+    figure { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="hoja">
+
+  <header class="portada">
+    <div class="marca">incrementa-gestion · Plan de trabajo · 18 de octubre de 2026</div>
+    <h1>El plan para migrar incrementa-gestion a Azure</h1>
+    <p class="bajada">
+      Qué se hace, en qué orden, quién lo hace y cómo se comprueba cada paso. Va desde la rama de
+      trabajo hasta prod en la suscripción de Incrementa. La migración se hace <strong>fuera de AOD</strong>;
+      AOD se vuelve a montar al final, sobre el sistema ya migrado.
+    </p>
+    <div class="procedencia">
+      Implementa la arquitectura de <a href="arquitectura-azure-iconos-oficiales.html" style="color:inherit">arquitectura-azure-iconos-oficiales.html</a>
+      y las decisiones del 18 de octubre de 2026.<br>
+      Base de código: <code>origin/preprod</code> en <code>28ffc68</code>. La revisión de redacción
+      (<code>david/texto-dinamico-base</code>, <code>1e30bdc</code>) y los prompts de la rama local
+      <code>planes</code> quedan aparte: se retoman con AOD después de la migración.<br>
+      Quién: <strong>David</strong> (decide, aprueba y ejecuta lo que requiere sus cuentas),
+      <strong>Claude</strong> (escribe código, Bicep, scripts y verificaciones) y el
+      <strong>administrador de Incrementa</strong> (lo que ocurre en su tenant).
+    </div>
+  </header>
+
+  <section>
+    <div class="rubro">De un vistazo</div>
+    <h2>Diez fases, una detrás de otra</h2>
+    <figure>
+<svg viewBox="0 0 1000 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diez fases del plan en dos filas: preparación, cuentas, código, infraestructura, CI/CD, datos, despliegue y pruebas, puesta en uso, prod y cierre">
+<defs><marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5F6368"/></marker></defs>
+<rect width="1000" height="250" fill="#FFFFFF"/>
+<g font-size="11" font-weight="700" letter-spacing="1.1">
+<rect x="10" y="20" width="176" height="86" rx="6" fill="#F1F3F4" stroke="#5F6368" stroke-width="1.3"/>
+<text x="24" y="42" fill="#5F6368">FASE 0</text>
+<rect x="210" y="20" width="176" height="86" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.3"/>
+<text x="224" y="42" fill="#0B5CAD">FASE 1</text>
+<rect x="410" y="20" width="176" height="86" rx="6" fill="#F3EEFB" stroke="#8661C5" stroke-width="1.3"/>
+<text x="424" y="42" fill="#6B47B0">FASE 2</text>
+<rect x="610" y="20" width="176" height="86" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.3"/>
+<text x="624" y="42" fill="#0B5CAD">FASE 3</text>
+<rect x="810" y="20" width="180" height="86" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.3"/>
+<text x="824" y="42" fill="#0B5CAD">FASE 4</text>
+<rect x="810" y="144" width="180" height="86" rx="6" fill="#FFF8F3" stroke="#D83B01" stroke-width="1.3"/>
+<text x="824" y="166" fill="#A33000">FASE 5</text>
+<rect x="610" y="144" width="176" height="86" rx="6" fill="#E6F4EA" stroke="#107C10" stroke-width="1.3"/>
+<text x="624" y="166" fill="#107C10">FASE 6</text>
+<rect x="410" y="144" width="176" height="86" rx="6" fill="#E6F4EA" stroke="#107C10" stroke-width="1.3"/>
+<text x="424" y="166" fill="#107C10">FASE 7</text>
+<rect x="210" y="144" width="176" height="86" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.3"/>
+<text x="224" y="166" fill="#0B5CAD">FASE 8</text>
+<rect x="10" y="144" width="176" height="86" rx="6" fill="#F1F3F4" stroke="#5F6368" stroke-width="1.3"/>
+<text x="24" y="166" fill="#5F6368">FASE 9</text>
+</g>
+<g font-size="14" font-weight="600" fill="#202124">
+<text x="24" y="64">Preparación</text>
+<text x="224" y="64">Cuentas</text>
+<text x="424" y="64">Código</text>
+<text x="624" y="64">Infraestructura</text>
+<text x="824" y="64">CI/CD</text>
+<text x="824" y="188">Datos</text>
+<text x="624" y="188">Despliegue y pruebas</text>
+<text x="424" y="188">Puesta en uso</text>
+<text x="224" y="188">Prod en Incrementa</text>
+<text x="24" y="188">Cierre y AOD</text>
+</g>
+<g font-size="11.5" fill="#3C4043">
+<text x="24" y="86">rama, respaldo, GCP quieto</text>
+<text x="224" y="86">suscripción y proveedores</text>
+<text x="424" y="86">Blob, Graph, TLS, SWA</text>
+<text x="624" y="86">Bicep, secretos, Entra</text>
+<text x="824" y="86">OIDC y workflows</text>
+<text x="824" y="210">copia y SHA-256</text>
+<text x="624" y="210">de punta a punta</text>
+<text x="424" y="210">aviso a Marcela</text>
+<text x="224" y="210">su tenant y suscripción</text>
+<text x="24" y="210">apagar GCP, montar AOD</text>
+</g>
+<g stroke="#5F6368" stroke-width="2" fill="none">
+<line x1="186" y1="63" x2="206" y2="63" marker-end="url(#pf)"/>
+<line x1="386" y1="63" x2="406" y2="63" marker-end="url(#pf)"/>
+<line x1="586" y1="63" x2="606" y2="63" marker-end="url(#pf)"/>
+<line x1="786" y1="63" x2="806" y2="63" marker-end="url(#pf)"/>
+<line x1="900" y1="106" x2="900" y2="140" marker-end="url(#pf)"/>
+<line x1="810" y1="187" x2="790" y2="187" marker-end="url(#pf)"/>
+<line x1="610" y1="187" x2="590" y2="187" marker-end="url(#pf)"/>
+<line x1="410" y1="187" x2="390" y2="187" marker-end="url(#pf)"/>
+<line x1="210" y1="187" x2="190" y2="187" marker-end="url(#pf)"/>
+</g>
+</svg>
+      <figcaption>
+        Las fases 2 (código) y 3 (infraestructura) se pueden avanzar en paralelo. Todo lo demás va en
+        orden, porque cada fase usa lo que dejó la anterior. Pre-prod queda en uso en la fase 7; prod
+        recién en la 8.
+      </figcaption>
+    </figure>
+    <div class="nota">
+      <strong>Regla de todo el plan:</strong> en GCP no se borra nada hasta la fase 9. Si algo sale mal
+      en Azure, pre-prod de GCP sigue intacto y basta con reactivar su workflow.
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 0</div>
+    <h2>Preparación, sin tocar nada en uso</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">0.1</td><td>Actualizar el repo y crear la rama <code>migracion-azure</code> desde <code>origin/preprod</code>. La copia local de <code>preprod</code> está atrasada cuatro PR.</td><td>Claude</td><td class="suave"><code>git log -1 migracion-azure</code> = <code>28ffc68</code></td></tr>
+        <tr><td class="ident">0.2</td><td>Desactivar el workflow <code>Deploy Pre-Prod</code> de GCP desde GitHub (<em>Actions → Disable workflow</em>). No se borra el archivo: se reactiva con un clic.</td><td>David</td><td class="suave">El workflow aparece como <em>disabled</em></td></tr>
+        <tr><td class="ident">0.3</td><td>Respaldo de GCP antes de empezar: un backup a pedido de Cloud SQL y un listado completo del bucket, con tamaños.</td><td>David</td><td class="suave">El backup aparece en Cloud SQL; queda el listado guardado</td></tr>
+        <tr><td class="ident">0.4</td><td>Verificar que Brazil South tiene los tiers de PostgreSQL elegidos: <code>az postgres flexible-server list-skus --location brazilsouth</code>.</td><td>David</td><td class="suave">Aparecen B1ms (o B2s) y la familia General Purpose</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 1</div>
+    <h2>La suscripción de pre-prod</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">1.1</td><td>Crear la suscripción <code>incrementa-preprod</code> en el tenant <code>60322b4a…</code>, desde la cuenta de facturación de David.</td><td>David</td><td class="suave"><code>az account list -o table</code> la muestra en ese tenant</td></tr>
+        <tr><td class="ident">1.2</td><td>Crear un presupuesto con alerta por correo, por ejemplo US$50 al mes, para enterarse a tiempo si algo consume de más.</td><td>David</td><td class="suave">El presupuesto aparece en <em>Cost Management</em></td></tr>
+        <tr><td class="ident">1.3</td><td>Registrar los proveedores de recursos que usa el Bicep: <code>Microsoft.App</code>, <code>Microsoft.DBforPostgreSQL</code>, <code>Microsoft.Web</code>, <code>Microsoft.KeyVault</code>, <code>Microsoft.ContainerRegistry</code>, <code>Microsoft.Storage</code>, <code>Microsoft.OperationalInsights</code>, <code>Microsoft.Network</code> y <code>Microsoft.ManagedIdentity</code>.</td><td>David, con un script de Claude</td><td class="suave">Todos en estado <em>Registered</em></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 2</div>
+    <h2>Los cambios de código</h2>
+    <div class="prosa"><p>Todo en la rama <code>migracion-azure</code>. Cada paso deja las pruebas del backend y del frontend en verde antes de seguir.</p></div>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Cambio</th><th>Archivos</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">2.1</td><td><strong>Servicio de Blob Storage</strong> con la misma interfaz que <code>gcsService</code> (<code>uploadBuffer</code>, <code>downloadBuffer</code>, <code>deleteFile</code>, <code>getSignedUrl</code>). Elige el contenedor según el prefijo: <code>contratos-firmados/</code> va a <code>firmados</code> y todo lo demás a <code>documentos</code>. Firma con SAS de delegación de usuario usando <code>DefaultAzureCredential</code>: la managed identity en Azure, el <code>az login</code> de David en local.</td><td class="suave"><code>services/gcsService.js</code> → servicio nuevo · quienes lo importan · <code>package.json</code> (+ <code>@azure/storage-blob</code>, <code>@azure/identity</code>; − <code>@google-cloud/storage</code>)</td><td class="suave">Pruebas nuevas del servicio con un cliente simulado; las de quienes lo usan siguen pasando</td></tr>
+        <tr><td class="ident">2.2</td><td><strong>Graph con identidad.</strong> <code>graphClient</code> pide el token con <code>@azure/identity</code> en vez de hacerlo con client secret.</td><td class="suave"><code>lib/graphClient.js</code> · sus pruebas</td><td class="suave">La prueba del cliente con una credencial simulada; en local, dar de alta un usuario real</td></tr>
+        <tr><td class="ident">2.3</td><td><strong>TLS hacia la base, validando el certificado.</strong> Fuera el comentario y el caso del socket de Cloud SQL, y fuera <code>rejectUnauthorized: false</code>; entra el certificado raíz que usa Azure.</td><td class="suave"><code>knexfile.js</code> · certificado raíz versionado</td><td class="suave">Conexión desde el Mac a la base de Azure; con un certificado equivocado, falla</td></tr>
+        <tr><td class="ident">2.4</td><td><strong>Configuración por entorno.</strong> Variables nuevas: cuenta de Storage, nombres de los contenedores e ID de la identidad. Salen <code>GCS_*</code> y <code>GRAPH_CLIENT_SECRET</code>. Se corrige que prod use por omisión el bucket de dev. El default local de <code>DATABASE_URL</code> deja de apuntar a la IP de GCP.</td><td class="suave"><code>backend/config.js</code> · <code>set-env-local.sh</code> (local, fuera de git)</td><td class="suave">El backend arranca en <code>local</code>, <code>dev</code> y <code>prod</code> con las variables nuevas</td></tr>
+        <tr><td class="ident">2.5</td><td><strong>Contenedor del backend.</strong> <code>NODE_ENV=production</code> en la imagen. El puerto queda como hoy, leído de <code>PORT</code>.</td><td class="suave"><code>backend/Dockerfile</code></td><td class="suave">Un error 500 responde JSON, sin stack trace</td></tr>
+        <tr><td class="ident">2.6</td><td><strong>Frontend para Static Web Apps.</strong> <code>staticwebapp.config.json</code> con la ruta de respaldo de la SPA y las cabeceras de seguridad. Se corrige el respaldo <code>https://dev.gaf.lat</code> de <code>config.js</code>. El Dockerfile y el <code>nginx.conf</code> dejan de usarse.</td><td class="suave"><code>frontend/</code></td><td class="suave"><code>npm run build</code>; la app abre en la URL de SWA y recarga bien en una ruta interna</td></tr>
+        <tr><td class="ident">2.7</td><td><strong>Revisión completa:</strong> no queda ninguna referencia a GCS, Cloud SQL ni GCP fuera de la documentación histórica.</td><td class="suave">Todo el repo</td><td class="suave"><code>grep</code> sin resultados; las dos suites y el lint en verde</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 3</div>
+    <h2>La infraestructura de pre-prod</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">3.1</td><td>Escribir <code>infra/azure/main.bicep</code> y sus módulos: red y subredes, Log Analytics, identidades, Key Vault, ACR, Storage (con versionado, soft delete e inmutabilidad de 5 años desbloqueada en <code>firmados</code>), PostgreSQL (endpoint privado, DNS privado y firewall con la IP de David), Container Apps environment, las dos Container Apps, Static Web Apps y las asignaciones de roles. Más <code>preprod.bicepparam</code>.</td><td>Claude</td><td class="suave"><code>az bicep build</code> sin errores</td></tr>
+        <tr><td class="ident">3.2</td><td>Revisar el <code>what-if</code> y aplicar desde el Mac. Las Container Apps nacen con una imagen de ejemplo, porque todavía no hay imagen propia en el ACR.</td><td>David</td><td class="suave">El <code>what-if</code> muestra solo creaciones; después, <code>az resource list -g rg-incrementa-preprod</code></td></tr>
+        <tr><td class="ident">3.3</td><td>Cargar a mano los valores de los secretos en Key Vault: <code>DATABASE-URL</code>, <code>RESEND-API-KEY</code>, <code>FIRME-API-TOKEN</code> y, más adelante, <code>ANTHROPIC-API-KEY</code>.</td><td>David</td><td class="suave"><code>az keyvault secret list</code> muestra los nombres; los valores no salen en ninguna parte</td></tr>
+        <tr><td class="ident">3.4</td><td>Dar a <code>id-backend</code> el permiso de aplicación <code>User.Read.All</code> sobre Microsoft Graph. Lo hace David, que administra su tenant, con un script de Claude.</td><td>David</td><td class="suave">El permiso aparece en la identidad, en <em>Enterprise applications</em></td></tr>
+        <tr><td class="ident">3.5</td><td>Agregar la URL de Static Web Apps como redirección SPA en la app registration <code>incrementa-gestion-dev</code>. Las de GCP se quitan recién en la fase 9.</td><td>David</td><td class="suave">El login funciona desde la URL nueva</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 4</div>
+    <h2>CI/CD hacia Azure</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">4.1</td><td>Crear la identidad de GitHub para pre-prod, con una credencial federada que solo acepta <code>repo:dhroco/incrementa-gestion:ref:refs/heads/preprod</code>, y sus roles: subir imágenes al ACR, actualizar las Container Apps y desplegar la SWA del resource group.</td><td>David, con un script de Claude</td><td class="suave">La credencial aparece en la identidad, con ese <em>subject</em></td></tr>
+        <tr><td class="ident">4.2</td><td>Escribir <code>.github/workflows/deploy-azure-preprod.yml</code>: build y push de la imagen, actualizar el MCP, actualizar el backend, build del frontend con la URL fija del backend y despliegue a SWA con un token pedido en el momento.</td><td>Claude</td><td class="suave">Primera corrida en verde (fase 6)</td></tr>
+        <tr><td class="ident">4.3</td><td>Escribir <code>.github/workflows/infra.yml</code>: se lanza a mano, muestra el <code>what-if</code> y espera la aprobación de David en un <em>environment</em> de GitHub antes de aplicar.</td><td>Claude</td><td class="suave">Una corrida sin cambios muestra un <code>what-if</code> vacío</td></tr>
+        <tr><td class="ident">4.4</td><td>Cargar en GitHub las variables (no secretos): IDs de tenant, suscripción e identidad, y los nombres de los recursos.</td><td>David</td><td class="suave">Aparecen en <em>Settings → Variables</em>; <em>Secrets</em> sigue vacío</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 5</div>
+    <h2>Los datos</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">5.1</td><td>Base: <code>pg_dump</code> desde Cloud SQL por el Auth Proxy (formato custom, sin dueños ni permisos) y <code>pg_restore</code> en Azure desde el Mac. Viaja también la tabla <code>knex_migrations</code>, así Knex sabe que no falta nada.</td><td>David, con un script de Claude</td><td class="suave"><code>npx knex migrate:status</code> contra Azure: todo aplicado, nada pendiente</td></tr>
+        <tr><td class="ident">5.2</td><td>Archivos: <code>azcopy</code> directo desde GCS, con la key de cuenta de servicio que ya existe. <code>contratos-firmados/</code> va al contenedor <code>firmados</code> y todo lo demás a <code>documentos</code>, con las mismas rutas.</td><td>David, con un script de Claude</td><td class="suave">Mismo número de archivos y mismos bytes por prefijo que el listado de la fase 0</td></tr>
+        <tr><td class="ident">5.3</td><td>Verificar la base: conteo de filas por tabla, en GCP y en Azure.</td><td>Claude</td><td class="suave">Todas las tablas coinciden</td></tr>
+        <tr><td class="ident">5.4</td><td>Verificar las rutas: cada ruta guardada en la base (<code>draft_document</code>, <code>document</code>, <code>legal_rep_signature</code>, <code>user_profile.avatar_gcs_path</code>) existe en Blob.</td><td>Claude</td><td class="suave">Cero rutas sin archivo</td></tr>
+        <tr><td class="ident">5.5</td><td>Verificar los firmados: el SHA-256 de cada PDF del contenedor <code>firmados</code> se compara con el que ya guarda <code>document</code>. Es lo que prueba que ningún contrato firmado cambió.</td><td>Claude</td><td class="suave">Todos coinciden</td></tr>
+      </tbody>
+    </table></div>
+    <div class="nota alerta">
+      La columna <code>signed_sha256</code> guarda el hash del cuerpo del contrato, <strong>sin la hoja de
+      constancia</strong>, y el archivo en Storage la incluye. Antes de esta verificación hay que confirmar
+      con qué hash comparar. Si no hay uno del archivo completo, se comparan los hashes de GCS y de Azure
+      del mismo archivo, archivo por archivo.
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 6</div>
+    <h2>Despliegue y pruebas de punta a punta</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">6.1</td><td>Fusionar <code>migracion-azure</code> en <code>preprod</code>. Corre el workflow nuevo; el de GCP ya está desactivado.</td><td>David aprueba, Claude abre el PR</td><td class="suave">El workflow termina en verde; tres URLs nuevas</td></tr>
+        <tr><td class="ident">6.2</td><td><code>/health</code> del backend y del MCP.</td><td>Claude</td><td class="suave">Responden <code>ok</code></td></tr>
+        <tr><td class="ident">6.3</td><td>Recorrido en la web: login, sesión con permisos, avatar, listados (empresas, proveedores, clientes, plantillas y contratos), abrir un PDF ya existente, generar un borrador, descargarlo, firmarlo y recibir el correo.</td><td>David</td><td class="suave">Cada paso sin error. El PDF firmado de prueba queda en <code>firmados</code> y no se puede borrar</td></tr>
+        <tr><td class="ident">6.4</td><td>Dar de alta un usuario de plataforma: prueba Graph con la identidad.</td><td>David</td><td class="suave">El alta encuentra el usuario en el tenant</td></tr>
+        <tr><td class="ident">6.5</td><td>Recorrido por MCP: conectar Claude a la URL nueva y validar, generar y obtener la URL de un contrato.</td><td>David</td><td class="suave">Mismas respuestas que en GCP</td></tr>
+        <tr><td class="ident">6.6</td><td>Local: <code>set-env-local.sh</code> apunta a la base de Azure y la firma de URLs usa el <code>az login</code>. Se elimina <code>backend/secrets/</code> del Mac.</td><td>David</td><td class="suave"><code>npm run dev</code> funciona sin Auth Proxy y sin key JSON</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 7</div>
+    <h2>Pre-prod en uso</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">7.1</td><td>Avisar a Marcela: la URL nueva del sistema y la del MCP, que tiene que volver a conectar en Claude. Su cuenta sigue siendo la misma.</td><td>David</td><td class="suave">Marcela entra y genera un contrato de prueba</td></tr>
+        <tr><td class="ident">7.2</td><td>Período de observación: GCP sigue intacto como vuelta atrás.</td><td>David</td><td class="suave">Sin incidentes durante el período que David defina</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 8</div>
+    <h2>Prod en la suscripción de Incrementa</h2>
+    <div class="nota alerta">
+      Esta fase depende de Incrementa. Antes de empezar hay que confirmar tres cosas con su
+      administrador: qué suscripción se usa, que pueda crear la app registration y dar el permiso de
+      Graph en su tenant, y que invite a David (<code>dvd.roco@gmail.com</code>) con permisos sobre esa
+      suscripción.
+    </div>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">8.1</td><td>App registration en el tenant de Incrementa, con el scope <code>access_as_user</code> y la redirección SPA de la URL de prod.</td><td>Admin de Incrementa, con la guía de Claude</td><td class="suave">El ID de la app y del tenant quedan en <code>prod.bicepparam</code></td></tr>
+        <tr><td class="ident">8.2</td><td>Proveedores de recursos, presupuesto y <code>rg-incrementa-prod</code>.</td><td>David</td><td class="suave">Como en la fase 1</td></tr>
+        <tr><td class="ident">8.3</td><td>Aplicar el Bicep con <code>prod.bicepparam</code>: General Purpose para la base, y alta disponibilidad si se decidió.</td><td>David</td><td class="suave">El <code>what-if</code> muestra solo creaciones</td></tr>
+        <tr><td class="ident">8.4</td><td>Secretos de prod en su Key Vault y el permiso de Graph para <code>id-backend</code> de prod.</td><td>David y el admin de Incrementa</td><td class="suave">Como en 3.3 y 3.4</td></tr>
+        <tr><td class="ident">8.5</td><td>Identidad de GitHub para prod (solo la rama <code>prod</code>), <em>environment</em> con la aprobación de David y <code>deploy-azure-prod.yml</code>.</td><td>Claude y David</td><td class="suave">Un despliegue espera la aprobación antes de correr</td></tr>
+        <tr><td class="ident">8.6</td><td>Datos: <code>pg_dump</code> desde Azure pre-prod y <code>pg_restore</code> en prod. Los archivos se copian de cuenta a cuenta con <code>azcopy</code>. Mismas verificaciones de la fase 5.</td><td>David, con scripts de Claude</td><td class="suave">Conteos, rutas y hashes coinciden</td></tr>
+        <tr><td class="ident">8.7</td><td>Usuarios: cada email de <code>user_profile</code> que deba entrar a prod tiene que existir en el tenant de Incrementa, como miembro o como invitado.</td><td>Admin de Incrementa</td><td class="suave">Cada persona entra y ve su perfil</td></tr>
+        <tr><td class="ident">8.8</td><td>Recorrido completo, como en la fase 6.</td><td>David</td><td class="suave">Todo en verde</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Fase 9</div>
+    <h2>Cierre: apagar GCP y montar AOD</h2>
+    <div class="marco"><table>
+      <thead><tr><th>#</th><th>Paso</th><th>Quién</th><th>Cómo se comprueba</th></tr></thead>
+      <tbody>
+        <tr><td class="ident">9.1</td><td>Exportar un último respaldo de Cloud SQL y del bucket a un lugar que David elija, y después borrar en GCP las Cloud Run, la instancia de Cloud SQL, el bucket, el registro de imágenes y las cuentas de servicio.</td><td>David</td><td class="suave">La facturación de GCP del proyecto baja a cero</td></tr>
+        <tr><td class="ident">9.2</td><td>Quitar de la app registration de pre-prod las redirecciones de GCP. Borrar el workflow <code>deploy-preprod.yml</code>.</td><td>David y Claude</td><td class="suave">Solo quedan las URLs de Azure</td></tr>
+        <tr><td class="ident">9.3</td><td>Actualizar la documentación: <code>CLAUDE.md</code>, <code>README.md</code>, <code>infra/README.md</code>, los gotchas de <code>.cursor/rules/</code> y los manuales de <code>docs/</code> que hablan de GCP.</td><td>Claude</td><td class="suave">Ninguna instrucción vigente menciona GCP</td></tr>
+        <tr><td class="ident">9.4</td><td>Volver a montar AOD: en <code>perfil.yaml</code> se prohíben <code>az</code> y las conexiones a la base en lugar de <code>gcloud</code> y <code>cloud-sql-proxy</code>; se corrige el <code>cwd</code> de <code>flujo-ciclo.json</code> y se revisan los permisos de <code>.claude/settings.json</code>.</td><td>Claude, aprobado por David</td><td class="suave">Una corrida de prueba de AOD termina bien</td></tr>
+        <tr><td class="ident">9.5</td><td>Retomar con AOD lo que quedó aparte: la revisión de redacción (<code>david/texto-dinamico-base</code>), los prompts de <code>planes</code> (<code>contrato-por-evento</code>) y, cuando se quiera, el Container Apps Job de migraciones.</td><td>David decide el orden</td><td class="suave">—</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="rubro">Lo que hay que decidir en el camino</div>
+    <h2>Decisiones que todavía faltan</h2>
+    <div class="marco"><table>
+      <thead><tr><th>Decisión</th><th>Cuándo hace falta</th><th>Quién</th></tr></thead>
+      <tbody>
+        <tr><td>Monto del presupuesto y de la alerta de costo</td><td class="suave">Fase 1</td><td>David</td></tr>
+        <tr><td>Con qué hash se verifican los PDF firmados (ver la nota de la fase 5)</td><td class="suave">Fase 5</td><td>Claude lo resuelve con el código; David lo confirma</td></tr>
+        <tr><td>Cuánto dura el período de observación antes de apagar GCP</td><td class="suave">Fase 7</td><td>David</td></tr>
+        <tr><td>Alta disponibilidad de la base de prod</td><td class="suave">Fase 8</td><td>David, con Incrementa</td></tr>
+        <tr><td>Dónde se guarda el último respaldo de GCP</td><td class="suave">Fase 9</td><td>David</td></tr>
+        <tr><td>Limpiar los contratos de prueba en prod y bloquear el WORM</td><td class="suave">Después de la fase 9</td><td>David</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <footer>
+    incrementa-gestion · plan de migración a Azure · 18 de octubre de 2026<br>
+    Acompaña a <code>docs/arquitectura-azure-iconos-oficiales.html</code>. Se marca el avance paso a paso; cuando una fase
+    termina, se anota la fecha y el commit o el recurso que la prueba.
+  </footer>
+
+</div>
+</body>
+</html>

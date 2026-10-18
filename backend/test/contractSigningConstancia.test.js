@@ -172,7 +172,7 @@ test('5.3 (I2): snapshot null -> firma ok y constancia honesta (sin imagen regis
     await fn(trx)
   }
 
-  const gcsService = {
+  const storageService = {
     downloadBuffer: async ({ gcsPath }) => {
       if (gcsPath === 'draft/original.pdf') return originalBuffer
       // Si esto se ejecuta, el test falla porque snapshot es null (no debería descargar firma).
@@ -187,7 +187,7 @@ test('5.3 (I2): snapshot null -> firma ok y constancia honesta (sin imagen regis
 
   const service = createContractSigningService({
     db,
-    gcsService,
+    storageService,
     emailService: {}
   })
 
@@ -316,7 +316,7 @@ test('5.4 (I3): con stamp, constancia no menciona partes/proveedor y sí incluye
     await fn(trx)
   }
 
-  const gcsService = {
+  const storageService = {
     downloadBuffer: async ({ gcsPath }) => {
       if (gcsPath === 'draft/original.pdf') return originalBuffer
       if (gcsPath.includes('firmas-representantes')) return transparentSig
@@ -328,7 +328,7 @@ test('5.4 (I3): con stamp, constancia no menciona partes/proveedor y sí incluye
     }
   }
 
-  const service = createContractSigningService({ db, gcsService, emailService: {} })
+  const service = createContractSigningService({ db, storageService, emailService: {} })
 
   const res = await service.signContract({ draftDocumentId: draftId, signerUserProfileId: profileId })
   assert.equal(res.ok, true)
@@ -447,7 +447,7 @@ test('5.5: con snapshot e imagen, solo company recibe imagen; supplier no (y no 
     await fn(trx)
   }
 
-  const gcsService = {
+  const storageService = {
     downloadBuffer: async ({ gcsPath }) => {
       if (gcsPath === 'draft/original.pdf') return bodyOriginalBuffer
       if (gcsPath === signatureGcsPath) return transparentSig
@@ -460,7 +460,7 @@ test('5.5: con snapshot e imagen, solo company recibe imagen; supplier no (y no 
     }
   }
 
-  const service = createContractSigningService({ db, gcsService, emailService: {} })
+  const service = createContractSigningService({ db, storageService, emailService: {} })
   const res = await service.signContract({ draftDocumentId: draftId, signerUserProfileId: profileId })
   assert.equal(res.ok, true)
 

@@ -46,7 +46,7 @@ test('GET /api/me/session returns profile extras with signed avatar URL', async 
       contactEmail: 'contacto@empresa.cl',
       widgetPreferences: { suppliers: true, contracts: false, templates: true }
     }),
-    gcsService: {
+    storageService: {
       getSignedUrl: async ({ gcsPath, expiresInMinutes }) => {
         assert.equal(gcsPath, 'avatars/profile-1/abc.jpg')
         assert.equal(expiresInMinutes, 1440)
