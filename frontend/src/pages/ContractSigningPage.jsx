@@ -115,7 +115,7 @@ export function ContractSigningPage() {
     setAuthorized(false)
     setSuccess(`Contrato firmado. Email enviado a ${email}`)
     window.setTimeout(() => setSuccess(null), 8000)
-  }, [])
+  }, [confirmRow, authorized])
 
   const breadcrumb = useMemo(() => (canSign ? [{ label: 'Firma de documento' }] : null), [canSign])
 
