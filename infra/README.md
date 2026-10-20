@@ -1,39 +1,47 @@
 # Infraestructura
 
-Infraestructura de **incrementa-gestion** en **Google Cloud Platform (GCP)**.
+Infraestructura de **incrementa-gestion** en **Microsoft Azure**, definida con Bicep.
 
-> La infraestructura AWS anterior (CloudFormation/ECS/ECR) fue retirada. El despliegue actual
-> es **Cloud Run + Cloud SQL + Cloud Storage + Artifact Registry + Secret Manager**, con CI/CD
-> keyless (Workload Identity Federation) desde GitHub Actions.
+> La infraestructura anterior en Google Cloud (Cloud Run, Cloud SQL, Cloud Storage) se dio de baja
+> el 20-oct-2026, y la de AWS (CloudFormation/ECS/ECR) se había retirado antes.
 
 ## Estructura
 
-- `gcp/`
-  - `setup-gcs.ps1` — script de apoyo para crear bucket + service account de GCS (PowerShell).
+- `azure/`
+  - `main.bicep` — plantilla principal; `preprod.bicepparam` — parámetros de pre-prod.
+  - `modulos/` — `red`, `logs`, `identidades`, `registro`, `keyvault`, `storage`, `postgres`,
+    `staticwebapp` y `containerapps`.
+  - `scripts/` — apoyo operativo: `firewall-mi-ip.sh`, `identidades-github.sh`,
+    `permiso-graph-backend.sh`, `agregar-redireccion-login.sh`, `restaurar-bd-azure.sh`,
+    `verificar-rutas-azure.sh` y, de la migración desde GCP, `respaldo-bd-gcp.sh` y
+    `copiar-archivos-gcs-azure.sh` (ya sin uso).
 
 ## Despliegue
 
-El despliegue **no** es manual: lo hace el pipeline de GitHub Actions.
-
-- **Pre-Prod:** push a la rama `preprod` → `.github/workflows/deploy-preprod.yml` construye las imágenes,
-  las publica en Artifact Registry y despliega backend y frontend a Cloud Run.
-- **Producción (nube del cliente):** se arma con los manuales de `docs/` (ver abajo) y su propio
-  workflow (`deploy-prod.yml`, análogo al de pre-prod, disparado en la rama `prod`).
+- **Código** (imágenes y contenido): push a la rama `preprod` →
+  `.github/workflows/deploy-azure-preprod.yml` sube la imagen del backend al ACR, actualiza el MCP y
+  el backend en Container Apps y publica el frontend en Static Web Apps. Entra a Azure con OIDC
+  federado, sin claves guardadas.
+- **Infraestructura:** `.github/workflows/infra.yml`, solo a mano. Pide la aprobación de David dos
+  veces: para ver los cambios (what-if) y para aplicarlos.
+- **Producción:** en una suscripción de Azure de Incrementa, por crear (workflow análogo al de pre-prod,
+  disparado en la rama `prod`).
 
 ## Documentación
 
-- **Arquitectura de entornos (local / pre-prod / CI-CD):** [`../docs/arquitectura-entornos.html`](../docs/arquitectura-entornos.html)
+- **Plan de la migración a Azure:** [`../docs/plan-migracion-azure.html`](../docs/plan-migracion-azure.html)
+- **Arquitectura de entornos:** [`../docs/arquitectura-entornos.html`](../docs/arquitectura-entornos.html)
 - **Manual de producción — Microsoft Entra ID:** [`../docs/manual-prod-azure-entra-id.html`](../docs/manual-prod-azure-entra-id.html)
-- **Manual de producción — GCP:** [`../docs/manual-prod-gcp.html`](../docs/manual-prod-gcp.html)
+- **Migraciones de BD con Container Apps Job:** [`../docs/incrementa-azure-migraciones-bd-con-container-apps-job.html`](../docs/incrementa-azure-migraciones-bd-con-container-apps-job.html)
 
-## Recursos GCP (pre-prod, proyecto `incrementa-gestion-dev`, región `us-central1`)
+## Recursos Azure (pre-prod, grupo `rg-incrementa-preprod`, Brazil South)
 
 | Recurso | Detalle |
 |---|---|
-| Cloud Run | `incrementa-backend`, `incrementa-frontend` |
-| Cloud SQL | `incrementa-db` (PostgreSQL 16) |
-| Cloud Storage | bucket `incrementa-contratos-dev` |
-| Artifact Registry | repo Docker `incrementa` |
-| Secret Manager | `DATABASE_URL`, `GRAPH_CLIENT_SECRET`, `RESEND_API_KEY` |
-| Service Accounts | `incrementa-run-sa` (runtime), `incrementa-deploy-sa` (CI/CD) |
-| CI/CD | Workload Identity Federation (pool `github-pool`) — sin llaves JSON |
+| Container Apps | `ca-incrementa-backend`, `ca-incrementa-mcp` |
+| Static Web Apps | `swa-incrementa-preprod` (frontend) |
+| PostgreSQL Flexible Server | `psql-incrementa-preprod` (PostgreSQL 16) |
+| Blob Storage | cuenta `stincrementapreprod`, contenedores `documentos` y `firmados` (WORM) |
+| Container Registry | `acrincrementapreprod` |
+| Key Vault | secretos de runtime (`DATABASE-URL`, `RESEND-API-KEY`) |
+| Identidades | `id-incrementa-backend-preprod` (runtime), `id-incrementa-github-deploy-preprod` y `id-incrementa-github-infra-preprod` (CI/CD, OIDC) |

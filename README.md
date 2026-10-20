@@ -186,48 +186,41 @@ Verificar que `ENVIRONMENT` sea uno de: `local`, `dev`, `prod`
 
 ## ☁️ Arquitectura Cloud y CI/CD
 
-El proyecto se despliega en **Google Cloud Platform (GCP)** con CI/CD automatizado y autenticación keyless.
+El proyecto se despliega en **Microsoft Azure** con CI/CD en GitHub Actions y autenticación federada (OIDC), sin claves guardadas. La infraestructura anterior en Google Cloud se dio de baja el 20-oct-2026.
 
-### Infraestructura GCP
+### Infraestructura Azure
 
-**Componentes:**
-- **Cloud Run**: contenedores serverless para backend (Express) y frontend (nginx)
-- **Cloud SQL**: PostgreSQL 16 (`incrementa-db`)
-- **Cloud Storage**: bucket de documentos y avatares
-- **Artifact Registry**: registro privado de imágenes Docker
-- **Secret Manager**: secretos de runtime (`DATABASE_URL`, `GRAPH_CLIENT_SECRET`, `RESEND_API_KEY`)
+**Componentes** (definidos en `infra/azure/` con Bicep):
+- **Container Apps**: contenedores del backend (Express) y del MCP
+- **Static Web Apps**: frontend
+- **PostgreSQL Flexible Server**: PostgreSQL 16
+- **Blob Storage**: documentos y avatares (con retención WORM para contratos firmados)
+- **Key Vault**: secretos de runtime
+- **Container Registry (ACR)**: registro privado de imágenes Docker
 
 **Ambientes:**
-- **Pre-Prod**: proyecto `incrementa-gestion-dev`, región `us-central1`
-- **Producción**: en la nube del **cliente** (proyecto GCP y tenant Entra ID propios) — ver manuales en `docs/`
+- **Pre-Prod**: grupo de recursos `rg-incrementa-preprod`, Brazil South
+- **Producción**: en una suscripción de Azure de Incrementa, aún por crear — ver `docs/plan-migracion-azure.html` y `docs/accesos-produccion-azure.html`
 
 ### Pipeline CI/CD (GitHub Actions)
 
-**Flujo automatizado:**
-1. Push a `preprod` → despliega a **Pre-Prod**
-2. Push a `prod` → despliega a **Producción** (cuando se configure el workflow de prod)
-
-**Proceso** (`.github/workflows/deploy-preprod.yml`):
-- Autenticación keyless con **Workload Identity Federation** (sin llaves JSON)
-- Build + push de imágenes a Artifact Registry
-- Deploy de backend y frontend a Cloud Run (backend con conector Cloud SQL y secretos desde Secret Manager)
+**Flujo:**
+1. Push a `preprod` → despliega a **Pre-Prod** (`.github/workflows/deploy-azure-preprod.yml`): imagen del backend al ACR, MCP, backend y frontend a Static Web Apps.
+2. Cambios de infraestructura → `.github/workflows/infra.yml`, solo a mano y con aprobación (what-if y luego aplicar).
+3. Push a `prod` → despliega a **Producción** (cuando se configure el workflow de prod).
 
 ### Despliegue y documentación
 
 - Detalle de infraestructura: [`infra/README.md`](infra/README.md)
+- Plan de la migración a Azure: [`docs/plan-migracion-azure.html`](docs/plan-migracion-azure.html)
 - Arquitectura de entornos: [`docs/arquitectura-entornos.html`](docs/arquitectura-entornos.html)
-- Manuales de producción (cliente): [`docs/manual-prod-azure-entra-id.html`](docs/manual-prod-azure-entra-id.html) y [`docs/manual-prod-gcp.html`](docs/manual-prod-gcp.html)
+- Manual de producción (cliente): [`docs/manual-prod-azure-entra-id.html`](docs/manual-prod-azure-entra-id.html)
 
 ### Monitoreo
 
-**Logs de Cloud Run:**
-```bash
-gcloud run services logs read incrementa-backend --region us-central1 --project incrementa-gestion-dev --limit 50
-```
-
 **Health check:**
 ```bash
-curl https://<CLOUD_RUN_BACKEND_URL>/health
+curl https://<URL_DEL_BACKEND>/health
 ```
 
 ## 📋 Próximos Pasos
