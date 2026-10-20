@@ -6,17 +6,18 @@ alwaysApply: true
 
 # Gotchas resueltos — no re-romper
 
-- **Cloud SQL por socket:** `knexfile.js` pasa `{ connectionString }` a knex,
-  no el string crudo. El parser de knex no entiende `?host=/cloudsql/INSTANCE`
-  (lo trata como filename sqlite y cae a localhost:5432); `pg` sí lo entiende
-  cuando recibe el objeto.
-- **PGSSLMODE va sin setear**, tanto en local (Cloud SQL Auth Proxy) como en
-  Cloud Run (socket). Setearlo rompe la conexión.
-- **Cloud Run:** el servicio de frontend también necesita `--service-account`.
-  Sin él usa la SA de compute por defecto y el deploy falla por falta de `actAs`.
-- **Firma de URLs GCS:** el ADC de usuario no puede firmar. Local usa key JSON;
-  la runtime SA en Cloud Run necesita `roles/iam.serviceAccountTokenCreator`
-  sobre sí misma.
-- **Orden de despliegue (5 pasos, por dependencia de URLs):** build+push backend
-  → deploy backend → build+push frontend con `VITE_API_BASE_URL` = URL del
-  backend → deploy frontend → update backend `CORS_ORIGIN` = URL del frontend.
+- **Conexión a PostgreSQL:** `knexfile.js` pasa siempre un objeto `{ connectionString, ssl }`
+  a knex (el parser interno de knex no se usa) y quita `sslmode` de la URL. `DATABASE_URL`
+  usa el nombre del servidor (`<servidor>.postgres.database.azure.com`), nunca una IP:
+  el certificado TLS tiene que calzar.
+- **PGSSLMODE va sin setear**, tanto en local como en Azure. `disable` apaga TLS y solo
+  vale para una base local sin TLS.
+- **Firma de URLs de Blob Storage:** usa clave de delegación (validez de 3 a 7 días,
+  límite de Azure); no hay claves ni SAS de cuenta. En local usa la sesión de `az login`;
+  en Azure, la managed identity.
+- **Columnas `gcs_path` y `avatar_gcs_path`:** el nombre es herencia de Google Cloud; hoy
+  guardan la ruta del archivo en Azure Blob Storage. No renombrar sin una migración y un
+  recorte propios.
+- **Despliegue:** `deploy-azure-preprod.yml` solo actualiza imágenes y contenido
+  (backend → MCP → backend → frontend en Static Web Apps). La infraestructura la cambia
+  `infra.yml`, a mano y con aprobación.

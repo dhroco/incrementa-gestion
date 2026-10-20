@@ -51,7 +51,7 @@ bower_components/
 SET_VARS_AMBIENTE_LOCAL.cmd
 set-env-local.sh
 
-# GCP credentials (never commit)
+# Local credentials (never commit)
 backend/secrets/
 
 # Build outputs
