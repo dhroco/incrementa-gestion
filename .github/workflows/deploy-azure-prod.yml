@@ -40,6 +40,8 @@ env:
   NODE_VERSION: '22'
   # App registration del login de prod (incrementa-gestion, tenant de Incrementa). No es secreto.
   LOGIN_CLIENT_ID: 9976f99a-975a-4f33-8dd8-746a2411adad
+  # Suscripción de Incrementa: el workflow se niega a seguir si entró a otra.
+  SUSCRIPCION_PROD: 2fdd7c0a-664d-46ea-863d-73f96627f217
 
 jobs:
   deploy:
@@ -61,10 +63,16 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # La identidad de deploy solo tiene permisos sobre el ACR, el backend y la SWA (no puede
+      # leer el resource group), así que se comprueba la suscripción con la que entró.
       - name: Confirmar que es la suscripción de prod
         run: |
-          RG_ACTUAL="$(az group show -n "$RG" --query name -o tsv)"
-          echo "Suscripción: $(az account show --query name -o tsv) · resource group: $RG_ACTUAL"
+          ACTUAL="$(az account show --query id -o tsv)"
+          if [ "$ACTUAL" != "$SUSCRIPCION_PROD" ]; then
+            echo "::error::Entró a la suscripción $ACTUAL y no a la de prod ($SUSCRIPCION_PROD)."
+            exit 1
+          fi
+          echo "Suscripción de prod: $(az account show --query name -o tsv) ($ACTUAL)"
 
       # --- Backend ---
       - name: Construir y publicar la imagen del backend
