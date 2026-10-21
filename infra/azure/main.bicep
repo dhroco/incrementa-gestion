@@ -58,8 +58,14 @@ param resendFromEmail string = 'onboarding@resend.dev'
 @description('false: sin Resend (prod sale sin correo saliente).')
 param usarResend bool = true
 
-@description('El MCP HTTP abierto (sin autenticación) solo existe en pre-prod; con ENVIRONMENT=prod se niega a arrancar.')
+@description('MCP HTTP sin login. En pre-prod, abierto en /mcp. En prod (marcha blanca, 21-oct) solo con mcpRutaSecreta=true y mcpIpPermitidas: con ENVIRONMENT=prod no arranca sin la ruta secreta.')
 param incluirMcp bool = entorno == 'preprod'
+
+@description('El MCP atiende solo en /mcp/<MCP-RUTA-SECRETA> (secreto en Key Vault, creado antes de aplicar).')
+param mcpRutaSecreta bool = false
+
+@description('Rangos de IP que pueden llegar al MCP; vacío: sin restricción.')
+param mcpIpPermitidas array = []
 
 param tags object = {
   sistema: 'incrementa-gestion'
@@ -181,13 +187,15 @@ module apps 'modulos/containerapps.bicep' = {
     resendFromEmail: resendFromEmail
     usarResend: usarResend
     incluirMcp: incluirMcp
+    mcpRutaSecreta: mcpRutaSecreta
+    mcpIpPermitidas: mcpIpPermitidas
   }
   // storage no se usa por salida: se espera explícitamente a que existan los roles de datos.
   dependsOn: [storage]
 }
 
 output backendUrl string = 'https://${apps.outputs.backendFqdn}'
-output mcpUrl string = incluirMcp ? 'https://${apps.outputs.mcpFqdn}/mcp' : ''
+output mcpUrl string = incluirMcp ? 'https://${apps.outputs.mcpFqdn}/mcp${mcpRutaSecreta ? '/<MCP-RUTA-SECRETA de Key Vault>' : ''}' : ''
 output frontendUrl string = 'https://${staticWebApp.outputs.hostname}'
 output postgresFqdn string = postgres.outputs.fqdn
 output acrLoginServer string = registro.outputs.loginServer
