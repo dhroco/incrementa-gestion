@@ -226,7 +226,7 @@ y el `document_id` ya están reservados.
 
 ## Modelo de datos
 
-Migración nueva (`202610220001_firme_signing.js`; la aplica el arquitecto, no la corrida):
+Migración nueva (`202610220001_firme_signing.js`; la aplica Ignacio, no la corrida):
 
 - `firme_signing`: `id uuid pk`, `draft_document_id uuid fk`, `attempt int`, `status text`,
   `document_id uuid` (reservado), `approved_by uuid` (→ `user_profile`), `approved_at timestamptz`,
@@ -263,20 +263,55 @@ rechazada», «Firma vencida», «Requiere revisión» y «En proceso» (borrado
 **MCP:** `firmar_contrato_electronico` responde `USE_FIRME_FLOW` si el contrato califica para Firme
 (no se puede saltar la firma de la influencer por esa vía).
 
-## Variables de entorno
+## Variables de entorno: pre-prod (staging de Firme) y producción
 
-Ninguna nueva. Ya existen en `config.js` (ver `backend/config.js`): `FIRME_API_URL`,
-`FIRME_API_TOKEN`, `FIRME_LEGAL_ENTITY_ID`. Las cargan David y la sesión de la nube en Key Vault y en
-las Container Apps (`FIRME-API-TOKEN` como secreto). El camino por Firme se activa solo si las tres
-tienen valor; sin ellas, todo sigue por el camino interno.
+Ninguna variable nueva en `config.js`: el camino por Firme se activa solo si las tres tienen valor; sin
+ellas, todo sigue por el camino interno. David y la sesión de la nube las agregan al Bicep y a Key Vault
+de **los dos ambientes antes de promover el código que las usa** (yo no toco infra).
 
-Pasos de operación (David, una vez por ambiente, no los hace la corrida):
-1. Cargar las tres variables.
-2. Registrar el webhook: `POST {FIRME_API_URL}/webhooks/subscriptions` con
+| Variable | ¿Secreto? | Pre-prod (staging de Firme) | Producción |
+|---|---|---|---|
+| `FIRME_API_URL` | no | `https://staging.api.documentos.firme.cl` | URL de la API de **producción** de Firme (hay que pedirla a Firme) |
+| `FIRME_API_TOKEN` | **sí** (Key Vault; nombre sugerido `FIRME-API-TOKEN`, inyectado como `FIRME_API_TOKEN`) | token de desarrollador de staging | token de la cuenta de producción de Incrementa (a nombre de Yerko Reckmann) |
+| `FIRME_LEGAL_ENTITY_ID` | no | `6aba57b936570f5e596a19af` | id de la entidad legal de producción (se pide a Firme) |
+
+**Qué cambia entre staging y producción:** la URL, el token y la entidad legal; en staging el certificado
+de la firma es «TESTING» y los créditos son de prueba, y en producción son reales y prepagados
+($800 por firma con IVA). Cada ambiente usa **su** token: nunca el de producción en pre-prod. Las pruebas
+contra Firme se hacen en pre-prod (producción no tiene datos de prueba).
+
+**Puesta en marcha por ambiente** (David; no las hace la corrida):
+1. Cargar las tres variables y recién entonces promover el código que las usa.
+2. Registrar el webhook de ese ambiente: `POST {FIRME_API_URL}/webhooks/subscriptions` con
    `{ legalEntityId, url: "https://<backend>/api/webhooks/firme", eventTypes: ["document.signed", "document.completed", "document.status_changed", "signature.signed", "signature.rejected", "signature.expired"] }`
+   (`<backend>` de producción: `ca-incrementa-backend.proudfield-0bbf6137.brazilsouth.azurecontainerapps.io`)
    y comprobar `GET /webhooks/subscriptions/{id}/status` → `isConfirmed: true`.
 3. Pedir a Firme (Juan Puelpan): IPs de salida de SNS si hay lista de permitidos, y la forma de los
    eventos.
+
+**Aviso para producción:** mientras las tres variables no estén cargadas allí, los contratos pasan por el
+camino interno y quedan marcados «Firmado» al aprobar Yerko, sin firma de la influencer. No usar
+producción para contratos reales hasta cargarlas.
+
+## Migraciones de este dominio
+
+El deploy no corre migraciones: **Las aplica Ignacio, primero en pre-prod y después en prod**,
+avisando antes a David y normalmente antes de promover el código, y todas son compatibles con el código anterior durante unos
+minutos.
+
+| Archivo | Recorte | Reversible | ¿El código nuevo la necesita antes de arrancar? |
+|---|---|---|---|
+| `202610210001_supplier_name_parts.js` | `proveedor-nombre-apellidos` | sí (`down` quita las columnas; el respaldo queda en `supplier_child_backup`) | **Sí**: el detalle del proveedor selecciona las columnas nuevas |
+| `202610220001_firme_signing.js` | `firme-flujo-a` | sí (`down` borra las dos tablas) | **Sí**: `GET /api/contracts/in-signature` consulta `firme_signing` |
+
+## `firmados` y WORM
+
+En producción el contenedor `firmados` tendrá WORM de 5 años (hoy aún no lo tiene; se activa al terminar
+las pruebas). El diseño **no depende de reemplazar ni borrar un PDF firmado**: solo se escribe en
+`firmados` el PDF firmado y verificado y su evidencia, **una sola vez** y con una ruta estable (el
+`document_id` se reserva al aprobar); todo lo intermedio (PDF estampado, PDF recibido con huella distinta)
+va a `contratos-en-firma/` en el contenedor `documentos`, que sí se puede borrar. Un reenvío tras rechazo o
+vencimiento no toca nada en `firmados`.
 
 ## Antes de lanzar (Ignacio y David)
 
