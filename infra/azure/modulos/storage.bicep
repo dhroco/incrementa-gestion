@@ -5,6 +5,8 @@ param nombre string
 param location string
 param tags object
 param retencionFirmadosDias int
+@description('false: el contenedor `firmados` queda sin política WORM (para probar y limpiar antes de salir a producción).')
+param wormFirmados bool
 param principalesDatos array
 param objectIdAdministrador string
 
@@ -56,7 +58,7 @@ resource firmados 'Microsoft.Storage/storageAccounts/blobServices/containers@202
 // y reemplazo por `retencionFirmadosDias` desde que se crea. Desbloqueada: se puede acortar
 // o quitar. Bloquearla (az storage container immutability-policy lock) es irreversible y se
 // decide aparte.
-resource politicaFirmados 'Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies@2023-05-01' = {
+resource politicaFirmados 'Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies@2023-05-01' = if (wormFirmados) {
   parent: firmados
   name: 'default'
   properties: {

@@ -2,6 +2,7 @@
 // Se aplica sobre un resource group que ya existe:
 //   az deployment group what-if -g rg-incrementa-preprod -f main.bicep -p preprod.bicepparam
 //   az deployment group create  -g rg-incrementa-preprod -f main.bicep -p preprod.bicepparam
+//   (prod: -g rg-incrementa-gestion-prod -p prod.bicepparam, en la suscripción de Incrementa)
 // Arquitectura: docs/arquitectura-azure-iconos-oficiales.html · Plan: docs/plan-migracion-azure.html
 targetScope = 'resourceGroup'
 
@@ -43,6 +44,9 @@ param postgresBackupDias int = 7
 @description('Días de retención WORM de los PDF firmados (5 años).')
 param retencionFirmadosDias int = 1825
 
+@description('Política WORM en `firmados`. En prod nace en false para poder probar y borrar los datos de prueba; se activa después.')
+param wormFirmados bool = true
+
 @description('Primera aplicación: false. Las Container Apps nacen con una imagen de ejemplo y sin secretos. Después de cargar los secretos en Key Vault y publicar la imagen, se vuelve a aplicar con true.')
 param secretosCargados bool = false
 
@@ -50,6 +54,9 @@ param secretosCargados bool = false
 param imagenBackend string = ''
 
 param resendFromEmail string = 'onboarding@resend.dev'
+
+@description('false: sin Resend (prod sale sin correo saliente).')
+param usarResend bool = true
 
 @description('El MCP HTTP abierto (sin autenticación) solo existe en pre-prod; con ENVIRONMENT=prod se niega a arrancar.')
 param incluirMcp bool = entorno == 'preprod'
@@ -119,6 +126,7 @@ module storage 'modulos/storage.bicep' = {
     location: location
     tags: tags
     retencionFirmadosDias: retencionFirmadosDias
+    wormFirmados: wormFirmados
     principalesDatos: [identidades.outputs.backendPrincipalId, identidades.outputs.mcpPrincipalId]
     objectIdAdministrador: objectIdAdministrador
   }
@@ -171,6 +179,7 @@ module apps 'modulos/containerapps.bicep' = {
     storageAccount: nombres.storage
     corsOrigin: 'https://${staticWebApp.outputs.hostname}'
     resendFromEmail: resendFromEmail
+    usarResend: usarResend
     incluirMcp: incluirMcp
   }
   // storage no se usa por salida: se espera explícitamente a que existan los roles de datos.
