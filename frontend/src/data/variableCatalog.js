@@ -217,6 +217,19 @@ export const VARIABLE_GROUPS = {
         id: 'precio_texto',
         label: 'Precio en texto',
         description: 'Monto del contrato escrito en palabras'
+      },
+      {
+        id: 'servicios_entregables',
+        label: 'Entregables (cláusula 2.3)',
+        type: 'dynamic_text',
+        description:
+          'Escribe qué publicará el influencer: cantidad en palabras y en cifra, formato y red social de cada entregable.'
+      },
+      {
+        id: 'cuentas_publicacion',
+        label: 'Cuentas de publicación (cláusula 2.5)',
+        type: 'dynamic_text',
+        description: 'Escribe la cuenta del influencer en cada red social nombrada en los entregables.'
       }
     ]
   }

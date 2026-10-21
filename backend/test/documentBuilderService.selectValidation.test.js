@@ -158,7 +158,7 @@ async function runGenerate({ templateDoc, supplier = SUPPLIER, clientService, bo
       db: createGenerateDb({ templateDoc, hooks: { onInsert } }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier } }) },
       clientService,
-      gcsService: stubGcs({ onUpload }),
+      storageService: stubGcs({ onUpload }),
       getUserProfileIdByUserId: async () => PROFILE_ID
     })
     return service.generateAndPersist(baseGenerateArgs(bodyExtra))

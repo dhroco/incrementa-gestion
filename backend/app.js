@@ -12,7 +12,7 @@ const {
   createLegalRepSignatureController,
   createSignatureUploadRouteHandler
 } = require('./controllers/legalRepSignatureController')
-const { sendOk } = require('./http/responses')
+const { sendOk, sendError } = require('./http/responses')
 const { db } = require('./db/knex')
 const {
   buildEnrichedSessionSuccessBody,
@@ -29,7 +29,7 @@ const clientServiceDefault = require('./services/clientService')
 const { createStandardTemplatesService } = require('./services/standardTemplatesService')
 const { createStandardTemplatesController } = require('./controllers/standardTemplatesController')
 const { createDocumentBuilderService } = require('./services/documentBuilderService')
-const { gcsService } = require('./services/gcsService')
+const { storageService } = require('./services/storageService')
 const { createDocumentBuilderController } = require('./controllers/documentBuilderController')
 const { buildPackedRulesForUser } = require('./services/abilityService')
 const { createMeController, createAvatarUploadRouteHandler } = require('./controllers/meController')
@@ -64,7 +64,7 @@ function createApp({
   contractSigningService: contractSigningServiceInjected = null,
   legalRepSignatureService: legalRepSignatureServiceInjected = null,
   emailService: emailServiceInjected = emailService,
-  gcsService: gcsServiceInjected = gcsService,
+  storageService: storageServiceInjected = storageService,
   meController: meControllerInjected = null
 } = {}) {
   const app = express()
@@ -107,7 +107,7 @@ function createApp({
     const { packedRules, profile } = packedResult
     let avatarUrl = null
     if (sessionMeta.avatarGcsPath) {
-      avatarUrl = await gcsServiceInjected.getSignedUrl({
+      avatarUrl = await storageServiceInjected.getSignedUrl({
         gcsPath: sessionMeta.avatarGcsPath,
         expiresInMinutes: 1440
       })
@@ -172,7 +172,7 @@ function createApp({
     documentBuilderServiceInjected ??
     createDocumentBuilderService({
       db,
-      gcsService,
+      storageService,
       getUserProfileIdByUserId: userProfileIdResolver
     })
   const documentBuilderController = createDocumentBuilderController({ documentBuilderService })
@@ -184,7 +184,7 @@ function createApp({
     contractsQueryServiceInjected ??
     createContractsQueryService({
       db,
-      gcsService
+      storageService
     })
   const contractsController = createContractsController({ service: contractsQueryService })
 
@@ -192,7 +192,7 @@ function createApp({
     contractSigningServiceInjected ??
     createContractSigningService({
       db,
-      gcsService: gcsServiceInjected,
+      storageService: storageServiceInjected,
       emailService: emailServiceInjected
     })
   const contractSigningController = createContractSigningController({
@@ -204,7 +204,7 @@ function createApp({
     meControllerInjected ??
     createMeController({
       db,
-      gcsService: gcsServiceInjected
+      storageService: storageServiceInjected
     })
   const avatarUpload = createAvatarUploadRouteHandler()
   app.put('/api/me/profile', meController.putProfile)
@@ -305,7 +305,7 @@ function createApp({
   app.put('/api/companies/:id', authorize('update', 'Company'), companyController.putUpdate)
 
   const legalRepSignatureService =
-    legalRepSignatureServiceInjected ?? createLegalRepSignatureService({ db, gcsService })
+    legalRepSignatureServiceInjected ?? createLegalRepSignatureService({ db, storageService })
   const legalRepSignatureController = createLegalRepSignatureController({
     service: legalRepSignatureService,
     userProfileIdResolver
@@ -393,6 +393,20 @@ function createApp({
   app.post('/api/standard-templates', authorize('create', 'Template'), standardTemplatesController.postCreate)
   app.get('/api/standard-templates/:id', authorize('read', 'Template'), standardTemplatesController.getById)
   app.put('/api/standard-templates/:id', authorize('update', 'Template'), standardTemplatesController.putUpdate)
+
+  // Último middleware: cualquier error no controlado responde JSON genérico. Nunca devuelve
+  // el stack ni el mensaje interno (por ejemplo, el de un error de la base); el detalle
+  // queda en los logs.
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, _next) => {
+    console.error('[app] Error no controlado:', err)
+    if (res.headersSent) return
+    return sendError(res, {
+      status: 500,
+      code: 'UNEXPECTED_ERROR',
+      message: 'Ocurrió un error inesperado.'
+    })
+  })
 
   return app
 }

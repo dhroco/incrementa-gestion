@@ -60,7 +60,7 @@ function formatCompanyRut(row) {
  *   documentBuilderService: object,
  *   contractsQueryService: object,
  *   contractSigningService: object,
- *   gcsService: object,
+ *   storageService: object,
  *   getUserProfileIdByUserId: (userId: string) => Promise<string | null>,
  *   tipTapDocToPlainTextAsync: (doc: unknown) => Promise<string>
  * }} deps
@@ -74,7 +74,7 @@ export function registerMcpTools(server, deps) {
     documentBuilderService,
     contractsQueryService,
     contractSigningService,
-    gcsService,
+    storageService,
     getUserProfileIdByUserId,
     tipTapDocToPlainTextAsync
   } = deps
@@ -321,7 +321,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'firmar_contrato_electronico',
-    'Firma electrónicamente un contrato pendiente. Agrega la página de firma al PDF, lo sube a GCS, crea el registro de documento firmado y envía el PDF firmado por email al correo de la Empresa. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
+    'Firma electrónicamente un contrato pendiente. Agrega la página de firma al PDF, lo guarda en el almacenamiento de documentos, crea el registro de documento firmado y envía el PDF firmado por email al correo de la Empresa. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
     {
       draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) pendiente de firma')
     },
@@ -390,7 +390,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'validar_contrato',
-    'Verifica si un contrato puede generarse con los datos actuales. NO genera PDF. Si ok es false y code es MISSING_PLACEHOLDERS, el campo data.missingFields contiene los campos faltantes. Cada campo tiene: key, label, type (text/date/select/number), options (si select), pairField (si aplica) y source (supplier/client/company/contract). REGLA CRÍTICA según source: si source=\'supplier\' → pide el dato al usuario y llama actualizar_proveedor ANTES de generar (el dato debe quedar en la BD); si source=\'client\' → pide el dato y llama actualizar_cliente ANTES de generar; si source=\'company\' → informa al usuario que debe completar los datos de la empresa en el sistema; si source=\'contract\' → pide el dato y pásalo en missingFieldOverrides. Para type=\'select\': si hay MÁS DE UNA opción, queda PROHIBIDO elegir por cuenta propia. Muestra las opciones numeradas y espera respuesta explícita del usuario. Prohibido inferir la elección del contexto de la conversación, aunque el usuario haya mencionado antes un producto, una marca o una campaña. Si la respuesta no coincide EXACTAMENTE con una opción, vuelve a preguntar. Prohibido mapear a la más parecida: "Dryoff" y "DRYOFF" son entradas distintas y el backend las trata como tales. Si el campo tiene una sola opción, puedes usarla sin preguntar. Si una opción tiene propiedad values (objeto), agrega TODOS sus entries a missingFieldOverrides (el par completo) en lugar de solo el key del campo. El campo pairField indica qué variable secundaria se llena junto con la primaria (nunca aparece como campo faltante). Para type=\'number\' pide un entero no negativo; el backend formatea miles y puede auto-generar el par (ej. precio_texto desde precio_numero). Solo llama generar_contrato cuando todos los campos estén resueltos.',
+    'Verifica si un contrato puede generarse con los datos actuales. NO genera PDF. Si ok es false y code es MISSING_PLACEHOLDERS, el campo data.missingFields contiene los campos faltantes. Cada campo tiene: key, label, type (text/date/select/number/dynamic_text), options (si select), pairField (si aplica) y source (supplier/client/company/contract). REGLA CRÍTICA según source: si source=\'supplier\' → pide el dato al usuario y llama actualizar_proveedor ANTES de generar (el dato debe quedar en la BD); si source=\'client\' → pide el dato y llama actualizar_cliente ANTES de generar; si source=\'company\' → informa al usuario que debe completar los datos de la empresa en el sistema; si source=\'contract\' → pide el dato y pásalo en missingFieldOverrides. Para type=\'select\': si hay MÁS DE UNA opción, queda PROHIBIDO elegir por cuenta propia. Muestra las opciones numeradas y espera respuesta explícita del usuario. Prohibido inferir la elección del contexto de la conversación, aunque el usuario haya mencionado antes un producto, una marca o una campaña. Si la respuesta no coincide EXACTAMENTE con una opción, vuelve a preguntar. Prohibido mapear a la más parecida: "Dryoff" y "DRYOFF" son entradas distintas y el backend las trata como tales. Si el campo tiene una sola opción, puedes usarla sin preguntar. Si una opción tiene propiedad values (objeto), agrega TODOS sus entries a missingFieldOverrides (el par completo) en lugar de solo el key del campo. El campo pairField indica qué variable secundaria se llena junto con la primaria (nunca aparece como campo faltante). Para type=\'number\' pide un entero no negativo; el backend formatea miles y puede auto-generar el par (ej. precio_texto desde precio_numero). Solo llama generar_contrato cuando todos los campos estén resueltos. Para type=\'dynamic_text\' el campo trae instruccion, ejemplos y contexto. Muéstrale a la persona la instrucción, los ejemplos y el contexto, y pídele el texto literal. Está PROHIBIDO redactarlo, completarlo, corregirlo o inferirlo por cuenta propia, aunque la conversación lo sugiera. Si la persona pide ayuda, puedes proponer un texto, pero solo lo usas si la persona lo aprueba de forma explícita. El texto se pasa en missingFieldOverrides tal como quedó aprobado.',
     contractParams,
     async ({ companyId, supplierId, templateId, missingFieldOverrides, clientId }) => {
       const result = await documentBuilderService.generateAndPersist({
@@ -410,7 +410,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'generar_contrato',
-    'Genera el PDF del contrato y lo persiste como borrador en GCS y base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
+    'Genera el PDF del contrato y lo persiste como borrador en el almacenamiento de documentos y en la base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
     contractParams,
     async ({ companyId, supplierId, templateId, missingFieldOverrides, overwrite, clientId }) => {
       const result = await documentBuilderService.generateAndPersist({
@@ -467,7 +467,7 @@ export function registerMcpTools(server, deps) {
 
         let signedUrl
         try {
-          signedUrl = await gcsService.getSignedUrl({
+          signedUrl = await storageService.getSignedUrl({
             gcsPath: row.gcs_path,
             expiresInMinutes
           })

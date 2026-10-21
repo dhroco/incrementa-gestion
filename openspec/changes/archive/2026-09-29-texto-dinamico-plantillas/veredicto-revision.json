@@ -1,0 +1,12 @@
+{
+  "color": "verde",
+  "resumen": "El plan cumple el encargo: reescritura verificada de la 2.3 y de la cláusula de la cuenta en las 21 plantillas, listado de contratos con servicios_entregables, sin tocar migraciones existentes ni archivos de prueba viejos. Falté una tarea de prueba para el up/down de la migración; la agregué a tasks.md.",
+  "hallazgos": [
+    {
+      "gravedad": "baja",
+      "donde": "openspec/changes/texto-dinamico-plantillas/tasks.md",
+      "que": "El escenario 'Backup note matches the restore key' de specs/template-dynamic-text-clauses/spec.md (up inserta el content_json previo en template_content_backup con la nota correcta y solo después de que las 21 reescrituras calcen; down restaura y borra esas filas) no tenía ninguna tarea de prueba que lo ejecutara: la 3.1 original solo prueba rewriteDynamicTextClauses, no up/down.",
+      "como_arreglar": "Ya corregido: agregué la tarea 3.2 en tasks.md, que pide un archivo nuevo backend/test/dynamicTextClausesMigrationOrder.test.js con un doble de knex en memoria (mismo patrón que test/templateCurrencyMigrationOrder.test.js), sin abrir conexión real, cubriendo el caso de las 21 completas, el caso de plantilla faltante (no escribe nada) y el down."
+    }
+  ]
+}

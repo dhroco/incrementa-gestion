@@ -12,7 +12,7 @@ para una empresa chilena. Monorepo:
 - `frontend/` React 19 + Vite + Redux Toolkit + React Router 7. Auth MSAL (Entra ID).
 - `backend/` Node + Express + Knex + PostgreSQL. PDFs con @react-pdf/renderer,
   email con Resend, expone un MCP Server (`backend/mcp.mjs`).
-- `infra/` GCP · `docs/` documentación · `openspec/` gestión de cambios.
+- `infra/` Azure (Bicep) · `docs/` documentación · `openspec/` gestión de cambios.
 
 ## Fuente oficial de estilo y contexto
 

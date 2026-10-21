@@ -1,0 +1,72 @@
+version: 1
+ablaciones:
+  - id: limite-500-fuera-de-rango
+    que: >
+      el backend rechaza un texto dinámico de más de 500 caracteres antes de persistirlo
+      en contract_overrides (regla de la spec dynamic-text y de Consideraciones de seguridad).
+      Se corre el límite un carácter más allá para comprobar que la prueba de 501 caracteres
+      realmente exige el corte en 500 y no en otro valor cercano.
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    if (normalized.length > 500) {"
+    reemplazar: "    if (normalized.length > 501) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/dynamicText.test.js"
+    gravedad: borde
+
+  - id: normalizacion-sin-trim
+    que: >
+      el valor se recorta en los extremos además de colapsar espacios internos, y el texto
+      normalizado (sin espacios sobrantes) es el que queda en contract_overrides.
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    const normalized = String(value).trim().replace(/\\s+/g, ' ')"
+    reemplazar: "    const normalized = String(value).replace(/\\s+/g, ' ')"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/dynamicText.test.js"
+    gravedad: borde
+
+  - id: metadatos-sin-acotar-a-dynamic-text
+    que: >
+      instruccion, ejemplos y contexto solo se agregan al campo faltante cuando el tipo es
+      dynamic_text; los demás tipos (text/date/select/number) no ganan esas propiedades.
+    archivo: backend/services/documentBuilderService.js
+    buscar: "  if (meta.type === 'dynamic_text') {"
+    reemplazar: "  if (true) {"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/dynamicText.test.js"
+    gravedad: borde
+
+  - id: hueco-marca-la-variable-equivocada
+    que: >
+      dentro del párrafo de contexto, la variable que se pide (targetId) se marca como el
+      hueco ⟨…⟩ y las demás variables quedan como {{id}}; si se invierte, el hueco cae sobre
+      una variable distinta a la que el Constructor está pidiendo.
+    archivo: backend/services/documentBuilderService.js
+    buscar: "    return vid === targetId ? DYNAMIC_TEXT_HOLE : `{{${vid}}}`"
+    reemplazar: "    return vid !== targetId ? DYNAMIC_TEXT_HOLE : `{{${vid}}}`"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/dynamicText.test.js"
+    gravedad: borde
+
+  - id: contexto-toma-el-ultimo-parrafo
+    que: >
+      cuando el id aparece en más de un párrafo, contexto usa el primero en el orden del
+      documento, no el último.
+    archivo: backend/services/documentBuilderService.js
+    buscar: |2
+        for (const child of node.content) {
+          const found = findFirstParagraphWithVariable(child, variableId)
+          if (found) return found
+        }
+    reemplazar: |2
+        for (const child of [...node.content].reverse()) {
+          const found = findFirstParagraphWithVariable(child, variableId)
+          if (found) return found
+        }
+    prueba: "cd backend && env -u DATABASE_URL node --test test/dynamicText.test.js"
+    gravedad: borde
+
+  - id: mcp-pierde-dynamic-text-de-la-lista
+    que: >
+      la descripción de validar_contrato lista dynamic_text junto a los demás tipos, para
+      que el agente sepa que ese type existe y lea el párrafo de prohibición al final.
+    archivo: backend/mcpTools.mjs
+    buscar: "type (text/date/select/number/dynamic_text)"
+    reemplazar: "type (text/date/select/number)"
+    prueba: "cd backend && env -u DATABASE_URL node --test test/mcpDynamicText.test.js"
+    gravedad: borde

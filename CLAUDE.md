@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `frontend/` — React 19 + Vite + Redux Toolkit + React Router 7. UI con CSS propio (`src/styles/`); MUI se usa exclusivamente como librería de íconos (`@mui/icons-material`, variante Outlined), nunca como componentes. Auth con MSAL (`@azure/msal-*`).
 - `backend/` — Node + Express + Knex.js + PostgreSQL. Valida JWT OIDC. Genera PDFs (`@react-pdf/renderer`), envía email (Resend), expone un **MCP Server** (`backend/mcp.mjs`).
-- `infra/` — IaC/scripts GCP. `docs/` — documentación (arquitectura, manuales de producción).
+- `infra/` — IaC (Bicep) y scripts de Azure. `docs/` — documentación (arquitectura, manuales de producción).
 - `openspec/` — gestión de cambios spec-driven (ver más abajo).
 
 Locale: Chile (`es-CL`, timezone `America/Santiago`, RUT `XX.XXX.XXX-X`). Mensajes de error al usuario en español.
@@ -44,19 +44,20 @@ npm run build
 
 ### Correr el backend localmente (importante)
 
-El backend **no usa dotenv**; lee `process.env` directo vía `config.js`. Las variables (incluidos secretos) se cargan con `backend/set-env-local.sh` (gitignored). Además, la BD local es la misma de la nube, alcanzada por el **Cloud SQL Auth Proxy**:
+El backend **no usa dotenv**; lee `process.env` directo vía `config.js`. Las variables (incluidos secretos) se cargan con `backend/set-env-local.sh` (gitignored). Además, la BD local es la de pre-prod en Azure (PostgreSQL Flexible Server), alcanzada directo por su nombre de servidor: el firewall tiene que admitir tu IP y Blob Storage y Microsoft Graph usan tu sesión de `az login`:
 
 ```bash
-cloud-sql-proxy <connection-name> --port 5432    # en su propia terminal
+./infra/azure/scripts/firewall-mi-ip.sh          # cada vez que cambie tu IP pública
+az login
 cd backend && source ./set-env-local.sh && npm run dev
 ```
-`DATABASE_URL` local apunta a `127.0.0.1:5432` (proxy) y **`PGSSLMODE` va sin setear** (el túnel ya es cifrado; setearlo rompe la conexión a localhost).
+`DATABASE_URL` usa siempre el nombre del servidor (`<servidor>.postgres.database.azure.com`), nunca una IP, y **`PGSSLMODE` va sin setear** (Azure exige TLS y `knexfile.js` lo valida; `PGSSLMODE=disable` solo sirve para una base local sin TLS).
 
 ## Configuración por ambiente (no .env)
 
-`config.js` en back y front exporta configuración según `ENVIRONMENT` (única variable de selección), válido solo en `{local, dev, prod}`. **Pre-producción usa `ENVIRONMENT=dev`** (no existe un valor "preprod"). Los defaults son solo respaldo; en la nube las variables las inyecta Cloud Run.
+`config.js` en back y front exporta configuración según `ENVIRONMENT` (única variable de selección), válido solo en `{local, dev, prod}`. **Pre-producción usa `ENVIRONMENT=dev`** (no existe un valor "preprod"). Los defaults son solo respaldo; en la nube las variables las inyecta la Container App (los secretos, desde Key Vault).
 
-- Backend usa: `DATABASE_URL`, `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `GRAPH_TENANT_ID/CLIENT_ID/CLIENT_SECRET`, `GCS_BUCKET`, `GOOGLE_APPLICATION_CREDENTIALS` (solo local), `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `CORS_ORIGIN`, `PORT`.
+- Backend usa: `DATABASE_URL`, `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_CONTAINER_DOCUMENTOS/FIRMADOS`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `FIRME_API_URL/TOKEN`, `FIRME_LEGAL_ENTITY_ID`, `CORS_ORIGIN`, `PORT`. Blob Storage y Microsoft Graph no usan secretos: autentican con `DefaultAzureCredential` (managed identity en Azure, `az login` en local).
 - Frontend hornea en build-time (Vite): `VITE_API_BASE_URL`, `VITE_AZURE_CLIENT_ID`, `VITE_AZURE_AUTHORITY`, `VITE_AZURE_API_SCOPE`, y `ENVIRONMENT` (vía `vite.config.js` define). Cambiar la URL del API en la nube requiere **rebuild** del frontend.
 
 ## Arquitectura
@@ -68,7 +69,7 @@ cd backend && source ./set-env-local.sh && npm run dev
 - **Identidad interna por EMAIL, no por `sub`:** `middleware/resolveInternalIdentity.js` mapea el email del token a la fila `user_profile` (índice único parcial sobre `LOWER(email)`). Esto desacopla del IdP. El alta de usuarios valida existencia en el tenant vía **Microsoft Graph app-only** (`lib/graphClient.js`, permiso `User.Read.All` tipo Aplicación).
 - **Autorización:** permisos por perfil "empaquetados" (packed rules CASL) construidos en `services/abilityService.js`; el frontend recibe esas reglas en la sesión.
 - **BD:** una sola instancia knex en `db/knex.js` desde `knexfile.js`. Migraciones en `migrations/`, seeds en `seeds/`.
-- **GCS:** `services/gcsService.js` firma URLs V4. En local requiere una key de service account (`GOOGLE_APPLICATION_CREDENTIALS`); en Cloud Run firma vía IAM signBlob con la identidad del runtime.
+- **Almacenamiento:** `services/storageService.js` usa Azure Blob Storage y firma SAS con clave de delegación. Las columnas se siguen llamando `gcs_path` (y `avatar_gcs_path`) por herencia: guardan la misma ruta (`contratos/…`, `contratos-firmados/…`, `avatars/…`). Los PDF firmados viven en un contenedor aparte con inmutabilidad (WORM), elegido por el prefijo de la ruta.
 - **MCP Server:** `mcp.mjs` registra tools de `mcpTools.mjs` (crear/listar/actualizar proveedores y clientes, generar/firmar/consultar contratos, plantillas). Reutiliza los mismos services que la API.
 
 ### Frontend (React + MSAL)
@@ -97,21 +98,27 @@ Todo bajo `/api` y protegido por JWT (salvo `/` y `/health`, públicos). Definid
 
 ## Despliegue y CI/CD
 
-GCP Cloud Run (backend Express + frontend nginx), Cloud SQL (PostgreSQL 16), GCS, Artifact Registry, Secret Manager. CI/CD con GitHub Actions + **Workload Identity Federation** (keyless, sin llaves JSON).
+Azure (Brazil South): Container Apps (backend `ca-incrementa-backend` y MCP `ca-incrementa-mcp`), Static Web Apps (frontend), PostgreSQL Flexible Server 16, Blob Storage, Key Vault y ACR, definidos en `infra/azure/` (Bicep). CI/CD con GitHub Actions y OIDC federado (sin claves guardadas). Google Cloud se dio de baja el 20-oct-2026.
 
-- Rama **`main`** = integración (sin deploy). Rama **`preprod`** → despliega a Pre-Prod (`.github/workflows/deploy-preprod.yml`, proyecto `incrementa-gestion-dev`). Rama **`prod`** → Producción en la nube del cliente (proyecto/tenant propios; workflow análogo por crear).
-- El deploy sigue un orden de 5 pasos por dependencia de URLs: build+push backend → deploy backend → build+push frontend con `VITE_API_BASE_URL` = URL del backend → deploy frontend → update backend `CORS_ORIGIN` = URL del frontend.
-- Ver `docs/arquitectura-entornos.html` y los manuales de producción en `docs/`.
+- Rama **`main`** = integración (sin deploy). Rama **`preprod`** → despliega a Pre-Prod (`.github/workflows/deploy-azure-preprod.yml`, grupo `rg-incrementa-preprod`): imagen del backend al ACR → MCP → backend → frontend a Static Web Apps. Rama **`prod`** → Producción en una suscripción de Azure de Incrementa (por crear; workflow análogo por crear).
+- La infraestructura la cambia `.github/workflows/infra.yml`, solo a mano y con aprobación de David (what-if y luego aplicar). El workflow de deploy solo actualiza imágenes y contenido.
+- Ver `docs/plan-migracion-azure.html`, `docs/arquitectura-entornos.html` y el manual de producción en `docs/`.
 
 ### Gotchas conocidos (ya resueltos, no re-romper)
 
-- **Conexión Cloud SQL por socket:** `knexfile.js` pasa `{ connectionString }` a knex (no el string crudo). El parser interno de knex NO entiende `?host=/cloudsql/INSTANCE` (lo trata como filename de sqlite → cae a localhost:5432). `pg` sí lo entiende cuando recibe `{ connectionString }`.
-- **Cloud Run: el frontend también necesita `--service-account`** (si no, usa la SA de compute por defecto y el deploy falla por falta de `actAs`).
-- **PGSSLMODE:** sin setear tanto en local (proxy) como en Cloud Run (socket).
-- **Firma de URLs GCS:** el ADC de usuario no puede firmar; local usa key JSON, la runtime SA en Cloud Run necesita `roles/iam.serviceAccountTokenCreator` sobre sí misma.
+- **Conexión a PostgreSQL:** `knexfile.js` pasa siempre un objeto `{ connectionString, ssl }` a knex (el parser interno de knex no se usa) y quita `sslmode` de la URL para que la validación del certificado no dependa de cómo venga escrita. Hay que usar el nombre del servidor y no una IP, porque el certificado tiene que calzar.
+- **PGSSLMODE:** sin setear, tanto en local como en Azure. `disable` apaga TLS y solo vale para una base local sin TLS.
+- **Firma de URLs de Blob:** usa clave de delegación (válida al menos 3 días y como máximo 7, límite de Azure), así que la identidad necesita permiso de delegación sobre la cuenta de almacenamiento; no hay claves ni SAS de cuenta.
 
 ## Flujo de trabajo del proyecto
 
-- **Gestión de cambios con OpenSpec:** los cambios se proponen y aplican bajo `openspec/changes/` (`propose` → `apply`), con specs en `openspec/specs/`. El contexto, reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
-- Cursor lee `.cursor/rules/*.mdc` (contexto de proyecto, sistema de diseño frontend, convenciones de backend y gotchas). No lee `CLAUDE.md`. Comandos y skills OpenSpec en `.cursor/commands/` y `.cursor/skills/`.
-- **Roles de colaboración:** Claude = arquitecto/PM y revisor (propone, especifica, revisa); Cursor = implementa el código de producto vía OpenSpec.
+- **Desarrollo con AOD** (desde el 28-sep-2026): Claude (Ignacio) diseña y prepara lo que entra; el orquestador AOD (agente Pedro) ejecuta las corridas con Cursor; las compuertas las aprueba David. Reemplaza el `propose`→`apply` manual de OpenSpec; las corridas siguen dejando sus artefactos en `openspec/changes/<cambio>/`.
+- **Diseño y recortes:** `docs/disenos/<dominio>.md` (diseño), `<dominio>.recortes.yaml` (plan) y, por recorte, `prompts/<recorte>.md` (se usa tal cual en el `propose`) y `prompts/<recorte>.ablaciones.yaml`. Se entregan commiteados en la rama `planes`; a AOD se le pasa solo el hash.
+- **Pruebas protegidas:** una corrida falla si cambia una prueba que existía al empezar. Las que deban cambiar se modifican antes, en un commit aparte y con autorización del dueño; las pruebas nuevas van siempre en archivos nuevos.
+- **Ablaciones:** el campo `prueba` corre la suite completa (`cd backend && env -u DATABASE_URL npm test` / `cd frontend && npm test`) o un archivo nuevo, nunca uno existente. Un `buscar` de varias líneas usa `|2` o comillas dobles con `\n`.
+- **Migraciones:** ninguna corrida las ejecuta (`knex`/`migrate` prohibidos; `knexfile.js`, `db/knex.js` y `config.js` son de solo lectura para las corridas). Las aplica el arquitecto contra pre-prod en Azure (procedimiento en `docs/incrementa-azure-migraciones-bd-con-container-apps-job.html`), antes del deploy del código que las usa. Las de plantillas reescriben `content_json` con una función pura, verifican el texto exacto antes de modificar y respaldan en `template_content_backup`.
+- **Recortes encadenados:** si un recorte deja pruebas en rojo que implementa otro, el siguiente no se lanza desde `preprod` hasta que el primero esté fusionado, o se lanza sobre su rama; al entregar un hash se indica siempre la base.
+- **`.jsx`:** antes de borrar una variable «sin uso», buscar que no aparezca en JSX (el lint no tiene `react/jsx-uses-vars`).
+- **PRs:** cada corrida termina en una rama `david/<recorte>`; el arquitecto abre el PR a `preprod` y lo fusiona David.
+- El contexto, las reglas por artefacto y el **sistema de diseño completo** (paleta, tipografía Nunito Sans, componentes, prohibiciones, `locale.rut_format`) están en **`openspec/config.yaml`** — esa es la fuente oficial para implementar el frontend; no reinterpretar estilos.
+- Cursor lee `.cursor/rules/*.mdc` (contexto de proyecto, sistema de diseño frontend, convenciones de backend y gotchas). No lee `CLAUDE.md`.

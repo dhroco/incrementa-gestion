@@ -2,7 +2,7 @@ const { db } = require('../db/knex')
 const { parseRut } = require('../utils/rut')
 const { isValidEmail } = require('../utils/validation')
 const { resolveCompanyScopeByUserId } = require('./companyScopeService')
-const { gcsService: gcsServiceDefault } = require('./gcsService')
+const { storageService: storageServiceDefault } = require('./storageService')
 
 /**
  * @param {import('knex').Knex.QueryBuilder} qb
@@ -171,7 +171,7 @@ async function getCompanyDetail({ userId, companyId }) {
   const legal_rep_signatures = []
   for (const s of signatureRows) {
     try {
-      const url = await gcsServiceDefault.getSignedUrl({ gcsPath: s.gcs_path, expiresInMinutes: 60 })
+      const url = await storageServiceDefault.getSignedUrl({ gcsPath: s.gcs_path, expiresInMinutes: 60 })
       legal_rep_signatures.push({ rep_index: s.rep_index, url })
     } catch {
       // best-effort: si falla la URL firmada, omitimos esa firma

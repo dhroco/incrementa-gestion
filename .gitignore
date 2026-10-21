@@ -51,7 +51,7 @@ bower_components/
 SET_VARS_AMBIENTE_LOCAL.cmd
 set-env-local.sh
 
-# GCP credentials (never commit)
+# Local credentials (never commit)
 backend/secrets/
 
 # Build outputs
@@ -109,4 +109,4 @@ venv.bak/
 infra/route53-changes.json
 
 # Datos de base de datos
-postgresql-credenciales.txt
+postgresql-credenciales*.txt

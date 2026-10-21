@@ -66,7 +66,25 @@ function resolveSelectIndex(field, overrides) {
   return ''
 }
 
-function MissingFieldInput({ field, value, overrides, onChange }) {
+const DYNAMIC_TEXT_HOLE = '⟨…⟩'
+
+function DynamicTextPreview({ contexto, value }) {
+  const current = value ?? ''
+  const shown = current === '' ? '…' : current
+  const holeAt = contexto.indexOf(DYNAMIC_TEXT_HOLE)
+  if (holeAt === -1) {
+    return <p className="db-dynamic-text__preview">{contexto}</p>
+  }
+  return (
+    <p className="db-dynamic-text__preview">
+      {contexto.slice(0, holeAt)}
+      <span className="db-dynamic-text__highlight">{shown}</span>
+      {contexto.slice(holeAt + DYNAMIC_TEXT_HOLE.length)}
+    </p>
+  )
+}
+
+export function MissingFieldInput({ field, value, overrides, onChange }) {
   const id = `missing-field-${field.key}`
   if (field.type === 'select' && Array.isArray(field.options) && field.options.length > 0) {
     const selectedIndex = resolveSelectIndex(field, overrides ?? {})
@@ -123,6 +141,32 @@ function MissingFieldInput({ field, value, overrides, onChange }) {
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
       />
+    )
+  }
+  if (field.type === 'dynamic_text') {
+    const current = value ?? ''
+    return (
+      <div className="db-dynamic-text">
+        <p className="db-dynamic-text__instruction">{field.instruccion}</p>
+        <textarea
+          id={id}
+          rows={3}
+          className="clause-input"
+          maxLength={500}
+          value={current}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <p className="db-dynamic-text__counter">{current.length} / 500</p>
+        <p className="db-dynamic-text__examples-label">Ejemplos:</p>
+        <ul className="db-dynamic-text__examples">
+          {(field.ejemplos ?? []).map((ejemplo) => (
+            <li key={ejemplo}>{ejemplo}</li>
+          ))}
+        </ul>
+        {typeof field.contexto === 'string' ? (
+          <DynamicTextPreview contexto={field.contexto} value={current} />
+        ) : null}
+      </div>
     )
   }
   return (

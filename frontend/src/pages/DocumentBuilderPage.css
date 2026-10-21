@@ -233,6 +233,24 @@
   font-size: 13px;
 }
 
+.db-dynamic-text__instruction,
+.db-dynamic-text__counter,
+.db-dynamic-text__examples-label,
+.db-dynamic-text__preview,
+.db-dynamic-text__examples {
+  margin: 0;
+  font-size: 13px;
+}
+
+.db-dynamic-text__examples {
+  padding-left: 18px;
+}
+
+.db-dynamic-text__highlight {
+  color: var(--color-selection);
+  font-weight: 600;
+}
+
 .db-doc-list {
   list-style: none;
   margin: 0;

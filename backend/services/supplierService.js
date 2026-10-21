@@ -1,6 +1,6 @@
 const { db } = require('../db/knex')
 const { isValidEmail } = require('../utils/validation')
-const { gcsService } = require('./gcsService')
+const { storageService } = require('./storageService')
 const {
   compactSearchTerm,
   formatDocumentDisplay,
@@ -699,7 +699,7 @@ async function getSupplierDocumentForView(supplierId, documentId) {
     .first()
 
   if (signed) {
-    const buffer = await gcsService.downloadBuffer({ gcsPath: signed.gcs_path })
+    const buffer = await storageService.downloadBuffer({ gcsPath: signed.gcs_path })
     return { ok: true, data: { file_name: signed.file_name, buffer } }
   }
 
@@ -709,7 +709,7 @@ async function getSupplierDocumentForView(supplierId, documentId) {
     .first()
 
   if (draft) {
-    const buffer = await gcsService.downloadBuffer({ gcsPath: draft.gcs_path })
+    const buffer = await storageService.downloadBuffer({ gcsPath: draft.gcs_path })
     return { ok: true, data: { file_name: draft.file_name, buffer } }
   }
 

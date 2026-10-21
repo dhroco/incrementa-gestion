@@ -1,0 +1,12 @@
+{
+  "color": "amarillo",
+  "resumen": "El plan es implementable y openspec validate pasa; agregué a tasks.md las pruebas que faltaban para cubrir escenarios de las specs (catálogo directo, contexto nulo, segundo párrafo, campos no-dynamic_text sin propiedades nuevas, catálogo frontend, CSS del chip, etiqueta del modal). Queda un hallazgo para el Arquitecto sobre la prueba del atributo data-kind del chip.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "frontend/src/components/RichTextEditor/VariableRenderer.jsx (tasks.md 5.2)",
+      "que": "El escenario de spec «Editor chip is marked dynamic text» (dynamic-text/spec.md) exige que el chip tenga data-kind=\"dynamic_text\", pero VariableRenderer usa useCurrentEditor() de @tiptap/react: para ejecutar ese render hace falta un editor Tiptap real con el nodo variable registrado, y no hay ningún test existente en el repo que monte un NodeView así (solo hay un precedente de testear el CSS como texto, en styles.module.css.test.js, que ya usé en la tarea 6.7 para la parte de color). No inventé esa infraestructura de editor.",
+      "como_arreglar": "El Arquitecto decide: aceptar la prueba de CSS (tarea 6.7) como proxy suficiente para este recorte, o encargar una tarea aparte para construir un fixture mínimo de editor Tiptap (fuera de este cambio) que permita montar VariableRenderer y verificar el atributo data-kind con ejecución real."
+    }
+  ]
+}

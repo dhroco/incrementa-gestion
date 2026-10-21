@@ -55,6 +55,12 @@ Para el objetivo de operar varias plataformas en paralelo hace falta una **forma
 
 **Esto no es configuración de Cursor: es diseño de la fábrica de desarrollo.** Tratarlo como tal — es el único de los cinco que escala más allá de este proyecto, y probablemente el de mayor retorno.
 
+## 6. GitHub Actions en Node 20 (deprecado)
+
+`.github/workflows/deploy-preprod.yml` usa `actions/checkout@v4`, `google-github-actions/auth@v2` y `google-github-actions/setup-gcloud@v2`, que apuntan a Node 20. GitHub las fuerza a Node 24 y avisa en cada deploy. Hoy el pipeline funciona; el riesgo es que se rompa cuando se retire ese fallback. Detectado el 6 de agosto de 2026.
+
+Subir las tres versiones y validarlo con un deploy real a pre-prod, porque un fallo de autenticación WIF solo se ve ejecutando.
+
 ---
 
 ## Rutas útiles

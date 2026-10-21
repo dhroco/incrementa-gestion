@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migraciones con Container Apps Job</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a6370; --line: #e3e6e8;
+    --card: #fafafa; --accent: #0b6bcb; --ok: #0a7d33; --warn: #9a5b00; --code: #f4f5f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171a; --fg: #e8eaed; --muted: #a3acb6; --line: #2c3238;
+      --card: #1b1f23; --accent: #6cb4ff; --ok: #5cd38a; --warn: #f0b45a; --code: #1f2429; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 21px; margin: 44px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 24px 0 6px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 14px 0; }
+  .box.ok { border-left: 4px solid var(--ok); }
+  .box.warn { border-left: 4px solid var(--warn); }
+  .box.info { border-left: 4px solid var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { background: var(--card); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px;
+    background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+    overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  ol li, ul li { margin: 6px 0; }
+  .step { display: flex; gap: 12px; margin: 16px 0; }
+  .num { flex: 0 0 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .step > div:last-child { flex: 1; min-width: 0; }
+  .diagram { width: 100%; height: auto; display: block; margin: 12px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  dl dt { font-weight: 600; margin-top: 10px; }
+  dl dd { margin: 2px 0 0 0; color: var(--fg); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Correr las migraciones de la base con un Container Apps Job</h1>
+<p class="sub">Un cambio para más adelante en <strong>incrementa-gestion</strong>, una vez que el sistema esté en Azure.
+Explica qué se cambia, por qué conviene, qué se gana y cómo se hace, paso a paso.</p>
+<p class="meta">Estado: <strong>decidido para el futuro, no para la migración inicial.</strong> Al migrar a Azure, las migraciones se siguen corriendo como hoy, desde el Mac. Escrito el 18 de octubre de 2026.</p>
+
+<div class="box info toc">
+  <strong>Contenido</strong>
+  <ol>
+    <li><a href="#palabras">Palabras que se usan en este documento</a></li>
+    <li><a href="#hoy">Cómo se hace hoy</a></li>
+    <li><a href="#cambio">Cuál es el cambio</a></li>
+    <li><a href="#porque">Por qué se debe hacer</a></li>
+    <li><a href="#gana">Qué se gana</a></li>
+    <li><a href="#como">Cómo se hace, paso a paso</a></li>
+    <li><a href="#cuidado">Cosas a cuidar</a></li>
+    <li><a href="#listo">Cómo saber que quedó bien</a></li>
+  </ol>
+</div>
+
+<h2 id="palabras">1. Palabras que se usan en este documento</h2>
+<dl>
+  <dt>Base de datos</dt>
+  <dd>El lugar donde el sistema guarda sus datos: proveedores, clientes, plantillas y contratos. En Azure es un <em>PostgreSQL Flexible Server</em>.</dd>
+  <dt>Migración</dt>
+  <dd>Un archivo de código que cambia la forma de la base. Por ejemplo, agrega una tabla, agrega una columna o corrige el texto de una plantilla. Están en la carpeta <code>backend/migrations/</code>. Cada una se aplica una sola vez, en orden.</dd>
+  <dt>Aplicar las migraciones</dt>
+  <dd>Correr el comando <code>knex migrate:latest</code>. Ese comando revisa cuáles ya se aplicaron (lo anota en la tabla <code>knex_migrations</code>) y aplica las que faltan.</dd>
+  <dt>Imagen</dt>
+  <dd>Un paquete con el código del backend listo para correr. Se construye en cada despliegue y se guarda en el registro de imágenes (<em>Azure Container Registry</em>).</dd>
+  <dt>Container App</dt>
+  <dd>Un programa que corre siempre, esperando peticiones. El backend y el MCP son Container Apps.</dd>
+  <dt>Container Apps Job</dt>
+  <dd>Un programa que corre una vez, hace una tarea y termina. Usa una imagen, igual que un Container App, pero no queda encendido.</dd>
+  <dt>Red privada (VNet)</dt>
+  <dd>Una red dentro de Azure. Lo que está dentro se comunica sin pasar por internet. El backend, el MCP y la base están dentro.</dd>
+  <dt>Firewall de la base</dt>
+  <dd>La lista de direcciones de internet (IP) que pueden conectarse a la base desde fuera de la red privada.</dd>
+  <dt>Key Vault</dt>
+  <dd>El servicio de Azure que guarda los secretos, como la clave de la base.</dd>
+  <dt>Managed identity</dt>
+  <dd>Una identidad que Azure le da a un programa. Con ella el programa pide permisos sin usar claves.</dd>
+</dl>
+
+<h2 id="hoy">2. Cómo se hace hoy</h2>
+<p>Hoy (y también justo después de migrar a Azure) las migraciones las aplica una persona, Ignacio, desde el Mac de David:</p>
+<ol>
+  <li>Se abre una terminal en el Mac.</li>
+  <li>Se cargan las variables con <code>source ./set-env-local.sh</code>. Ahí está la clave de la base.</li>
+  <li>El Mac se conecta a la base. En GCP es con el Cloud SQL Auth Proxy. En Azure será directo, porque la IP del Mac está autorizada en el firewall.</li>
+  <li>Se corre <code>npm run migrate:latest</code> dentro de <code>backend/</code>.</li>
+  <li>Esto se hace <strong>antes</strong> de desplegar el código que necesita esa migración.</li>
+</ol>
+
+<svg class="diagram" viewBox="0 0 820 200" role="img" aria-label="Diagrama: hoy, la migración sale del Mac y entra a la base por internet">
+  <rect x="10" y="60" width="200" height="80" rx="8" fill="#e7f0ff" stroke="#1f6feb" stroke-width="1.5"/>
+  <text x="110" y="92" text-anchor="middle" font-size="15" font-weight="700" fill="#0b2c66">Mac de David</text>
+  <text x="110" y="114" text-anchor="middle" font-size="12" fill="#0b2c66">npm run migrate:latest</text>
+  <text x="110" y="130" text-anchor="middle" font-size="12" fill="#0b2c66">(código de la carpeta local)</text>
+  <line x1="210" y1="100" x2="420" y2="100" stroke="#9a5b00" stroke-width="2" stroke-dasharray="6 4"/>
+  <polygon points="420,94 432,100 420,106" fill="#9a5b00"/>
+  <text x="320" y="88" text-anchor="middle" font-size="12" fill="#9a5b00">por internet</text>
+  <text x="320" y="122" text-anchor="middle" font-size="12" fill="#9a5b00">(IP del Mac en el firewall)</text>
+  <rect x="440" y="20" width="370" height="160" rx="8" fill="#e6f6ec" stroke="#0a7d33" stroke-width="1.5"/>
+  <text x="625" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#083d1a">Azure · red privada</text>
+  <rect x="520" y="70" width="210" height="70" rx="8" fill="#ffffff" stroke="#0a7d33" stroke-width="1.5"/>
+  <text x="625" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#083d1a">PostgreSQL</text>
+  <text x="625" y="120" text-anchor="middle" font-size="12" fill="#083d1a">base de datos</text>
+</svg>
+
+<h2 id="cambio">3. Cuál es el cambio</h2>
+<p>Se crea en Azure un <strong>Container Apps Job</strong> que se llama, por ejemplo, <code>job-migraciones-preprod</code> (y otro para prod). Ese job:</p>
+<ul>
+  <li>usa <strong>la misma imagen del backend</strong> que se va a desplegar;</li>
+  <li>corre <strong>dentro de la red privada</strong>, al lado de la base;</li>
+  <li>toma la clave de la base desde <strong>Key Vault</strong>;</li>
+  <li>ejecuta <code>knex migrate:latest</code> y termina;</li>
+  <li>se lanza <strong>a mano</strong> o <strong>desde el workflow de GitHub</strong>, después de que David lo aprueba.</li>
+</ul>
+
+<svg class="diagram" viewBox="0 0 820 230" role="img" aria-label="Diagrama: después, GitHub lanza el job, que corre dentro de la red privada y aplica las migraciones">
+  <rect x="10" y="75" width="190" height="80" rx="8" fill="#f1e9ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="105" y="105" text-anchor="middle" font-size="15" font-weight="700" fill="#3a1d66">GitHub Actions</text>
+  <text x="105" y="125" text-anchor="middle" font-size="12" fill="#3a1d66">David aprueba</text>
+  <text x="105" y="141" text-anchor="middle" font-size="12" fill="#3a1d66">y lanza el job</text>
+  <line x1="200" y1="115" x2="290" y2="115" stroke="#8250df" stroke-width="2"/>
+  <polygon points="290,109 302,115 290,121" fill="#8250df"/>
+  <rect x="310" y="20" width="500" height="200" rx="8" fill="#e6f6ec" stroke="#0a7d33" stroke-width="1.5"/>
+  <text x="560" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#083d1a">Azure · red privada</text>
+  <rect x="330" y="75" width="200" height="80" rx="8" fill="#ffffff" stroke="#0a7d33" stroke-width="1.5"/>
+  <text x="430" y="103" text-anchor="middle" font-size="14" font-weight="700" fill="#083d1a">Container Apps Job</text>
+  <text x="430" y="123" text-anchor="middle" font-size="12" fill="#083d1a">imagen del backend</text>
+  <text x="430" y="139" text-anchor="middle" font-size="12" fill="#083d1a">knex migrate:latest</text>
+  <line x1="530" y1="115" x2="590" y2="115" stroke="#0a7d33" stroke-width="2"/>
+  <polygon points="590,109 602,115 590,121" fill="#0a7d33"/>
+  <rect x="610" y="75" width="180" height="80" rx="8" fill="#ffffff" stroke="#0a7d33" stroke-width="1.5"/>
+  <text x="700" y="110" text-anchor="middle" font-size="14" font-weight="700" fill="#083d1a">PostgreSQL</text>
+  <text x="700" y="130" text-anchor="middle" font-size="12" fill="#083d1a">base de datos</text>
+  <rect x="330" y="170" width="200" height="38" rx="8" fill="#fff4e5" stroke="#9a5b00" stroke-width="1.5"/>
+  <text x="430" y="194" text-anchor="middle" font-size="12" fill="#5a3d00">Key Vault: clave de la base</text>
+  <line x1="430" y1="170" x2="430" y2="158" stroke="#9a5b00" stroke-width="1.5"/>
+</svg>
+
+<p>Lo que <strong>no</strong> cambia: los archivos de migración, el comando de Knex, la tabla <code>knex_migrations</code> y la regla de que la migración va antes del código que la necesita.</p>
+
+<h2 id="porque">4. Por qué se debe hacer</h2>
+<p>El modo de hoy funciona, pero tiene cinco problemas concretos:</p>
+<table>
+  <thead><tr><th>Problema de hoy</th><th>Qué puede pasar</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Depende de un computador.</strong> Solo se puede migrar desde el Mac de David.</td><td>Si el Mac no está disponible, no se puede desplegar un cambio que necesite migración.</td></tr>
+    <tr><td><strong>El código de la migración sale de la carpeta local.</strong></td><td>Se puede aplicar una migración de una rama que no es la que se despliega, o una versión distinta del archivo. La base queda distinta de lo que el código espera.</td></tr>
+    <tr><td><strong>La base acepta conexiones desde una IP de internet.</strong></td><td>Hay que mantener esa IP en el firewall. Si la IP del Mac cambia, hay que actualizarla. Mientras está abierta, es una puerta más hacia la base.</td></tr>
+    <tr><td><strong>El orden es manual.</strong> Una persona tiene que acordarse de migrar antes de desplegar.</td><td>Si se olvida, el código nuevo llega a una base vieja y falla.</td></tr>
+    <tr><td><strong>No queda un registro central.</strong></td><td>Para saber quién aplicó qué migración y cuándo, hay que preguntar o revisar una terminal.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="gana">5. Qué se gana</h2>
+<div class="box ok">
+<ul>
+  <li><strong>La migración y el código vienen de la misma imagen.</strong> Se aplica exactamente lo que se va a desplegar, del mismo commit.</li>
+  <li><strong>Ya no depende del Mac.</strong> Cualquiera con permiso puede lanzarla desde GitHub o desde el portal de Azure.</li>
+  <li><strong>El orden lo asegura el workflow.</strong> Primero el job; si falla, el despliegue se detiene y el código nuevo no sale.</li>
+  <li><strong>Queda registro.</strong> Cada ejecución del job queda guardada en Azure con su fecha, su resultado y su salida, y en GitHub queda quién la aprobó.</li>
+  <li><strong>Se puede cerrar el firewall.</strong> Cuando nadie necesite migrar desde fuera, se puede quitar la IP del Mac. La base queda accesible solo desde la red privada.</li>
+  <li><strong>Costo casi cero.</strong> El job solo cobra los segundos que corre, normalmente menos de un minuto.</li>
+</ul>
+</div>
+
+<h2 id="como">6. Cómo se hace, paso a paso</h2>
+<p>Se hace primero en <strong>pre-prod</strong>. Cuando funcione ahí, se repite en <strong>prod</strong>.</p>
+
+<div class="step"><div class="num">1</div><div>
+<h3>Crear una identidad para el job</h3>
+<p>Una managed identity propia, por ejemplo <code>id-migraciones-preprod</code>, con solo dos permisos:</p>
+<ul>
+  <li><strong>Key Vault Secrets User</strong> en el Key Vault del entorno, para leer la clave de la base;</li>
+  <li><strong>AcrPull</strong> en el registro de imágenes, para bajar la imagen del backend.</li>
+</ul>
+<p>No necesita permisos sobre Blob Storage ni sobre Graph. Una identidad propia hace que el job no pueda hacer nada fuera de su tarea.</p>
+</div></div>
+
+<div class="step"><div class="num">2</div><div>
+<h3>Agregar el job al Bicep del entorno</h3>
+<p>Se agrega un recurso <code>Microsoft.App/jobs</code> en el mismo <em>environment</em> de Container Apps del backend. Ejemplo de referencia (los nombres y versiones se ajustan al Bicep real):</p>
+<pre><code>resource jobMigraciones 'Microsoft.App/jobs@2024-03-01' = {
+  name: 'job-migraciones-${entorno}'
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${idMigraciones.id}': {} }
+  }
+  properties: {
+    environmentId: containerAppsEnv.id
+    configuration: {
+      triggerType: 'Manual'          // solo corre cuando se lanza
+      replicaTimeout: 600            // máximo 10 minutos
+      replicaRetryLimit: 0           // si falla, no reintenta solo
+      manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
+      registries: [ { server: acr.properties.loginServer, identity: idMigraciones.id } ]
+      secrets: [ {
+        name: 'database-url'
+        keyVaultUrl: '${keyVault.properties.vaultUri}secrets/DATABASE-URL'
+        identity: idMigraciones.id
+      } ]
+    }
+    template: {
+      containers: [ {
+        name: 'migraciones'
+        image: '${acr.properties.loginServer}/backend:${imageTag}'
+        command: [ 'sh', '-c' ]
+        args: [ 'npx knex migrate:list &amp;&amp; npx knex migrate:latest' ]
+        env: [
+          { name: 'ENVIRONMENT', value: envName }        // dev o prod
+          { name: 'NODE_ENV', value: 'production' }
+          { name: 'PGSSLMODE', value: 'require' }
+          { name: 'DATABASE_URL', secretRef: 'database-url' }
+        ]
+        resources: { cpu: json('0.5'), memory: '1Gi' }
+      } ]
+    }
+  }
+}</code></pre>
+<p>Tres detalles de este ejemplo:</p>
+<ul>
+  <li><code>migrate:list</code> se corre antes, para que la salida del job muestre qué migraciones estaban pendientes.</li>
+  <li><code>replicaRetryLimit: 0</code>: una migración que falla no se debe reintentar sola. Una persona revisa por qué falló.</li>
+  <li>En Key Vault los nombres de secretos no aceptan <code>_</code>; por eso el secreto se llama <code>DATABASE-URL</code>.</li>
+</ul>
+</div></div>
+
+<div class="step"><div class="num">3</div><div>
+<h3>Agregar un paso al workflow de GitHub</h3>
+<p>Va <strong>después</strong> de publicar la imagen y <strong>antes</strong> de desplegar el backend y el MCP. Se pone en un job aparte de GitHub con un <em>environment</em> que exige la aprobación de David:</p>
+<pre><code>migraciones:
+  needs: build
+  runs-on: ubuntu-latest
+  environment: migraciones-preprod   # exige aprobación de David
+  steps:
+    - uses: azure/login@v2            # login OIDC, sin claves
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    - name: Aplicar migraciones
+      run: |
+        JOB=job-migraciones-preprod
+        RG=rg-incrementa-preprod
+        IMG="$ACR/backend:${{ github.sha }}"
+        az containerapp job update -n $JOB -g $RG --image "$IMG"
+        EXEC=$(az containerapp job start -n $JOB -g $RG --query name -o tsv)
+        echo "Ejecución: $EXEC"
+        for i in $(seq 1 60); do
+          STATUS=$(az containerapp job execution show -n $JOB -g $RG \
+                   --job-execution-name "$EXEC" --query properties.status -o tsv)
+          echo "Estado: $STATUS"
+          [ "$STATUS" = "Succeeded" ] &amp;&amp; exit 0
+          [ "$STATUS" = "Failed" ] &amp;&amp; exit 1
+          sleep 10
+        done
+        echo "::error::La migración no terminó a tiempo."; exit 1
+
+deploy:
+  needs: migraciones                  # el código sale solo si migrar salió bien
+  ...</code></pre>
+<p>Si un despliegue no trae migraciones nuevas, el job corre igual, no encuentra nada pendiente y termina en segundos. No hace daño.</p>
+</div></div>
+
+<div class="step"><div class="num">4</div><div>
+<h3>Probar en pre-prod</h3>
+<ol>
+  <li>Lanzar el job a mano una vez, sin migraciones pendientes. Debe terminar en <em>Succeeded</em> y mostrar la lista con todo aplicado.</li>
+  <li>Preparar un cambio que traiga una migración nueva e inofensiva (por ejemplo, un índice) y desplegarlo por el workflow. Ver que el job la aplica antes del deploy.</li>
+  <li>Probar el error a propósito: una migración que falla. El workflow se debe detener y el backend <strong>no</strong> se debe desplegar.</li>
+</ol>
+</div></div>
+
+<div class="step"><div class="num">5</div><div>
+<h3>Actualizar las reglas del proyecto</h3>
+<ul>
+  <li><strong><code>CLAUDE.md</code></strong>: cambiar «las aplica el arquitecto contra pre-prod por el Cloud SQL Auth Proxy» por «las aplica el job de migraciones en el workflow, con aprobación de David».</li>
+  <li><strong><code>.agent-orchestrator/perfil.yaml</code></strong>: no cambia. Las corridas de AOD siguen sin poder migrar; el job es el único camino.</li>
+  <li><strong>Diseños de recortes</strong> (<code>docs/disenos/prompts/*.md</code>): donde dice «no la corras: la aplica Ignacio», pasa a decir «la aplica el job de migraciones al desplegar».</li>
+</ul>
+</div></div>
+
+<div class="step"><div class="num">6</div><div>
+<h3>Repetir en prod y, si se quiere, cerrar el firewall</h3>
+<p>Crear <code>job-migraciones-prod</code> con su propia identidad y su environment de aprobación <code>migraciones-prod</code>. Cuando los dos entornos lleven un tiempo funcionando así, se puede quitar la IP del Mac del firewall de la base. Si alguna vez hace falta entrar a mano, se vuelve a agregar por un rato.</p>
+</div></div>
+
+<h2 id="cuidado">7. Cosas a cuidar</h2>
+<div class="box warn">
+<ul>
+  <li><strong>Las migraciones tienen que funcionar solas dentro de la imagen.</strong> La imagen no trae <code>docs/</code> ni las pruebas (lo excluye <code>.dockerignore</code>). Una migración no puede leer archivos de esas carpetas. Las de plantillas ya cumplen esto: copian su texto dentro del archivo.</li>
+  <li><strong>Revertir (<code>migrate:rollback</code>) no va en el workflow.</strong> Revertir puede borrar datos. Si hace falta, se lanza el job a mano, cambiando el comando solo para esa ejecución, y con decisión explícita de David.</li>
+  <li><strong>Las semillas (<code>seed:run</code>) nunca se corren con este job.</strong></li>
+  <li><strong>Dos ejecuciones a la vez no se pisan.</strong> Knex usa la tabla <code>knex_migrations_lock</code> para que solo una aplique migraciones. Igual, el job está configurado para correr de a una.</li>
+  <li><strong>Antes de una migración que reescribe datos</strong> (como las de plantillas), conviene un respaldo de la base. PostgreSQL Flexible Server tiene restauración a un punto en el tiempo, pero restaurar crea un servidor nuevo; lo más simple es seguir guardando respaldo en <code>template_content_backup</code>, como hoy.</li>
+</ul>
+</div>
+
+<h2 id="listo">8. Cómo saber que quedó bien</h2>
+<table>
+  <thead><tr><th>Comprobación</th><th>Resultado esperado</th></tr></thead>
+  <tbody>
+    <tr><td>Ejecutar el job sin cambios pendientes</td><td>Termina en <em>Succeeded</em> en menos de un minuto</td></tr>
+    <tr><td>Desplegar un cambio con una migración nueva</td><td>El job la aplica y después se despliega el backend</td></tr>
+    <tr><td>Desplegar con una migración que falla</td><td>El workflow se detiene; el backend sigue en la versión anterior</td></tr>
+    <tr><td>Revisar el historial del job en Azure</td><td>Cada ejecución aparece con fecha, estado y salida</td></tr>
+    <tr><td>Revisar el workflow en GitHub</td><td>Cada ejecución muestra quién la aprobó</td></tr>
+    <tr><td>Comparar <code>knex_migrations</code> con <code>backend/migrations/</code> del commit desplegado</td><td>Son iguales</td></tr>
+  </tbody>
+</table>
+
+</main>
+</body>
+</html>

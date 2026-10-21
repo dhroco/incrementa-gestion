@@ -203,6 +203,18 @@
   border-color: #FFD093;
 }
 
+.variable-node[data-kind="dynamic_text"] {
+  background: var(--color-form-field-readonly-bg);
+  border-color: var(--color-selection);
+  color: var(--color-selection);
+}
+
+.variable-node[data-kind="dynamic_text"]:hover {
+  background: var(--color-form-field-readonly-bg);
+  border-color: var(--color-main-headerbar);
+  color: var(--color-main-headerbar);
+}
+
 /* Variable Catalog styles */
 .variable-catalog-overlay {
   position: fixed;
@@ -336,6 +348,12 @@
 .variable-label {
   font-weight: 500;
   color: black;
+}
+
+.variable-kind-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-selection);
 }
 
 .variable-group-badge {

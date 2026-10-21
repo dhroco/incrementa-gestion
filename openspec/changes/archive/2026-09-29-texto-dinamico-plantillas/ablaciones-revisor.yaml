@@ -1,0 +1,111 @@
+version: 1
+ablaciones:
+  - id: migracion-limite-faltantes
+    que: >-
+      up() de la migración debe lanzar y no escribir nada si falta CUALQUIERA de las 21
+      plantillas (spec template-dynamic-text-clauses, Requirement "Template backup migration").
+      Corro un límite: cambio el umbral de "alguna falta" a "falta más de una", de modo que si
+      falta exactamente una plantilla la migración sigue de largo y corrompe datos en vez de abortar.
+    archivo: backend/migrations/202609290001_dynamic_text_clauses.js
+    buscar: "if (missing.length > 0) {"
+    reemplazar: "if (missing.length > 1) {"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="up throws the missing codes and does not insert or update" test/dynamicTextClausesMigrationOrder.test.js
+    gravedad: grave
+
+  - id: migracion-down-borra-todo
+    que: >-
+      down() solo debe restaurar y borrar las filas de template_content_backup con la nota
+      BACKUP_NOTE, sin tocar otras notas (spec: "down MUST NOT change any other column" / down
+      borra solo esas filas). Quito el filtro por nota del delete: down pasaría a borrar
+      cualquier backup de cualquier otro cambio, no solo el suyo.
+    archivo: backend/migrations/202609290001_dynamic_text_clauses.js
+    buscar: "await knex('template_content_backup').where({ note: BACKUP_NOTE }).del()"
+    reemplazar: "await knex('template_content_backup').del()"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="down restores content_json from the note and deletes those rows only" test/dynamicTextClausesMigrationOrder.test.js
+    gravedad: grave
+
+  - id: migracion-backup-guarda-reescrito
+    que: >-
+      up() debe guardar en template_content_backup el content_json PREVIO (para poder
+      restaurarlo con down), no el ya reescrito. Cambio el insert para que guarde
+      "template.next" en vez de "template.previous": el backup quedaría inútil (down
+      restauraría la versión ya reescrita, no la original).
+    archivo: backend/migrations/202609290001_dynamic_text_clauses.js
+    buscar: "content_json: template.previous,"
+    reemplazar: "content_json: template.next,"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="up backs up the previous content and stores the rewrite only after all 21 match" test/dynamicTextClausesMigrationOrder.test.js
+    gravedad: grave
+
+  - id: migracion-ventana-pl-23
+    que: >-
+      La ventana de reemplazo de la cláusula 2.3 variante PL (PLANS_23.PL) debe cortar
+      exactamente los nodos 1..5 del párrafo original. Corro el límite un nodo antes
+      (end: 4 en vez de 5): la variable proveedor_red_social original quedaría duplicada
+      o el texto final mal armado, y el texto plano dejaría de calzar con lo que pide
+      la spec (template-dynamic-text-clauses, escenario "PL clause 2.3 keeps the unbolded opening").
+    archivo: backend/migrations/202609290001_dynamic_text_clauses.js
+    buscar: "end: 5,"
+    reemplazar: "end: 4,"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="PL clause 2.3 keeps the unbolded opening and the account clause is 2.6" test/dynamicTextClausesMigration.test.js
+    gravedad: grave
+
+  - id: migracion-group-hardcode
+    que: >-
+      Todo nodo `variable` nuevo debe llevar `group: 'contrato'` sin importar el group
+      original de la variable que reemplaza (spec: "MUST set group to contrato"). Cambio
+      el literal para que el nuevo nodo quede con un group distinto ("otro"), rompiendo
+      esa regla fija del catálogo.
+    archivo: backend/migrations/202609290001_dynamic_text_clauses.js
+    buscar: "group: 'contrato',"
+    reemplazar: "group: 'otro',"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="account clause A uses publication accounts and leaves the commercial name unmarked" test/dynamicTextClausesMigration.test.js
+    gravedad: grave
+
+  - id: filtro-red-social-and-en-vez-de-or
+    que: >-
+      redSocialSearch debe buscar el término con ILIKE en proveedor_red_social O en
+      servicios_entregables (spec contracts-query, "Social filter matches deliverables
+      only"). Cambio el OR por AND: un contrato con el término solo en
+      servicios_entregables (y sin red social) dejaría de aparecer en el listado.
+    archivo: backend/services/contractsQueryService.js
+    buscar: ".orWhereRaw("
+    reemplazar: ".andWhereRaw("
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="redSocialSearch matches a network named only in servicios_entregables" test/contractsQueryService.entregables.test.js
+    gravedad: borde
+
+  - id: filtro-red-social-suelta-otros-filtros
+    que: >-
+      El OR de redSocialSearch debe quedar agrupado con andWhere para no soltar los
+      demás filtros del listado (spec: "grouped so the OR does not release the other
+      filters"). Cambio el agrupador de andWhere a orWhere de nivel superior: el grupo
+      pasaría a soltarse de los demás filtros (supplierSearch, clientId, templateId,
+      status) en vez de quedar encerrado en un AND.
+    archivo: backend/services/contractsQueryService.js
+    buscar: "q.andWhere(function redSocialWhere() {"
+    reemplazar: "q.orWhere(function redSocialWhere() {"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="redSocialSearch matches a network named only in servicios_entregables" test/contractsQueryService.entregables.test.js
+    gravedad: borde
+
+  - id: listado-servicios-entregables-se-pierde
+    que: >-
+      mapContractListItem debe incluir servicios_entregables desde contract_overrides,
+      o null si no viene (spec contracts-query, "List item includes deliverables").
+      Fuerzo el campo a null siempre: un contrato con servicios_entregables cargado
+      dejaría de mostrarlo en la respuesta de la API.
+    archivo: backend/services/contractsQueryService.js
+    buscar: "servicios_entregables: overrides.servicios_entregables ?? null"
+    reemplazar: "servicios_entregables: null"
+    prueba: cd backend && env -u DATABASE_URL node --test --test-name-pattern="mapContractListItem includes servicios_entregables from contract_overrides" test/contractsQueryService.entregables.test.js
+    gravedad: borde
+
+  - id: celda-red-social-ignora-entregables
+    que: >-
+      La celda Red Social debe mostrar servicios_entregables cuando viene un string no
+      vacío, y solo si no viene caer a "red — cuenta" (spec contracts-query, "Cell shows
+      deliverables when present"). Quito el atajo temprano: la celda volvería a mostrar
+      siempre la red social y la cuenta, ignorando servicios_entregables.
+    archivo: frontend/src/pages/ContractsListPage.jsx
+    buscar: "if (typeof entregables === 'string' && entregables !== '') return entregables"
+    reemplazar: ""
+    prueba: cd frontend && npx vitest run src/pages/ContractsListPage.entregables.test.jsx
+    gravedad: borde

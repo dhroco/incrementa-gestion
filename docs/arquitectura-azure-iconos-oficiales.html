@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura en Azure</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+
+  :root {
+    --ground:        #FAFBFC;
+    --ground-raised: #FFFFFF;
+    --ground-sunken: #F0F3F5;
+    --ink:           #12171C;
+    --ink-soft:      #4A5560;
+    --ink-faint:     #7C8894;
+    --rule:          #DCE2E7;
+    --rule-strong:   #C3CCD4;
+    --accent:        #0B5CAD;
+    --accent-soft:   #E4EEF8;
+    --si:            #1E6F49;
+    --si-soft:       #E4F1EA;
+    --no:            #9E3325;
+    --no-soft:       #F6E7E4;
+    --aviso:         #8A5A00;
+    --aviso-soft:    #F8EEDC;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D1114; --ground-raised: #141A1F; --ground-sunken: #1A2127;
+      --ink: #E2E8ED; --ink-soft: #A3AFBA; --ink-faint: #74818D;
+      --rule: #262F37; --rule-strong: #38434D;
+      --accent: #6CB0F0; --accent-soft: #142230;
+      --si: #5CBE8A; --si-soft: #12271C; --no: #E08272; --no-soft: #2B1714;
+      --aviso: #D9A441; --aviso-soft: #2A2113;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0D1114; --ground-raised: #141A1F; --ground-sunken: #1A2127;
+    --ink: #E2E8ED; --ink-soft: #A3AFBA; --ink-faint: #74818D;
+    --rule: #262F37; --rule-strong: #38434D;
+    --accent: #6CB0F0; --accent-soft: #142230;
+    --si: #5CBE8A; --si-soft: #12271C; --no: #E08272; --no-soft: #2B1714;
+    --aviso: #D9A441; --aviso-soft: #2A2113;
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .hoja { max-width: 1060px; margin: 0 auto; padding: 0 26px 100px; }
+
+  header.portada { padding: 70px 0 34px; border-bottom: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 18px; }
+  .marca { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 5vw, 3.2rem);
+    line-height: 1.08; letter-spacing: -0.015em; text-wrap: balance; max-width: 22ch; }
+  .bajada { font-size: 1.1rem; color: var(--ink-soft); max-width: 68ch; }
+  .procedencia { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--ink-faint);
+    border-left: 2px solid var(--rule-strong); padding-left: 14px; max-width: 66ch; }
+
+  section { padding: 46px 0; border-bottom: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 20px; }
+  section:last-of-type { border-bottom: none; }
+  .rubro { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); display: flex; align-items: center; gap: 12px; }
+  .rubro::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.55rem, 3.2vw, 2.05rem);
+    line-height: 1.18; letter-spacing: -0.01em; text-wrap: balance; max-width: 26ch; }
+  h3 { font-family: var(--sans); font-weight: 600; font-size: 1.02rem; margin-top: 6px; }
+  p { max-width: 70ch; }
+  .prosa { display: flex; flex-direction: column; gap: 13px; }
+  code { font-family: var(--mono); font-size: 0.855em; background: var(--ground-sunken);
+    padding: 1px 5px; border-radius: 2px; }
+  strong { font-weight: 600; }
+  ul, ol { padding-left: 1.15em; max-width: 70ch; }
+  li { margin-bottom: 0.35em; }
+  li::marker { color: var(--ink-faint); }
+
+  .marco { overflow-x: auto; border: 1px solid var(--rule); background: var(--ground-raised); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 400; background: var(--ground-sunken); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.ident { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  .suave { color: var(--ink-soft); }
+
+  .et { display: inline-block; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 2px; white-space: nowrap; }
+  .et.si    { background: var(--si-soft);    color: var(--si); }
+  .et.no    { background: var(--no-soft);    color: var(--no); }
+  .et.aviso { background: var(--aviso-soft); color: var(--aviso); }
+
+  figure { border: 1px solid var(--rule); background: #FFFFFF; padding: 22px 22px 16px;
+    display: flex; flex-direction: column; gap: 14px; overflow-x: auto; }
+  figure svg { display: block; width: 100%; min-width: 640px; height: auto; }
+  figcaption { font-size: 14px; line-height: 1.5; color: #4A5560; max-width: 80ch; }
+
+  .nota { background: var(--ground-sunken); border-left: 3px solid var(--accent);
+    padding: 16px 18px; font-size: 15px; }
+  .nota.alerta { border-left-color: var(--aviso); background: var(--aviso-soft); }
+
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); }
+  .cifra { background: var(--ground-raised); padding: 15px 16px 13px; display: flex; flex-direction: column; gap: 2px; }
+  .cifra b { font-family: var(--serif); font-weight: 400; font-size: 1.75rem; line-height: 1;
+    font-variant-numeric: tabular-nums; }
+  .cifra span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); }
+
+  footer { border-top: 1px solid var(--rule); margin-top: 40px; padding-top: 20px; font-family: var(--mono);
+    font-size: 12px; line-height: 1.75; color: var(--ink-faint); max-width: 78ch; }
+
+  .lamina { border: 1px solid var(--rule); background: #FFFFFF; padding: 14px; align-self: center;
+    width: min(1280px, calc(100vw - 32px)); overflow-x: auto; }
+  .lamina svg { display: block; width: 100%; min-width: 880px; height: auto; }
+  .zonas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); }
+  .zona { background: var(--ground-raised); padding: 16px 18px; }
+  .zona h4 { font-family: var(--sans); font-size: 0.98rem; font-weight: 600; margin-bottom: 6px; }
+  .zona p { font-size: 14.5px; color: var(--ink-soft); max-width: none; }
+  .zona p + p { margin-top: 10px; }
+
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .la-titulo { font-size: 20px; font-weight: 600; }
+  .la-sub, .la-ley { font-size: 12.5px; }
+  .la-gt  { font-size: 13px; font-weight: 600; }
+  .la-et  { font-size: 13px; font-weight: 600; }
+  .la-ets { font-size: 11.5px; }
+  .la-ic  { font-size: 12px; font-weight: 700; }
+  .la-fl  { font-size: 11.5px; font-weight: 500; paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; stroke-linejoin: round; }
+
+  @media (max-width: 640px) {
+    .hoja { padding: 0 16px 60px; }
+    header.portada { padding-top: 44px; }
+    section { padding: 34px 0; }
+    figure { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="hoja">
+
+  <header class="portada">
+    <div class="marca">incrementa-gestion · Arquitectura objetivo · 18 de octubre de 2026</div>
+    <h1>La arquitectura de incrementa-gestion sobre Azure</h1>
+    <p class="bajada">
+      Cómo queda el sistema cuando salga de Google Cloud: qué pieza de Azure reemplaza a cada una
+      de hoy, cómo se conectan, quién puede entrar a qué, y en qué orden se migra. Todavía no hay
+      nada construido en Azure, salvo el login de pre-prod.
+    </p>
+    <div class="procedencia">
+      Sale de las decisiones tomadas por David el 18 de octubre de 2026 (siete decisiones, una a la vez),
+      contrastadas con el código de <code>preprod</code> en el commit <code>28ffc68</code> y con la rama
+      <code>david/texto-dinamico-base</code> (<code>1e30bdc</code>), que agrega la revisión de redacción con Claude.<br>
+      El inventario de Azure se midió ese mismo día con <code>az ad app list</code>,
+      <code>az ad user list</code>, <code>az billing account list</code> y <code>az account list --all</code>.<br>
+      El cambio futuro de las migraciones está en
+      <a href="incrementa-azure-migraciones-bd-con-container-apps-job.html" style="color:inherit">incrementa-azure-migraciones-bd-con-container-apps-job.html</a>.
+    </div>
+  </header>
+
+  <section>
+    <div class="rubro">La lámina</div>
+    <h2>Todo lo que habrá, en un solo dibujo</h2>
+    <figure class="lamina">
+<!-- Fuentes de los iconos; SVG embebidos salvo Graph y Firme.cl (PNG).
+{
+  "WEB": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/general/10783-icon-service-Browser.svg"
+  },
+  "SWA": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/web/01007-icon-service-Static-Apps.svg"
+  },
+  "API": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/other/02884-icon-service-Worker-Container-App.svg"
+  },
+  "MCP": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/other/02884-icon-service-Worker-Container-App.svg"
+  },
+  "PG": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/databases/10131-icon-service-Azure-Database-PostgreSQL-Server.svg"
+  },
+  "BLOB": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/general/10780-icon-service-Blob-Block.svg"
+  },
+  "KV": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/security/10245-icon-service-Key-Vaults.svg"
+  },
+  "MI": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/identity/10227-icon-service-Managed-Identities.svg"
+  },
+  "ACR": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/containers/10105-icon-service-Container-Registries.svg"
+  },
+  "LOG": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "asset": "Azure_Public_Service_Icons/Icons/analytics/00009-icon-service-Log-Analytics-Workspaces.svg"
+  },
+  "ID": {
+    "source": "https://learn.microsoft.com/en-us/entra/architecture/architecture-icons",
+    "asset": "Microsoft Entra architecture icons - Oct 2023/Microsoft Entra color icons SVG/Microsoft Entra ID color icon.svg"
+  },
+  "GH": {
+    "source": "https://brand.github.com/GitHub_Logos.zip",
+    "asset": "GitHub Logos/SVG/GitHub_Invertocat_Black.svg"
+  },
+  "BCP": {
+    "source": "https://raw.githubusercontent.com/Azure/bicep/main/docs/images/BicepLogoImage.svg",
+    "asset": "bicep.svg"
+  },
+  "RS": {
+    "source": "https://cdn.resend.com/brand/resend-icon-black.svg",
+    "asset": "resend.svg"
+  },
+  "FI": {
+    "source": "https://firme.cl/assets/firme_logo_green-hG_4-g_G.png",
+    "asset": "firme.png"
+  },
+  "GR": {
+    "source": "https://go.microsoft.com/fwlink/?LinkID=288890",
+    "asset": "graph-sdk.png"
+  },
+  "IA": {
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/claude.svg",
+    "asset": "claude.svg"
+  },
+  "AI": {
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/claude.svg",
+    "asset": "claude.svg"
+  },
+  "MAC": {
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/apple.svg",
+    "asset": "apple.svg"
+  }
+}
+Claude y Apple: logotipos distribuidos por Simple Icons. Navegador: pictograma genérico de Microsoft.
+-->
+<svg viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arquitectura de incrementa-gestion sobre Azure: usuarios, identidad, frontend, cómputo en Container Apps dentro de una red privada, PostgreSQL, Blob Storage, Key Vault, registro de imágenes, entrega continua y terceros">
+<defs>
+  <marker id="m-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/></marker>
+  <marker id="m-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#107C10"/></marker>
+  <marker id="m-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D83B01"/></marker>
+  <marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#008575"/></marker>
+  <marker id="m-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5F6368"/></marker>
+  <marker id="m-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8661C5"/></marker>
+</defs>
+<rect width="1200" height="980" fill="#FFFFFF"/>
+
+<!-- título y leyenda -->
+<text x="24" y="34" class="la-titulo" fill="#202124">incrementa-gestion · arquitectura objetivo en Azure</text>
+<text x="24" y="56" class="la-sub" fill="#80868B">Brazil South (brazilsouth), salvo Static Web Apps (global) · un resource group por entorno: rg-incrementa-preprod (suscripción de David) y rg-incrementa-prod (suscripción de Incrementa)</text>
+<line x1="24" y1="80" x2="54" y2="80" stroke="#0078D4" stroke-width="2.4"/><text x="62" y="84" class="la-ley" fill="#3C4043">Petición</text>
+<line x1="134" y1="80" x2="164" y2="80" stroke="#107C10" stroke-width="2.4"/><text x="172" y="84" class="la-ley" fill="#3C4043">Login</text>
+<line x1="230" y1="80" x2="260" y2="80" stroke="#D83B01" stroke-width="2.4"/><text x="268" y="84" class="la-ley" fill="#3C4043">Datos y secretos</text>
+<line x1="392" y1="80" x2="422" y2="80" stroke="#008575" stroke-width="2.4"/><text x="430" y="84" class="la-ley" fill="#3C4043">Llamada hacia fuera</text>
+<line x1="574" y1="80" x2="604" y2="80" stroke="#5F6368" stroke-width="2.4"/><text x="612" y="84" class="la-ley" fill="#3C4043">Despliegue</text>
+<line x1="706" y1="80" x2="736" y2="80" stroke="#8661C5" stroke-width="2.4"/><text x="744" y="84" class="la-ley" fill="#3C4043">Operación manual</text>
+<image x="870" y="72" width="16" height="16" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMiIgeDE9IjguNzk4IiB5MT0iOC43MDMiIHgyPSIxNC42ODMiIHkyPSI4LjcwMyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMC4wMDEiIHN0b3AtY29sb3I9IiM3NzNhZGMiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNTUyZjk5IiAvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYiIHgxPSI1Ljc2NCIgeTE9IjMuNzc3IiB4Mj0iNS43NjQiIHkyPSIxMy43OCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2E2N2FmNCIgLz48c3RvcCBvZmZzZXQ9IjAuOTk5IiBzdG9wLWNvbG9yPSIjNzczYWRjIiAvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGlkPSJiOGEwNDg2YS01NTAxLTRkOTItYjU0MC1hNzY2YzRiM2I1NDgiPjxnPjxnPjxnPjxwYXRoIGQ9Ik0xNi45MzIsMTEuNTc4YTguNDQ4LDguNDQ4LDAsMCwxLTcuOTUsNS41OSw4LjE1LDguMTUsMCwwLDEtMi4zMy0uMzMsMi4xMzMsMi4xMzMsMCwwLDAsLjE4LS44M2MuMDEsMCwuMDMuMDEuMDQuMDFhNy40MjIsNy40MjIsMCwwLDAsMi4xMS4zLDcuNjQ2LDcuNjQ2LDAsMCwwLDYuODUtNC4yOGwuMDEtLjAxWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMy41ODIsMTQuMDY4YTIuMDI1LDIuMDI1LDAsMCwwLS42NC41Niw4LjYsOC42LDAsMCwxLTEuNjctMi40NGwxLjA0LjIzdi4yNmEuNi42LDAsMCwwLC40Ny41OWwuMTQuMDNhNi4xMzYsNi4xMzYsMCwwLDAsLjYyLjczWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTIuMzUyLjk1OGEyLjI4LDIuMjgsMCwwLDAtLjI3LjgxYy0uMDItLjAxLS4wNS0uMDItLjA3LS4wM2E3LjQ3OSw3LjQ3OSwwLDAsMC0zLjAzLS42Myw3LjY0Myw3LjY0MywwLDAsMC01LjksMi44bC0uMjkuMDZhLjYuNiwwLDAsMC0uNDguNTh2LjQ2bC0xLjAyLjE5QTguNDU0LDguNDU0LDAsMCwxLDguOTgyLjI2OCw4LjYsOC42LDAsMCwxLDEyLjM1Mi45NThaIiBmaWxsPSIjMzJiZWRkIiAvPjxwYXRoIGQ9Ik0xNi44NzIsNS43bC0xLjA5LS4zOGE2LjYsNi42LDAsMCwwLS43Mi0xLjE2Yy0uMDItLjAzLS4wNC0uMDUtLjA1LS4wN2EyLjA4MywyLjA4MywwLDAsMCwuNzItLjQ1QTcuODEsNy44MSwwLDAsMSwxNi44NzIsNS43WiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSIjZmZmIiAvPjxnPjxnIGlkPSJlOTE4ZjI4Ni01MDMyLTQ5NDItYWQyOS1lYTE3ZTZmMWNjOTAiPjxwYXRoIGQ9Ik0xLjEsNS42NjhsMS4yMS0uMjN2Ni41NWwtMS4yMy0uMjctLjk5LS4yMmEuMTExLjExMSwwLDAsMS0uMDktLjEydi01LjRhLjEyLjEyLDAsMCwxLC4wOS0uMTJaIiBmaWxsPSIjYTY3YWY0IiAvPjwvZz48Zz48ZyBpZD0iYTQ3YTk5ZGQtNGQ0Ny00YzcwLThjNDItYzVhYzI3NGNlNDk2Ij48Zz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSJ1cmwoI2IyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMikiIC8+PHBhdGggZD0iTTguNTg2LDMuMywyLjg3OCw0LjM3OGEuMTc3LjE3NywwLDAsMC0uMTQuMTc1VjEyLjY4YS4xNzcuMTc3LDAsMCwwLC4xMzcuMTc0TDguNTgxLDE0LjFhLjE3Ni4xNzYsMCwwLDAsLjIxLS4xNzRWMy40NzhBLjE3NS4xNzUsMCwwLDAsOC42MTksMy4zWiIgZmlsbD0idXJsKCNiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYpIiAvPjwvZz48L2c+PHBvbHlnb24gcG9pbnRzPSI1Ljk0OCA0LjkyMSA1Ljk0OCAxMi40ODMgNy45MzQgMTIuODE0IDcuOTM0IDQuNTY0IDUuOTQ4IDQuOTIxIiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PHBvbHlnb24gcG9pbnRzPSIzLjUwOSA1LjMyOSAzLjUwOSAxMS45NTQgNS4yMzggMTIuMzE3IDUuMjM4IDUuMDMxIDMuNTA5IDUuMzI5IiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PC9nPjwvZz48L2c+PHBhdGggZD0iTTE2LDIuMDQ4YTEuNzU1LDEuNzU1LDAsMSwxLTEuNzYtMS43NkExLjc1NiwxLjc1NiwwLDAsMSwxNiwyLjA0OFoiIGZpbGw9IiMzMmJlZGQiIC8+PGNpcmNsZSBjeD0iNC42NSIgY3k9IjE1Ljk3MyIgcj0iMS43NTkiIGZpbGw9IiMzMmJlZGQiIC8+PC9nPjxwYXRoIGQ9Ik0xOCw2LjY4OXYzLjg0NGEuMjIyLjIyMiwwLDAsMS0uMTMzLjJsLS43NjYuMzE2LTMuMDcsMS4yNjgtLjAxMSwwYS4xMjYuMTI2LDAsMCwxLS4wMzgsMCwuMS4xLDAsMCwxLS4xLS4xVjUuMjM0YS4xLjEsMCwwLDEsLjA1NC0uMDg4bDAsMCwuMDE5LDBhLjAzMS4wMzEsMCwwLDEsLjAxOSwwLC4wNTUuMDU1LDAsMCwxLC4wMzQuMDA4bC4wMTEsMCwuMDEyLDBMMTcuMDUsNi4ybC44LjI4MkEuMjEzLjIxMywwLDAsMSwxOCw2LjY4OVoiIGZpbGw9IiM3NzNhZGMiIC8+PHBhdGggZD0iTTEzLjk1OSw1LjE0bC0zLjguNzE1YS4xMTguMTE4LDAsMCwwLS4wOTMuMTE3djUuNDA5YS4xMTguMTE4LDAsMCwwLC4wOTEuMTE2bDMuOC44MzFhLjExNS4xMTUsMCwwLDAsLjEzNy0uMDkuMTA5LjEwOSwwLDAsMCwwLS4wMjZWNS4yNTZhLjExNy4xMTcsMCwwLDAtLjExNS0uMTE4QS4wODIuMDgyLDAsMCwwLDEzLjk1OSw1LjE0WiIgZmlsbD0iI2E2N2FmNCIgLz48L2c+PC9nPjwvc3ZnPg==" role="img" aria-label="Azure Container Apps — Backend"><title>Azure Container Apps — Backend</title></image><text x="892" y="84" class="la-ley" fill="#3C4043">Pieza de Azure</text>
+<image x="994" y="72" width="16" height="16" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTgiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5OCA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzczMF8yNzEyNikiPgo8cGF0aCBkPSJNNDEuNDM5NSA2OS4zODQ4QzI4LjgwNjYgNjcuODUzNSAxOS45MDYyIDU4Ljc2MTcgMTkuOTA2MiA0Ni45OTAyQzE5LjkwNjIgNDIuMjA1MSAyMS42Mjg5IDM3LjAzNzEgMjQuNSAzMy41OTE4QzIzLjI1NTkgMzAuNDMzNiAyMy40NDczIDIzLjczNDQgMjQuODgyOCAyMC45NTlDMjguNzEwOSAyMC40ODA1IDMzLjg3ODkgMjIuNDkwMiAzNi45NDE0IDI1LjI2NTZDNDAuNTc4MSAyNC4xMTcyIDQ0LjQwNjIgMjMuNTQzIDQ5LjA5NTcgMjMuNTQzQzUzLjc4NTIgMjMuNTQzIDU3LjYxMzMgMjQuMTE3MiA2MS4wNTg2IDI1LjE2OTlDNjQuMDI1NCAyMi40OTAyIDY5LjI4OTEgMjAuNDgwNSA3My4xMTcyIDIwLjk1OUM3NC40NTcgMjMuNTQzIDc0LjY0ODQgMzAuMjQyMiA3My40MDQzIDMzLjQ5NjFDNzYuNDY2OCAzNy4xMzI4IDc4LjA5MzcgNDIuMDEzNyA3OC4wOTM3IDQ2Ljk5MDJDNzguMDkzNyA1OC43NjE3IDY5LjE5MzQgNjcuNjYyMSA1Ni4zNjkxIDY5LjI4OTFDNTkuNjIzIDcxLjM5NDUgNjEuODI0MiA3NS45ODgzIDYxLjgyNDIgODEuMjUyTDYxLjgyNDIgOTEuMjA1MUM2MS44MjQyIDk0LjA3NjIgNjQuMjE2OCA5NS43MDMxIDY3LjA4NzkgOTQuNTU0N0M4NC40MTAyIDg3Ljk1MTIgOTggNzAuNjI4OSA5OCA0OS4xOTE0Qzk4IDIyLjEwNzQgNzUuOTg4MyA2LjY5NTM5ZS0wNyA0OC45MDQzIDQuMzA5ZS0wN0MyMS44MjAzIDEuOTIyNjFlLTA3IC0xLjk0NzllLTA3IDIyLjEwNzQgLTQuMzM0M2UtMDcgNDkuMTkxNEMtNi4yMDYzMWUtMDcgNzAuNDM3NSAxMy40OTQxIDg4LjA0NjkgMzEuNjc3NyA5NC42NTA0QzM0LjI2MTcgOTUuNjA3NCAzNi43NSA5My44ODQ4IDM2Ljc1IDkxLjMwMDhMMzYuNzUgODMuNjQ0NUMzNS40MTAyIDg0LjIxODggMzMuNjg3NSA4NC42MDE2IDMyLjE1NjIgODQuNjAxNkMyNS44Mzk4IDg0LjYwMTYgMjIuMTA3NCA4MS4xNTYzIDE5LjQyNzcgNzQuNzQ0MUMxOC4zNzUgNzIuMTYwMiAxNy4yMjY2IDcwLjYyODkgMTUuMDI1NCA3MC4zNDE4QzEzLjg3NyA3MC4yNDYxIDEzLjQ5NDEgNjkuNzY3NiAxMy40OTQxIDY5LjE5MzRDMTMuNDk0MSA2OC4wNDQ5IDE1LjQwODIgNjcuMTgzNiAxNy4zMjIzIDY3LjE4MzZDMjAuMDk3NyA2Ny4xODM2IDIyLjQ5MDIgNjguOTA2MyAyNC45Nzg1IDcyLjQ0NzNDMjYuODkyNiA3NS4yMjI3IDI4LjkwMjMgNzYuNDY2OCAzMS4yOTQ5IDc2LjQ2NjhDMzMuNjg3NSA3Ni40NjY4IDM1LjIxODcgNzUuNjA1NSAzNy40MTk5IDczLjQwNDNDMzkuMDQ2OSA3MS43NzczIDQwLjI5MSA3MC4zNDE4IDQxLjQzOTUgNjkuMzg0OFoiIGZpbGw9ImJsYWNrIi8+CjwvZz4KPGRlZnM+CjxjbGlwUGF0aCBpZD0iY2xpcDBfNzMwXzI3MTI2Ij4KPHJlY3Qgd2lkdGg9Ijk4IiBoZWlnaHQ9Ijk2IiBmaWxsPSJ3aGl0ZSIvPgo8L2NsaXBQYXRoPgo8L2RlZnM+Cjwvc3ZnPgo=" role="img" aria-label="GitHub"><title>GitHub</title></image><text x="1016" y="84" class="la-ley" fill="#3C4043">Tercero</text>
+<circle cx="1092" cy="80" r="8" fill="#F1F3F4" stroke="#9AA0A6" stroke-width="1.4" stroke-dasharray="3 2"/><text x="1106" y="84" class="la-ley" fill="#3C4043">Futuro</text>
+
+<!-- Usuarios -->
+<rect x="20" y="140" width="180" height="360" rx="6" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1.3"/>
+<text x="34" y="162" class="la-gt" fill="#80868B">Usuarios</text>
+<!-- Icono: Claude -->
+<image x="84" y="174" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRDk3NzU3IiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Q2xhdWRlPC90aXRsZT48cGF0aCBkPSJtNC43MTQ0IDE1Ljk1NTUgNC43MTc0LTIuNjQ3MS4wNzktLjIzMDctLjA3OS0uMTI3NWgtLjIzMDdsLS43ODkzLS4wNDg2LTIuNjk1Ni0uMDcyOS0yLjMzNzUtLjA5NzEtMi4yNjQ2LS4xMjE0LS41NzA3LS4xMjE1LS41MzQzLS43MDQyLjA1NDYtLjM1MjIuNDc5Ny0uMzIxOC42ODYuMDYwOCAxLjUxNzkuMTAzMiAyLjI3NjcuMTU3OCAxLjY1MTQuMDk3MiAyLjQ0NjguMjU1aC4zODg2bC4wNTQ2LS4xNTc5LS4xMzM2LS4wOTcxLS4xMDMyLS4wOTcyTDYuOTczIDkuODM1NmwtMi41NS0xLjY4NzktMS4zMzU2LS45NzE0LS43MjI1LS40OTE4LS4zNjQzLS40NjE0LS4xNTc4LTEuMDA3OC42NTU3LS43MjI1Ljg4MDMuMDYwNy4yMjQ2LjA2MDcuODkyNS42ODYgMS45MDY0IDEuNDc1NCAyLjQ4OTMgMS44MzM2LjM2NDMuMzAzNS4xNDU3LS4xMDMyLjAxODItLjA3MjgtLjE2NC0uMjczMy0xLjM1MzktMi40NDY3LTEuNDQ1LTIuNDg5My0uNjQzNS0xLjAzMi0uMTctLjYxOTRjLS4wNjA3LS4yNTUtLjEwMzItLjQ2NzQtLjEwMzItLjcyODVMNi4yODcuMTMzNSA2LjY5OTcgMGwuOTk1Ny4xMzM2LjQxOS4zNjQyLjYxOTIgMS40MTQ3IDEuMDAxOCAyLjIyODIgMS41NTQzIDMuMDI5Ni40NTUzLjg5ODUuMjQyOS44MzE4LjA5MS4yNTVoLjE1Nzl2LS4xNDU3bC4xMjc1LTEuNzA2LjIzNjgtMi4wOTQ3LjIzMDctMi42OTU3LjA3ODktLjc1ODkuMzc2NC0uOTEwNy43NDY4LS40OTE4LjU4MjguMjc5My40Nzk3LjY4Ni0uMDY2OC40NDMzLS4yODUzIDEuODUxNy0uNTU4NiAyLjkwMjEtLjM2NDMgMS45NDI5aC4yMTI1bC4yNDI5LS4yNDI5Ljk4MzUtMS4zMDUzIDEuNjUxNC0yLjA2NDMuNzI4Ni0uODE5Ni44NS0uOTA0Ni41NDY0LS40MzExaDEuMDMyMWwuNzU5IDEuMTI5My0uMzQgMS4xNjU3LTEuMDYyNSAxLjM0NzgtLjg4MDQgMS4xNDE0LTEuMjYyOCAxLjctLjc4OTMgMS4zNi4wNzI5LjEwOTMuMTg4Mi0uMDE4MyAyLjg1MzUtLjYwNyAxLjU0MjEtLjI3OTQgMS44Mzk2LS4zMTU3LjgzMTguMzg4Ni4wOTEuMzk0Ni0uMzI3OC44MDc1LTEuOTY3LjQ4NTctMi4zMDcyLjQ2MTQtMy40MzY0LjgxMzYtLjA0MjUuMDMwNC4wNDg2LjA2MDcgMS41NDgyLjE0NTcuNjYxOC4wMzY0aDEuNjIxbDMuMDE3NS4yMjQ3Ljc4OTIuNTIyLjQ3MzYuNjM3Ni0uMDc5LjQ4NTctMS4yMTQyLjYxOTMtMS42MzkzLS4zODg2LTMuODI1LS45MTA3LTEuMzExMy0uMzI3OWgtLjE4MjJ2LjEwOTNsMS4wOTI5IDEuMDY4NiAyLjAwMzUgMS44MDkyIDIuNTA3NSAyLjMzMTQuMTI3NS41NzY4LS4zMjE4LjQ1NTQtLjM0LS4wNDg2LTIuMjAzOS0xLjY1NzUtLjg1LS43NDY4LTEuOTI0Ni0xLjYyMWgtLjEyNzV2LjE3bC40NDMyLjY0OTYgMi4zNDM2IDMuNTIxNC4xMjE0IDEuMDgwNy0uMTcuMzUyMS0uNjA3MS4yMTI1LS42Njc5LS4xMjE0LTEuMzcyMS0xLjkyNDZMMTQuMzggMTcuOTU5bC0xLjE0MTQtMS45NDI4LS4xMzk3LjA3OS0uNjc0IDcuMjU1Mi0uMzE1Ni4zNzAzLS43Mjg2LjI3OTMtLjYwNzEtLjQ2MTQtLjMyMTgtLjc0NjguMzIxOC0xLjQ3NTMuMzg4Ni0xLjkyNDYuMzE1Ny0xLjUzLjI4NTMtMS45MDA0LjE3LS42MzE0LS4wMTIxLS4wNDI1LS4xMzk3LjAxODItMS40MzI4IDEuOTY3Mi0yLjE3OTYgMi45NDQ2LTEuNzI0MyAxLjg0NTYtLjQxMjguMTY0LS43MTY0LS4zNzA0LjA2NjctLjY2MTguNDAwOC0uNTg4OSAyLjM4Ni0zLjAzNTcgMS40Mzg5LTEuODgyLjkyOS0xLjA4NjgtLjAwNjItLjE1NzloLS4wNTQ2bC02LjMzODUgNC4xMTY0LTEuMTI5My4xNDU3LS40ODU3LS40NTU0LjA2MDgtLjc0NjcuMjMwNy0uMjQyOSAxLjkwNjQtMS4zMTE0WiIvPjwvc3ZnPg==" role="img" aria-label="Claude"><title>Claude</title></image>
+<text x="110" y="248" class="la-et" text-anchor="middle" fill="#3C4043">Claude</text>
+<text x="110" y="264" class="la-ets" text-anchor="middle" fill="#80868B">Desktop o web,</text>
+<text x="110" y="278" class="la-ets" text-anchor="middle" fill="#80868B">con el conector MCP</text>
+<!-- Icono: Navegador -->
+<image x="84" y="354" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImI4NWUyYmYwLTNhMmYtNGNjMi1hZTVmLTYwZmU1ODgxYTJhNSIgeDE9IjkiIHkxPSIxNS44MzQiIHgyPSI5IiB5Mj0iNS43ODgiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMzMmJlZGQiIC8+PHN0b3Agb2Zmc2V0PSIwLjE3NSIgc3RvcC1jb2xvcj0iIzMyY2FlYSIgLz48c3RvcCBvZmZzZXQ9IjAuNDEiIHN0b3AtY29sb3I9IiMzMmQyZjIiIC8+PHN0b3Agb2Zmc2V0PSIwLjc3NSIgc3RvcC1jb2xvcj0iIzMyZDRmNSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48dGl0bGU+TXNQb3J0YWxGeC5iYXNlLmltYWdlcy0xNTwvdGl0bGU+PGcgaWQ9ImUzZTMxMzMzLTMxZjQtNDBkOC05ODg2LWQzYTFjNThkNzY3OSI+PGc+PHBhdGggZD0iTS41LDUuNzg4aDE3YTAsMCwwLDAsMSwwLDB2OS40NzhhLjU2OC41NjgsMCwwLDEtLjU2OC41NjhIMS4wNjhBLjU2OC41NjgsMCwwLDEsLjUsMTUuMjY2VjUuNzg4QTAsMCwwLDAsMSwuNSw1Ljc4OFoiIGZpbGw9InVybCgjYjg1ZTJiZjAtM2EyZi00Y2MyLWFlNWYtNjBmZTU4ODFhMmE1KSIgLz48cGF0aCBkPSJNMS4wNzEsMi4xNjZIMTYuOTI5YS41NjguNTY4LDAsMCwxLC41NjguNTY4VjUuNzg4YTAsMCwwLDAsMSwwLDBILjVhMCwwLDAsMCwxLDAsMFYyLjczNEEuNTY4LjU2OCwwLDAsMSwxLjA3MSwyLjE2NloiIGZpbGw9IiMwMDc4ZDQiIC8+PHJlY3QgeD0iMi43ODciIHk9IjMuMjQ4IiB3aWR0aD0iMTIuNDI2IiBoZWlnaHQ9IjEuNDU5IiByeD0iMC4yODQiIGZpbGw9IiNmMmYyZjIiIC8+PC9nPjwvZz48L3N2Zz4=" role="img" aria-label="Navegador"><title>Navegador</title></image>
+<text x="110" y="428" class="la-et" text-anchor="middle" fill="#3C4043">Navegador</text>
+<text x="110" y="444" class="la-ets" text-anchor="middle" fill="#80868B">equipo de Incrementa</text>
+
+<!-- Operación -->
+<rect x="20" y="520" width="180" height="170" rx="6" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1.3"/>
+<text x="34" y="542" class="la-gt" fill="#80868B">Operación</text>
+<!-- Icono: Apple — Mac de David -->
+<image x="84" y="564" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+QXBwbGU8L3RpdGxlPjxwYXRoIGQ9Ik0xMi4xNTIgNi44OTZjLS45NDggMC0yLjQxNS0xLjA3OC0zLjk2LTEuMDQtMi4wNC4wMjctMy45MSAxLjE4My00Ljk2MSAzLjAxNC0yLjExNyAzLjY3NS0uNTQ2IDkuMTAzIDEuNTE5IDEyLjA5IDEuMDEzIDEuNDU0IDIuMjA4IDMuMDkgMy43OTIgMy4wMzkgMS41Mi0uMDY1IDIuMDktLjk4NyAzLjkzNS0uOTg3IDEuODMxIDAgMi4zNS45ODcgMy45Ni45NDggMS42MzctLjAyNiAyLjY3Ni0xLjQ4IDMuNjc2LTIuOTQ4IDEuMTU2LTEuNjg4IDEuNjM2LTMuMzI1IDEuNjYyLTMuNDE1LS4wMzktLjAxMy0zLjE4Mi0xLjIyMS0zLjIyLTQuODU3LS4wMjYtMy4wNCAyLjQ4LTQuNDk0IDIuNTk3LTQuNTU5LTEuNDI5LTIuMDktMy42MjMtMi4zMjQtNC4zOS0yLjM3Ni0yLS4xNTYtMy42NzUgMS4wOS00LjYxIDEuMDl6TTE1LjUzIDMuODNjLjg0My0xLjAxMiAxLjQtMi40MjcgMS4yNDUtMy44My0xLjIwNy4wNTItMi42NjIuODA1LTMuNTMyIDEuODE4LS43OC44OTYtMS40NTQgMi4zMzgtMS4yNzMgMy43MTQgMS4zMzguMTA0IDIuNzE1LS42ODggMy41NTktMS43MDEiLz48L3N2Zz4=" role="img" aria-label="Apple — Mac de David"><title>Apple — Mac de David</title></image>
+<text x="110" y="636" class="la-et" text-anchor="middle" fill="#3C4043">Mac de David</text>
+<text x="110" y="652" class="la-ets" text-anchor="middle" fill="#80868B">az CLI · Bicep</text>
+<text x="110" y="666" class="la-ets" text-anchor="middle" fill="#80868B">migraciones Knex</text>
+
+<!-- Azure: todo lo de esta caja vive en Azure. Entra ID es del tenant; el resto, del resource group -->
+<rect x="220" y="98" width="970" height="664" rx="10" fill="#FBFDFF" stroke="#0078D4" stroke-width="1.6"/>
+<text x="236" y="120" class="la-gt" fill="#0B5CAD">Azure</text>
+<text x="1176" y="120" class="la-ets" text-anchor="end" fill="#0B5CAD">resource group rg-incrementa-‹entorno›: todo salvo Entra ID (es del tenant)</text>
+
+<!-- Región Azure -->
+<rect x="440" y="140" width="740" height="600" rx="8" fill="#F3F8FD" stroke="#0078D4" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="456" y="162" class="la-gt" fill="#0B5CAD">Región Brazil South</text>
+
+<!-- Identidad -->
+<rect x="230" y="140" width="180" height="170" rx="6" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1.3"/>
+<text x="244" y="162" class="la-gt" fill="#80868B">Identidad · tenant</text>
+<!-- Icono: Microsoft Entra ID -->
+<image x="294" y="184" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0idXVpZC1mOGQ0ZDM5Mi03YzEyLTRiZDktYmFmZi02NmZiZjc4MTRiOTEiIGRhdGEtbmFtZT0iTGF5ZXIgMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCI+CiAgPHBhdGggZD0ibTMuODAyLDE0LjAzMmMuMzg4LjI0MiwxLjAzMy41MTEsMS43MTUuNTExLjYyMSwwLDEuMTk4LS4xOCwxLjY3Ni0uNDg3LDAsMCwuMDAxLDAsLjAwMi0uMDAxbDEuODA1LTEuMTI4djQuMDczYy0uMjg2LDAtLjU3NC0uMDc4LS44MjQtLjIzNGwtNC4zNzQtMi43MzRaIiBmaWxsPSIjMjI1MDg2Ii8+CiAgPHBhdGggZD0ibTcuODUzLDEuNTA3TC4zNTMsOS45NjdjLS41NzkuNjU0LS40MjgsMS42NDIuMzIzLDIuMTExLDAsMCwyLjc3NiwxLjczNSwzLjEyNiwxLjk1NC4zODguMjQyLDEuMDMzLjUxMSwxLjcxNS41MTEuNjIxLDAsMS4xOTgtLjE4LDEuNjc2LS40ODcsMCwwLC4wMDEsMCwuMDAyLS4wMDFsMS44MDUtMS4xMjgtNC4zNjQtMi43MjgsNC4zNjUtNC45MjRWMXMwLDAsMCwwYy0uNDI0LDAtLjg0Ny4xNjktMS4xNDcuNTA3WiIgZmlsbD0iIzZkZiIvPgogIDxwb2x5Z29uIHBvaW50cz0iNC42MzYgMTAuMTk5IDQuNjg4IDEwLjIzMSA5IDEyLjkyNyA5LjAwMSAxMi45MjcgOS4wMDEgMTIuOTI3IDkuMDAxIDUuMjc2IDkgNS4yNzUgNC42MzYgMTAuMTk5IiBmaWxsPSIjY2JmOGZmIi8+CiAgPHBhdGggZD0ibTE3LjMyNCwxMi4wNzhjLjc1MS0uNDY5LjkwMi0xLjQ1Ny4zMjMtMi4xMTFsLTQuOTIxLTUuNTUxYy0uMzk3LS4xODUtLjg0Mi0uMjkxLTEuMzEzLS4yOTEtLjkyNSwwLTEuNzUyLjM5OS0yLjMwMiwxLjAyNmwtLjEwOS4xMjNoMHM0LjM2NCw0LjkyNCw0LjM2NCw0LjkyNGgwczAsMCwwLDBsLTQuMzY1LDIuNzI4djQuMDczYy4yODcsMCwuNTczLS4wNzguODIzLS4yMzRsNy41LTQuNjg4WiIgZmlsbD0iIzA3NDc5MyIvPgogIDxwYXRoIGQ9Im05LjAwMSwxdjQuMjc1cy4xMDktLjEyMy4xMDktLjEyM2MuNTUtLjYyNywxLjM3Ny0xLjAyNiwyLjMwMi0xLjAyNi40NzIsMCwuOTE2LjEwNywxLjMxMy4yOTFsLTIuNTc5LTIuOTA5Yy0uMjk5LS4zMzgtLjcyMy0uNTA3LTEuMTQ2LS41MDdaIiBmaWxsPSIjMDI5NGU0Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSIxMy4zNjUgMTAuMTk5IDEzLjM2NSAxMC4xOTkgMTMuMzY1IDEwLjE5OSA5LjAwMSA1LjI3NiA5LjAwMSAxMi45MjYgMTMuMzY1IDEwLjE5OSIgZmlsbD0iIzk2YmNjMiIvPgo8L3N2Zz4=" role="img" aria-label="Microsoft Entra ID"><title>Microsoft Entra ID</title></image>
+<text x="320" y="258" class="la-et" text-anchor="middle" fill="#3C4043">Microsoft Entra ID</text>
+<text x="320" y="274" class="la-ets" text-anchor="middle" fill="#80868B">un tenant por entorno</text>
+<text x="320" y="288" class="la-ets" text-anchor="middle" fill="#80868B">MSAL · código + PKCE</text>
+
+<!-- Frontend: dentro del resource group, pero global (no regional) -->
+<rect x="230" y="330" width="180" height="170" rx="6" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.2" stroke-dasharray="5 3"/>
+<text x="244" y="352" class="la-gt" fill="#0B5CAD">Frontend · global</text>
+<!-- Icono: Azure Static Web Apps -->
+<image x="294" y="354" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImU2YWQ0ZGY5LTBhYjctNGI0OS05NzA2LTYyMGI0MjM4MGYwYiIgeDE9IjkiIHkxPSIxNi4yMzYiIHgyPSI5IiB5Mj0iNS41OTkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwMDViYTEiIC8+PHN0b3Agb2Zmc2V0PSIwLjc3NSIgc3RvcC1jb2xvcj0iIzAwNzhkNCIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48ZyBpZD0iZTc4ODViOWMtOTcxNC00Mjc2LWJkNDEtNTkxY2I3ZTA4NmE1Ij48cGF0aCBkPSJNMCw1LjZIMThhMCwwLDAsMCwxLDAsMFYxNS42MzVhLjYuNiwwLDAsMS0uNi42SC42YS42LjYsMCwwLDEtLjYtLjZWNS42QTAsMCwwLDAsMSwwLDUuNloiIGZpbGw9InVybCgjZTZhZDRkZjktMGFiNy00YjQ5LTk3MDYtNjIwYjQyMzgwZjBiKSIgLz48cmVjdCB4PSIxLjMwOSIgeT0iNi42NTciIHdpZHRoPSIxNS41MjciIGhlaWdodD0iOC41MTQiIHJ4PSIwLjYiIGZpbGw9IiM1ZWEwZWYiIG9wYWNpdHk9IjAuNiIgLz48cGF0aCBkPSJNLjYsMS43NjRIMTcuNGEuNi42LDAsMCwxLC42LjZWNS42YTAsMCwwLDAsMSwwLDBIMGEwLDAsMCwwLDEsMCwwVjIuMzY1QS42LjYsMCwwLDEsLjYsMS43NjRaIiBmaWxsPSIjMDA1YmExIiAvPjxwYXRoIGQ9Ik03LjEwOSwxMy4yMTdsLS4zMjEuMzJhLjE0NC4xNDQsMCwwLDEtLjIwNSwwTDQuMjU4LDExLjIwNWEuMjkuMjksMCwwLDEsMC0uNDFsLjMyMS0uMzJMNy4xMSwxMy4wMTJBLjE0NS4xNDUsMCwwLDEsNy4xMDksMTMuMjE3Wm0zLjY1MywwLC4zMjEuMzJhLjE0NC4xNDQsMCwwLDAsLjIwNSwwbDIuMzI1LTIuMzMyYS4yOS4yOSwwLDAsMCwwLS40MWwtLjMyMi0uMzItMi41MywyLjUzN0EuMTQ1LjE0NSwwLDAsMCwxMC43NjIsMTMuMjE3WiIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC44IiAvPjxwYXRoIGQ9Ik02LjgzMSw4LjQzM2wuMzIuMzIxYS4xNDQuMTQ0LDAsMCwxLDAsLjIwNUw0LjU3NiwxMS41MjdsLS4zMi0uMzIyYS4yODkuMjg5LDAsMCwxLDAtLjQxbDIuMzctMi4zNjNBLjE0NS4xNDUsMCwwLDEsNi44MzEsOC40MzNabTQuMjA3LDAtLjMyLjMyMWEuMTQ0LjE0NCwwLDAsMCwwLC4yMDVsMi41NzUsMi41NjguMzItLjMyMWEuMjkyLjI5MiwwLDAsMCwwLS40MTFsLTIuMzctMi4zNjJBLjE0NC4xNDQsMCwwLDAsMTEuMDM4LDguNDM0WiIgZmlsbD0iI2ZmZiIgLz48cGF0aCBkPSJNOC4xNTksMTQuMzYzLDcuNjQ2LDE0LjJhLjEwNS4xMDUsMCwwLDEtLjA2Ny0uMTMxTDkuNjY5LDcuNTRhLjEuMSwwLDAsMSwuMTMtLjA2N2wuNTEzLjE2NGEuMS4xLDAsMCwxLC4wNjcuMTNMOC4yODksMTQuM0EuMS4xLDAsMCwxLDguMTU5LDE0LjM2M1oiIGZpbGw9IiNmZmYiIC8+PHBhdGggZD0iTTMuMTY2LDMuODQ3YS43Ni43NiwwLDEsMS0uNzYtLjc2QS43Ni43NiwwLDAsMSwzLjE2NiwzLjg0N1pNNC44LDMuMDg3YS43Ni43NiwwLDEsMCwuNzYuNzZBLjc2Ljc2LDAsMCwwLDQuOCwzLjA4N1ptMi4zOTMsMGEuNzYuNzYsMCwxLDAsLjc2Ljc2QS43Ni43NiwwLDAsMCw3LjE5MSwzLjA4N1oiIGZpbGw9IiNmZmYiIC8+PC9nPjwvc3ZnPg==" role="img" aria-label="Azure Static Web Apps"><title>Azure Static Web Apps</title></image>
+<text x="320" y="428" class="la-et" text-anchor="middle" fill="#3C4043">Static Web Apps</text>
+<text x="320" y="444" class="la-ets" text-anchor="middle" fill="#80868B">React 19 + Vite</text>
+<text x="320" y="458" class="la-ets" text-anchor="middle" fill="#80868B">CDN global · ficha en eastus2</text>
+
+
+
+<!-- VNet -->
+<rect x="460" y="180" width="440" height="390" rx="6" fill="#FFFFFF" stroke="#8A8886" stroke-width="1.3" stroke-dasharray="6 4"/>
+<text x="474" y="200" class="la-gt" fill="#605E5C">Red privada (VNet)</text>
+<rect x="476" y="212" width="408" height="180" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.2"/>
+<text x="490" y="232" class="la-ets" fill="#0B5CAD" font-weight="600">Container Apps environment</text>
+<!-- Icono: Azure Container Apps — Backend -->
+<image x="554" y="256" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMiIgeDE9IjguNzk4IiB5MT0iOC43MDMiIHgyPSIxNC42ODMiIHkyPSI4LjcwMyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMC4wMDEiIHN0b3AtY29sb3I9IiM3NzNhZGMiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNTUyZjk5IiAvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYiIHgxPSI1Ljc2NCIgeTE9IjMuNzc3IiB4Mj0iNS43NjQiIHkyPSIxMy43OCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2E2N2FmNCIgLz48c3RvcCBvZmZzZXQ9IjAuOTk5IiBzdG9wLWNvbG9yPSIjNzczYWRjIiAvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGlkPSJiOGEwNDg2YS01NTAxLTRkOTItYjU0MC1hNzY2YzRiM2I1NDgiPjxnPjxnPjxnPjxwYXRoIGQ9Ik0xNi45MzIsMTEuNTc4YTguNDQ4LDguNDQ4LDAsMCwxLTcuOTUsNS41OSw4LjE1LDguMTUsMCwwLDEtMi4zMy0uMzMsMi4xMzMsMi4xMzMsMCwwLDAsLjE4LS44M2MuMDEsMCwuMDMuMDEuMDQuMDFhNy40MjIsNy40MjIsMCwwLDAsMi4xMS4zLDcuNjQ2LDcuNjQ2LDAsMCwwLDYuODUtNC4yOGwuMDEtLjAxWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMy41ODIsMTQuMDY4YTIuMDI1LDIuMDI1LDAsMCwwLS42NC41Niw4LjYsOC42LDAsMCwxLTEuNjctMi40NGwxLjA0LjIzdi4yNmEuNi42LDAsMCwwLC40Ny41OWwuMTQuMDNhNi4xMzYsNi4xMzYsMCwwLDAsLjYyLjczWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTIuMzUyLjk1OGEyLjI4LDIuMjgsMCwwLDAtLjI3LjgxYy0uMDItLjAxLS4wNS0uMDItLjA3LS4wM2E3LjQ3OSw3LjQ3OSwwLDAsMC0zLjAzLS42Myw3LjY0Myw3LjY0MywwLDAsMC01LjksMi44bC0uMjkuMDZhLjYuNiwwLDAsMC0uNDguNTh2LjQ2bC0xLjAyLjE5QTguNDU0LDguNDU0LDAsMCwxLDguOTgyLjI2OCw4LjYsOC42LDAsMCwxLDEyLjM1Mi45NThaIiBmaWxsPSIjMzJiZWRkIiAvPjxwYXRoIGQ9Ik0xNi44NzIsNS43bC0xLjA5LS4zOGE2LjYsNi42LDAsMCwwLS43Mi0xLjE2Yy0uMDItLjAzLS4wNC0uMDUtLjA1LS4wN2EyLjA4MywyLjA4MywwLDAsMCwuNzItLjQ1QTcuODEsNy44MSwwLDAsMSwxNi44NzIsNS43WiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSIjZmZmIiAvPjxnPjxnIGlkPSJlOTE4ZjI4Ni01MDMyLTQ5NDItYWQyOS1lYTE3ZTZmMWNjOTAiPjxwYXRoIGQ9Ik0xLjEsNS42NjhsMS4yMS0uMjN2Ni41NWwtMS4yMy0uMjctLjk5LS4yMmEuMTExLjExMSwwLDAsMS0uMDktLjEydi01LjRhLjEyLjEyLDAsMCwxLC4wOS0uMTJaIiBmaWxsPSIjYTY3YWY0IiAvPjwvZz48Zz48ZyBpZD0iYTQ3YTk5ZGQtNGQ0Ny00YzcwLThjNDItYzVhYzI3NGNlNDk2Ij48Zz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSJ1cmwoI2IyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMikiIC8+PHBhdGggZD0iTTguNTg2LDMuMywyLjg3OCw0LjM3OGEuMTc3LjE3NywwLDAsMC0uMTQuMTc1VjEyLjY4YS4xNzcuMTc3LDAsMCwwLC4xMzcuMTc0TDguNTgxLDE0LjFhLjE3Ni4xNzYsMCwwLDAsLjIxLS4xNzRWMy40NzhBLjE3NS4xNzUsMCwwLDAsOC42MTksMy4zWiIgZmlsbD0idXJsKCNiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYpIiAvPjwvZz48L2c+PHBvbHlnb24gcG9pbnRzPSI1Ljk0OCA0LjkyMSA1Ljk0OCAxMi40ODMgNy45MzQgMTIuODE0IDcuOTM0IDQuNTY0IDUuOTQ4IDQuOTIxIiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PHBvbHlnb24gcG9pbnRzPSIzLjUwOSA1LjMyOSAzLjUwOSAxMS45NTQgNS4yMzggMTIuMzE3IDUuMjM4IDUuMDMxIDMuNTA5IDUuMzI5IiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PC9nPjwvZz48L2c+PHBhdGggZD0iTTE2LDIuMDQ4YTEuNzU1LDEuNzU1LDAsMSwxLTEuNzYtMS43NkExLjc1NiwxLjc1NiwwLDAsMSwxNiwyLjA0OFoiIGZpbGw9IiMzMmJlZGQiIC8+PGNpcmNsZSBjeD0iNC42NSIgY3k9IjE1Ljk3MyIgcj0iMS43NTkiIGZpbGw9IiMzMmJlZGQiIC8+PC9nPjxwYXRoIGQ9Ik0xOCw2LjY4OXYzLjg0NGEuMjIyLjIyMiwwLDAsMS0uMTMzLjJsLS43NjYuMzE2LTMuMDcsMS4yNjgtLjAxMSwwYS4xMjYuMTI2LDAsMCwxLS4wMzgsMCwuMS4xLDAsMCwxLS4xLS4xVjUuMjM0YS4xLjEsMCwwLDEsLjA1NC0uMDg4bDAsMCwuMDE5LDBhLjAzMS4wMzEsMCwwLDEsLjAxOSwwLC4wNTUuMDU1LDAsMCwxLC4wMzQuMDA4bC4wMTEsMCwuMDEyLDBMMTcuMDUsNi4ybC44LjI4MkEuMjEzLjIxMywwLDAsMSwxOCw2LjY4OVoiIGZpbGw9IiM3NzNhZGMiIC8+PHBhdGggZD0iTTEzLjk1OSw1LjE0bC0zLjguNzE1YS4xMTguMTE4LDAsMCwwLS4wOTMuMTE3djUuNDA5YS4xMTguMTE4LDAsMCwwLC4wOTEuMTE2bDMuOC44MzFhLjExNS4xMTUsMCwwLDAsLjEzNy0uMDkuMTA5LjEwOSwwLDAsMCwwLS4wMjZWNS4yNTZhLjExNy4xMTcsMCwwLDAtLjExNS0uMTE4QS4wODIuMDgyLDAsMCwwLDEzLjk1OSw1LjE0WiIgZmlsbD0iI2E2N2FmNCIgLz48L2c+PC9nPjwvc3ZnPg==" role="img" aria-label="Azure Container Apps — Backend"><title>Azure Container Apps — Backend</title></image>
+<text x="580" y="326" class="la-et" text-anchor="middle" fill="#3C4043">Backend</text>
+<text x="580" y="342" class="la-ets" text-anchor="middle" fill="#80868B">Express 5 · id-backend</text>
+<text x="580" y="356" class="la-ets" text-anchor="middle" fill="#80868B">NODE_ENV=production</text>
+<!-- Icono: Azure Container Apps — MCP -->
+<image x="754" y="256" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMiIgeDE9IjguNzk4IiB5MT0iOC43MDMiIHgyPSIxNC42ODMiIHkyPSI4LjcwMyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMC4wMDEiIHN0b3AtY29sb3I9IiM3NzNhZGMiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNTUyZjk5IiAvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYiIHgxPSI1Ljc2NCIgeTE9IjMuNzc3IiB4Mj0iNS43NjQiIHkyPSIxMy43OCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2E2N2FmNCIgLz48c3RvcCBvZmZzZXQ9IjAuOTk5IiBzdG9wLWNvbG9yPSIjNzczYWRjIiAvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGlkPSJiOGEwNDg2YS01NTAxLTRkOTItYjU0MC1hNzY2YzRiM2I1NDgiPjxnPjxnPjxnPjxwYXRoIGQ9Ik0xNi45MzIsMTEuNTc4YTguNDQ4LDguNDQ4LDAsMCwxLTcuOTUsNS41OSw4LjE1LDguMTUsMCwwLDEtMi4zMy0uMzMsMi4xMzMsMi4xMzMsMCwwLDAsLjE4LS44M2MuMDEsMCwuMDMuMDEuMDQuMDFhNy40MjIsNy40MjIsMCwwLDAsMi4xMS4zLDcuNjQ2LDcuNjQ2LDAsMCwwLDYuODUtNC4yOGwuMDEtLjAxWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMy41ODIsMTQuMDY4YTIuMDI1LDIuMDI1LDAsMCwwLS42NC41Niw4LjYsOC42LDAsMCwxLTEuNjctMi40NGwxLjA0LjIzdi4yNmEuNi42LDAsMCwwLC40Ny41OWwuMTQuMDNhNi4xMzYsNi4xMzYsMCwwLDAsLjYyLjczWiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTIuMzUyLjk1OGEyLjI4LDIuMjgsMCwwLDAtLjI3LjgxYy0uMDItLjAxLS4wNS0uMDItLjA3LS4wM2E3LjQ3OSw3LjQ3OSwwLDAsMC0zLjAzLS42Myw3LjY0Myw3LjY0MywwLDAsMC01LjksMi44bC0uMjkuMDZhLjYuNiwwLDAsMC0uNDguNTh2LjQ2bC0xLjAyLjE5QTguNDU0LDguNDU0LDAsMCwxLDguOTgyLjI2OCw4LjYsOC42LDAsMCwxLDEyLjM1Mi45NThaIiBmaWxsPSIjMzJiZWRkIiAvPjxwYXRoIGQ9Ik0xNi44NzIsNS43bC0xLjA5LS4zOGE2LjYsNi42LDAsMCwwLS43Mi0xLjE2Yy0uMDItLjAzLS4wNC0uMDUtLjA1LS4wN2EyLjA4MywyLjA4MywwLDAsMCwuNzItLjQ1QTcuODEsNy44MSwwLDAsMSwxNi44NzIsNS43WiIgZmlsbD0iIzMyYmVkZCIgLz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSIjZmZmIiAvPjxnPjxnIGlkPSJlOTE4ZjI4Ni01MDMyLTQ5NDItYWQyOS1lYTE3ZTZmMWNjOTAiPjxwYXRoIGQ9Ik0xLjEsNS42NjhsMS4yMS0uMjN2Ni41NWwtMS4yMy0uMjctLjk5LS4yMmEuMTExLjExMSwwLDAsMS0uMDktLjEydi01LjRhLjEyLjEyLDAsMCwxLC4wOS0uMTJaIiBmaWxsPSIjYTY3YWY0IiAvPjwvZz48Zz48ZyBpZD0iYTQ3YTk5ZGQtNGQ0Ny00YzcwLThjNDItYzVhYzI3NGNlNDk2Ij48Zz48cGF0aCBkPSJNMTAuMDcyLDExLjkwOGwyLjU0LjU2TDguNjcyLDE0LjFjLS4wMiwwLS4wMy4wMS0uMDUuMDFhLjE1NC4xNTQsMCwwLDEtLjE1LS4xNVYzLjQ0OGEuMTU0LjE1NCwwLDAsMSwuMTUtLjE1LjA5LjA5LDAsMCwxLC4wNS4wMWw0LjQ2LDEuNTYtMy4wNS41N2EuNTY1LjU2NSwwLDAsMC0uNDQuNTR2NS40QS41MzcuNTM3LDAsMCwwLDEwLjA3MiwxMS45MDhaIiBmaWxsPSJ1cmwoI2IyN2YxYWQwLTdkMTEtNDI0Ny05ZGEzLTkxYmNlNjIxMWYzMikiIC8+PHBhdGggZD0iTTguNTg2LDMuMywyLjg3OCw0LjM3OGEuMTc3LjE3NywwLDAsMC0uMTQuMTc1VjEyLjY4YS4xNzcuMTc3LDAsMCwwLC4xMzcuMTc0TDguNTgxLDE0LjFhLjE3Ni4xNzYsMCwwLDAsLjIxLS4xNzRWMy40NzhBLjE3NS4xNzUsMCwwLDAsOC42MTksMy4zWiIgZmlsbD0idXJsKCNiMmY5MjExMi00Y2E5LTRiMTctYTAxOS1jOWYyNmMxYTRhOGYpIiAvPjwvZz48L2c+PHBvbHlnb24gcG9pbnRzPSI1Ljk0OCA0LjkyMSA1Ljk0OCAxMi40ODMgNy45MzQgMTIuODE0IDcuOTM0IDQuNTY0IDUuOTQ4IDQuOTIxIiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PHBvbHlnb24gcG9pbnRzPSIzLjUwOSA1LjMyOSAzLjUwOSAxMS45NTQgNS4yMzggMTIuMzE3IDUuMjM4IDUuMDMxIDMuNTA5IDUuMzI5IiBmaWxsPSIjYjc5NmY5IiBvcGFjaXR5PSIwLjUiIC8+PC9nPjwvZz48L2c+PHBhdGggZD0iTTE2LDIuMDQ4YTEuNzU1LDEuNzU1LDAsMSwxLTEuNzYtMS43NkExLjc1NiwxLjc1NiwwLDAsMSwxNiwyLjA0OFoiIGZpbGw9IiMzMmJlZGQiIC8+PGNpcmNsZSBjeD0iNC42NSIgY3k9IjE1Ljk3MyIgcj0iMS43NTkiIGZpbGw9IiMzMmJlZGQiIC8+PC9nPjxwYXRoIGQ9Ik0xOCw2LjY4OXYzLjg0NGEuMjIyLjIyMiwwLDAsMS0uMTMzLjJsLS43NjYuMzE2LTMuMDcsMS4yNjgtLjAxMSwwYS4xMjYuMTI2LDAsMCwxLS4wMzgsMCwuMS4xLDAsMCwxLS4xLS4xVjUuMjM0YS4xLjEsMCwwLDEsLjA1NC0uMDg4bDAsMCwuMDE5LDBhLjAzMS4wMzEsMCwwLDEsLjAxOSwwLC4wNTUuMDU1LDAsMCwxLC4wMzQuMDA4bC4wMTEsMCwuMDEyLDBMMTcuMDUsNi4ybC44LjI4MkEuMjEzLjIxMywwLDAsMSwxOCw2LjY4OVoiIGZpbGw9IiM3NzNhZGMiIC8+PHBhdGggZD0iTTEzLjk1OSw1LjE0bC0zLjguNzE1YS4xMTguMTE4LDAsMCwwLS4wOTMuMTE3djUuNDA5YS4xMTguMTE4LDAsMCwwLC4wOTEuMTE2bDMuOC44MzFhLjExNS4xMTUsMCwwLDAsLjEzNy0uMDkuMTA5LjEwOSwwLDAsMCwwLS4wMjZWNS4yNTZhLjExNy4xMTcsMCwwLDAtLjExNS0uMTE4QS4wODIuMDgyLDAsMCwwLDEzLjk1OSw1LjE0WiIgZmlsbD0iI2E2N2FmNCIgLz48L2c+PC9nPjwvc3ZnPg==" role="img" aria-label="Azure Container Apps — MCP"><title>Azure Container Apps — MCP</title></image>
+<text x="780" y="326" class="la-et" text-anchor="middle" fill="#3C4043">MCP</text>
+<text x="780" y="342" class="la-ets" text-anchor="middle" fill="#80868B">misma imagen · id-mcp</text>
+<text x="780" y="356" class="la-ets" text-anchor="middle" fill="#80868B">Streamable HTTP</text>
+
+<rect x="476" y="410" width="408" height="144" rx="6" fill="#FFF8F3" stroke="#D83B01" stroke-width="1.2"/>
+<text x="660" y="430" class="la-ets" fill="#A33000" font-weight="600">Subred de endpoints privados</text>
+<rect x="500" y="446" width="150" height="54" rx="4" fill="#FFFFFF" stroke="#D83B01" stroke-width="1.2"/>
+<text x="575" y="469" class="la-ets" text-anchor="middle" fill="#3C4043" font-weight="600">Endpoint privado</text>
+<text x="575" y="485" class="la-ets" text-anchor="middle" fill="#80868B">privatelink.postgres</text>
+<!-- Icono: Azure Database for PostgreSQL -->
+<image x="754" y="444" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBpZD0iZmM4OTAxMjctNzI4Yi00YWMwLWI1ZGEtODZjZGZjMTkxZTg2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEyOGRlZTIwLTRjNzEtNDZiNS1iOTU3LTgwNGM2N2RhNzI1YSIgeDE9IjIuNDQiIHkxPSIxMC42NyIgeDI9IjE1LjI3IiB5Mj0iMTAuNjciIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4xNCAtMC41KSByb3RhdGUoLTAuMDEpIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMDA1YmExIiAvPjxzdG9wIG9mZnNldD0iMC4wNyIgc3RvcC1jb2xvcj0iIzAwNjBhOSIgLz48c3RvcCBvZmZzZXQ9IjAuMzYiIHN0b3AtY29sb3I9IiMwMDcxYzgiIC8+PHN0b3Agb2Zmc2V0PSIwLjUyIiBzdG9wLWNvbG9yPSIjMDA3OGQ0IiAvPjxzdG9wIG9mZnNldD0iMC42NCIgc3RvcC1jb2xvcj0iIzAwNzRjZCIgLz48c3RvcCBvZmZzZXQ9IjAuODIiIHN0b3AtY29sb3I9IiMwMDZhYmIiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA1YmExIiAvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjx0aXRsZT5JY29uLWRhdGFiYXNlcy0xMzE8L3RpdGxlPjxwYXRoIGQ9Ik05LDUuMTRjLTMuNTQsMC02LjQxLTEtNi40MS0yLjMyVjE1LjE4YzAsMS4yNywyLjgyLDIuMyw2LjMyLDIuMzJIOWMzLjU0LDAsNi40MS0xLDYuNDEtMi4zMlYyLjgyQzE1LjQxLDQuMSwxMi41NCw1LjE0LDksNS4xNFoiIGZpbGw9InVybCgjYTI4ZGVlMjAtNGM3MS00NmI1LWI5NTctODA0YzY3ZGE3MjVhKSIgLz48cGF0aCBkPSJNMTUuNDEsMi44MmMwLDEuMjgtMi44NywyLjMyLTYuNDEsMi4zMnMtNi40MS0xLTYuNDEtMi4zMlM1LjQ2LjUsOSwuNXM2LjQxLDEsNi40MSwyLjMyIiBmaWxsPSIjZThlOGU4IiAvPjxwYXRoIGQ9Ik0xMy45MSwyLjYzYzAsLjgyLTIuMiwxLjQ4LTQuOTEsMS40OFM0LjA4LDMuNDUsNC4wOCwyLjY0LDYuMjgsMS4xNiw5LDEuMTZzNC45MS42Niw0LjkxLDEuNDciIGZpbGw9IiM1MGU2ZmYiIC8+PHBhdGggZD0iTTksM2ExMS42NSwxMS42NSwwLDAsMC0zLjkuNTdBMTEuNTMsMTEuNTMsMCwwLDAsOSw0LjExYTExLjQ3LDExLjQ3LDAsMCwwLDMuODktLjU4QTExLjkzLDExLjkzLDAsMCwwLDksM1oiIGZpbGw9IiMxOThhYjMiIC8+PHBhdGggZD0iTTEyLDljMCwuMDgsMCwuMjQsMCwuNDJhNS4xMiw1LjEyLDAsMCwwLS4wOC42M2MwLC4xMiwwLC4zLjA1LjQ2czAsLjI3LDAsLjM2YTEuNjgsMS42OCwwLDAsMS0uMjUuODYuNDMuNDMsMCwwLDAsMCwuMDdsLjEuMTJhMTAuNTUsMTAuNTUsMCwwLDAsMS4wNi0yLjM4aDBjLjI4LS45NS4zMS0xLjYzLjA5LTEuOTJhMi41OCwyLjU4LDAsMCwwLTIuNjgtLjg2LDMuMjksMy4yOSwwLDAsMSwuOTEuNjdBMi4yOCwyLjI4LDAsMCwxLDEyLDlabS0uMzEuMDhhMS4xNSwxLjE1LDAsMCwwLS43OS4wOWMtLjI5LjE4LS4yLjU1LDAsMWE3Ljc3LDcuNzcsMCwwLDAsLjM1Ljg1bC4wOS4xNmgwYy4wNS4wOC4wOC4xNS4xMS4ybC4wOC4xM2ExLjI4LDEuMjgsMCwwLDAsLjE4LS42NSwyLjg2LDIuODYsMCwwLDAsMC0uMzNjMC0uMTcsMC0uMzYtLjA1LS40OWE2LjEsNi4xLDAsMCwxLC4wOC0uNjlDMTEuNzEsOS4yNCwxMS43Miw5LjEzLDExLjczLDkuMDVabS0uMy40MWEuNC40LDAsMCwxLS4xOC4xaDBhLjMzLjMzLDAsMCwxLS4xNCwwQS4yMy4yMywwLDAsMSwxMSw5LjRoMGMwLS4wNy4xMS0uMTMuMjQtLjE1aC4xOXMuMDksMCwuMDkuMDhBLjIuMiwwLDAsMSwxMS40Myw5LjQ2Wm0tNC42OS44OWMwLS4wNywwLS4xMywwLS4xN2ExLDEsMCwwLDAsMC0uMTcsNS41NSw1LjU1LDAsMCwxLDAtMUE1LjIyLDUuMjIsMCwwLDEsNyw3Ljk0LDIuNDEsMi40MSwwLDAsMSw3LjU4LDcsNC43OCw0Ljc4LDAsMCwwLDYuMjMsNi44YTEuODcsMS44NywwLDAsMC0xLjEuM0EyLDIsMCwwLDAsNC41LDguOTIsMTIuMjcsMTIuMjcsMCwwLDAsNSwxMS4xNmMuMzQsMS4xNC43MywxLjg0LDEuMDcsMS45NWgwYy4xNS4wNS4zMSwwLC40Ny0uMjEuMjgtLjM0LjU0LS42My42OS0uOEExLjg4LDEuODgsMCwwLDEsNi43NCwxMC4zNVptLjI2LjRhMi4xOCwyLjE4LDAsMCwwLC4wNi41NiwxLjUsMS41LDAsMCwwLC4yNi40NCwxLjA3LDEuMDcsMCwwLDAsLjM1LjI1LDEuMDksMS4wOSwwLDAsMCwuMzkuMDhjMC0uMTcuMTQtLjM4LjIzLS42YTQuMzUsNC4zNSwwLDAsMCwuMjEtLjU5LDYuNjEsNi42MSwwLDAsMCwwLTEuMTFjMC0uMDksMC0uMTktLjA2LS4zYS40NS40NSwwLDAsMC0uMTItLjI3bDAsMEEuNjYuNjYsMCwwLDAsOCw5LjA4SDcuOGExLjU2LDEuNTYsMCwwLDAtLjQ4LjE0QTIsMiwwLDAsMCw3LDkuNDF2LjExYzAsLjIsMCwuNDEsMCwuNjF2MGEuODYuODYsMCwwLDEsMCwuMTVsMCwuMzlIN1ptLjY2LTEuMzQsMCwwYS40Ni40NiwwLDAsMSwuMjgsMCwuNi42LDAsMCwxLC4xOS4wNmMuMDksMCwuMS4xMS4wOS4xNGgwYS4zNy4zNywwLDAsMS0uMTIuMTNBLjMuMywwLDAsMSw4LDkuNzNoMGEuMzQuMzQsMCwwLDEtLjI4LS4yOFptLjc0LDNhLjIzLjIzLDAsMCwwLS4xMy4wNmwtLjE0LjE3Yy0uMTcuMjEtLjI0LjI4LS43My4zOGEuNTIuNTIsMCwwLDAtLjI2LjEuNTguNTgsMCwwLDAsLjI0LjExLDEuMTgsMS4xOCwwLDAsMCwuNzIsMEExLjcsMS43LDAsMCwwLDguNDUsMTNhLjYxLjYxLDAsMCwwLC4yLS4zMS4zNi4zNiwwLDAsMC0uMS0uMjhBLjE1LjE1LDAsMCwwLDguNCwxMi4zOVptNC42MSwwYTEuNjMsMS42MywwLDAsMS0xLjEzLDAsLjIyLjIyLDAsMCwwLS4xNCwwLC4zLjMsMCwwLDAtLjE3LjE0LDEuMDksMS4wOSwwLDAsMCwwLC4zMSwxLjgsMS44LDAsMCwwLDEuMS0uMSwxLjM2LDEuMzYsMCwwLDAsLjQ4LS4zNFptLTIuNC0yLjE0Yy0uMTQtLjQxLS4zNC0xLC4xOC0xLjM2YTEuMzUsMS4zNSwwLDAsMSwuODktLjE1QTMuMTgsMy4xOCwwLDAsMCwxMSw3LjY0bC0uMS0uMS0uMDYtLjA2aDBhLjM0LjM0LDAsMCwwLS4wNi0uMDZsMCwwLDAsMEEyLjM0LDIuMzQsMCwwLDAsMTAuMTEsNywyLjYzLDIuNjMsMCwwLDAsOSw2Ljc4YTEuNTIsMS41MiwwLDAsMC0uNy4xMUExLjc3LDEuNzcsMCwwLDAsOCw3YTIuMSwyLjEsMCwwLDAtLjc0LDEsNS44NCw1Ljg0LDAsMCwwLS4yMSwxLDEuNjYsMS42NiwwLDAsMSwxLS4yMy44NC44NCwwLDAsMSwuNzcuOTEsNy4yNiw3LjI2LDAsMCwxLDAsMS4yNywzLjg3LDMuODcsMCwwLDEtLjIzLjYzYy0uMDYuMTctLjE0LjM1LS4xOC40OWEuNS41LDAsMCwxLC4zOC4xNC42Ni42NiwwLDAsMSwuMTkuNTNIOWMwLC4wOCwwLC4xNiwwLC4yNGE2LjU1LDYuNTUsMCwwLDAsLjI0LDIuNDQuNTQuNTQsMCwwLDAsLjI0LjIxLjYuNiwwLDAsMCwuMzEuMSwxLjMsMS4zLDAsMCwwLDEtLjM0LDEuMDUsMS4wNSwwLDAsMCwuMjktLjY2Yy4wNy0uNDUuMjItMS43LjI0LTJoMGEuNzIuNzIsMCwwLDEsLjA5LS40NC42My42MywwLDAsMSwuMjctLjI0QTUuMzYsNS4zNiwwLDAsMSwxMC42MSwxMC4yNFoiIGZpbGw9IiNmMmYyZjIiIC8+PC9zdmc+" role="img" aria-label="Azure Database for PostgreSQL"><title>Azure Database for PostgreSQL</title></image>
+<text x="780" y="514" class="la-et" text-anchor="middle" fill="#3C4043">PostgreSQL 16</text>
+<text x="780" y="530" class="la-ets" text-anchor="middle" fill="#80868B">Flexible Server · TLS</text>
+<text x="780" y="544" class="la-ets" text-anchor="middle" fill="#80868B">firewall: solo IP del Mac</text>
+
+<!-- columna derecha -->
+<rect x="920" y="180" width="240" height="170" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Azure Blob Storage -->
+<image x="1016" y="198" width="48" height="48" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImE5YzYyMzA3LTFjZDAtNDAwYy05MTFiLTE3ZWM2YTkxMTBjZSIgeDE9IjkiIHkxPSIxNS44MzQiIHgyPSI5IiB5Mj0iNS43ODgiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMzMmJlZGQiIC8+PHN0b3Agb2Zmc2V0PSIwLjc3NSIgc3RvcC1jb2xvcj0iIzMyZDRmNSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48dGl0bGU+TXNQb3J0YWxGeC5iYXNlLmltYWdlcy03PC90aXRsZT48ZyBpZD0iZjMxZDIxNGUtZjA5ZS00OWUzLWIzZDItN2M1ZDU1NjgyZDA5Ij48Zz48cGF0aCBkPSJNLjUsNS43ODhoMTdhMCwwLDAsMCwxLDAsMHY5LjQ3OGEuNTY4LjU2OCwwLDAsMS0uNTY4LjU2OEgxLjA2OEEuNTY4LjU2OCwwLDAsMSwuNSwxNS4yNjZWNS43ODhBMCwwLDAsMCwxLC41LDUuNzg4WiIgZmlsbD0idXJsKCNhOWM2MjMwNy0xY2QwLTQwMGMtOTExYi0xN2VjNmE5MTEwY2UpIiAvPjxwYXRoIGQ9Ik0xLjA3MSwyLjE2NkgxNi45MjlhLjU2OC41NjgsMCwwLDEsLjU2OC41NjhWNS43ODhhMCwwLDAsMCwxLDAsMEguNWEwLDAsMCwwLDEsMCwwVjIuNzM0QS41NjguNTY4LDAsMCwxLDEuMDcxLDIuMTY2WiIgZmlsbD0iIzAwNzhkNCIgLz48cmVjdCB4PSIyLjMyOCIgeT0iNy4wNDkiIHdpZHRoPSI2LjI4MSIgaGVpZ2h0PSIzLjQwOCIgcng9IjAuMjgzIiBmaWxsPSIjMDA3OGQ0IiAvPjxyZWN0IHg9IjkuMzM2IiB5PSI3LjA0OSIgd2lkdGg9IjYuMjgxIiBoZWlnaHQ9IjMuNDA4IiByeD0iMC4yODMiIGZpbGw9IiNmZmYiIC8+PHJlY3QgeD0iMi4yOTYiIHk9IjExLjEyOCIgd2lkdGg9IjYuMjgxIiBoZWlnaHQ9IjMuNDA4IiByeD0iMC4yODMiIGZpbGw9IiMwMDc4ZDQiIC8+PHJlY3QgeD0iOS4zMDQiIHk9IjExLjEyOCIgd2lkdGg9IjYuMjgxIiBoZWlnaHQ9IjMuNDA4IiByeD0iMC4yODMiIGZpbGw9IiMwMDc4ZDQiIC8+PC9nPjwvZz48L3N2Zz4=" role="img" aria-label="Azure Blob Storage"><title>Azure Blob Storage</title></image>
+<text x="1040" y="266" class="la-et" text-anchor="middle" fill="#3C4043">Blob Storage</text>
+<text x="1040" y="283" class="la-ets" text-anchor="middle" fill="#80868B">documentos: borradores,</text>
+<text x="1040" y="297" class="la-ets" text-anchor="middle" fill="#80868B">rúbricas y avatares</text>
+<text x="1040" y="314" class="la-ets" text-anchor="middle" fill="#A33000" font-weight="600">firmados: WORM 5 años</text>
+<text x="1040" y="331" class="la-ets" text-anchor="middle" fill="#80868B">soft delete · versionado · SAS</text>
+
+<rect x="920" y="370" width="240" height="110" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Azure Key Vault -->
+<image x="940" y="403" width="44" height="44" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBpZD0iYmM5MzE2OWEtMjRjNC00Njg2LTlmMzctYzdlNGY1M2IzZDM0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImZiMTE0YzkzLTdjMTYtNDU0MC04OTlhLTA3OTYwNDE2MjllNiIgY3g9IjkiIGN5PSI5IiByPSI4LjUiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAuMTgiIHN0b3AtY29sb3I9IiM1ZWEwZWYiIC8+PHN0b3Agb2Zmc2V0PSIwLjU2IiBzdG9wLWNvbG9yPSIjNWM5ZmVlIiAvPjxzdG9wIG9mZnNldD0iMC42OSIgc3RvcC1jb2xvcj0iIzU1OWNlZCIgLz48c3RvcCBvZmZzZXQ9IjAuNzgiIHN0b3AtY29sb3I9IiM0YTk3ZTkiIC8+PHN0b3Agb2Zmc2V0PSIwLjg2IiBzdG9wLWNvbG9yPSIjMzk5MGU0IiAvPjxzdG9wIG9mZnNldD0iMC45MyIgc3RvcC1jb2xvcj0iIzIzODdkZSIgLz48c3RvcCBvZmZzZXQ9IjAuOTkiIHN0b3AtY29sb3I9IiMwODdiZDYiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA3OGQ0IiAvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJlYzQ3OGJkMy01YjM4LTRlN2YtYjY2MS0xMWYzNTU1NzhiZmYiIGN4PSIzOC45NSIgY3k9IjE4Mi4wNyIgcj0iOS44OCIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgtMjguNzEgLTE2My4yNCkgc2NhbGUoMC45NCAwLjk0KSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMC4yNyIgc3RvcC1jb2xvcj0iI2ZmZDcwZiIgLz48c3RvcCBvZmZzZXQ9IjAuNDkiIHN0b3AtY29sb3I9IiNmZmNiMTIiIC8+PHN0b3Agb2Zmc2V0PSIwLjg4IiBzdG9wLWNvbG9yPSIjZmVhYzE5IiAvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZlYTExYiIgLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48dGl0bGU+SWNvbi1zZWN1cml0eS0yNDU8L3RpdGxlPjxwYXRoIGlkPSJhYWNmODMxMS1hMzE3LTQwMGYtYjYxMy03NGJkMDBkYTVjZTMiIGQ9Ik05LC41QTguNSw4LjUsMCwxLDAsMTcuNSw5LDguNTEsOC41MSwwLDAsMCw5LC41Wk05LDE2LjM0QTcuMzQsNy4zNCwwLDEsMSwxNi4zNCw5LDcuMzQsNy4zNCwwLDAsMSw5LDE2LjM0WiIgZmlsbD0idXJsKCNmYjExNGM5My03YzE2LTQ1NDAtODk5YS0wNzk2MDQxNjI5ZTYpIiAvPjxjaXJjbGUgY3g9IjkiIGN5PSI5IiByPSI3LjM0IiBmaWxsPSIjZmZmIiAvPjxnPjxwYXRoIGlkPSJiZDk4M2M0MS1kYjczLTQwZWMtYTRmNC1kYTEyMTNmYzk5MjQiIGQ9Ik0xMy40NCw3LjMzYTEuODQsMS44NCwwLDAsMCwwLTIuNTloMEwxMC4yOSwxLjU4YTEuODMsMS44MywwLDAsMC0yLjU4LDBoMEw0LjU2LDQuNzRhMS44NCwxLjg0LDAsMCwwLDAsMi41OUw3LjE4LDEwYS41MS41MSwwLDAsMSwuMTUuMzZ2NC44OGEuNjMuNjMsMCwwLDAsLjE4LjQ0bDEuMiwxLjJhLjQxLjQxLDAsMCwwLC41OCwwbDEuMTYtMS4xNmgwbC42OC0uNjhhLjI1LjI1LDAsMCwwLDAtLjM0bC0uNDktLjQ5YS4yNy4yNywwLDAsMSwwLS4zN2wuNDktLjQ5YS4yNS4yNSwwLDAsMCwwLS4zNGwtLjQ5LS40OWEuMjcuMjcsMCwwLDEsMC0uMzdsLjQ5LS40OWEuMjUuMjUsMCwwLDAsMC0uMzRsLS42OC0uNjl2LS4yNVpNOSwyLjM1QTEsMSwwLDAsMSw5LDQuNDIsMSwxLDAsMSwxLDksMi4zNVoiIGZpbGw9InVybCgjZWM0NzhiZDMtNWIzOC00ZTdmLWI2NjEtMTFmMzU1NTc4YmZmKSIgLz48cGF0aCBpZD0iYWQyZTdlNDQtOWJmZC00Nzc1LThiZjQtOGVmMjZhNTQ0OTIxIiBkPSJNOC4xOCwxNS4zaDBhLjIzLjIzLDAsMCwwLC4zOC0uMTd2LTRhLjI0LjI0LDAsMCwwLS4xMS0uMmgwYS4yMi4yMiwwLDAsMC0uMzQuMnY0QS4yOC4yOCwwLDAsMCw4LjE4LDE1LjNaIiBmaWxsPSIjZmY5MzAwIiBvcGFjaXR5PSIwLjc1IiAvPjxyZWN0IGlkPSJhOTk2ZmJmZi0zOTM2LTRiMjQtYjQwNy0zNjkzMzZjMTQzYmEiIHg9IjYuNDgiIHk9IjUuNzkiIHdpZHRoPSI1LjE3IiBoZWlnaHQ9IjAuNjEiIHJ4PSIwLjI4IiBmaWxsPSIjZmY5MzAwIiBvcGFjaXR5PSIwLjc1IiAvPjxyZWN0IGlkPSJiYjEyZDMxYy0zMzUyLTRhMTgtODdkZC1hMTY5YTRhODcyMWQiIHg9IjYuNDgiIHk9IjYuNzgiIHdpZHRoPSI1LjE3IiBoZWlnaHQ9IjAuNjEiIHJ4PSIwLjI4IiBmaWxsPSIjZmY5MzAwIiBvcGFjaXR5PSIwLjc1IiAvPjwvZz48L3N2Zz4=" role="img" aria-label="Azure Key Vault"><title>Azure Key Vault</title></image>
+<text x="994" y="408" class="la-et" fill="#3C4043">Key Vault</text>
+<text x="994" y="425" class="la-ets" fill="#80868B">DATABASE-URL · RESEND</text>
+<text x="994" y="440" class="la-ets" fill="#80868B">ANTHROPIC · FIRME</text>
+<text x="994" y="455" class="la-ets" fill="#80868B">valores cargados a mano</text>
+
+<rect x="920" y="500" width="240" height="70" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Managed Identities -->
+<image x="942" y="515" width="40" height="40" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBpZD0iZjgwN2NkZGUtMThmMi00NTc0LWJhMTQtZjBiMWVlZjk0YTRhIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImJiNjdiMTU0LWFmOGYtNGE1My1hOWNlLWFhMDQ2YjkzOThlOSIgeDE9IjEzLjE4IiB5MT0iMTMuMDEiIHgyPSI4LjYzIiB5Mj0iNC4zOCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzE5ODhkOSIgLz48c3RvcCBvZmZzZXQ9IjAuOSIgc3RvcC1jb2xvcj0iIzU0YWVmMCIgLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iYTQ3ZDcxMzgtMDg0YS00NzFkLThkNjMtNzQ0ZTc1YjllOGEzIiB4MT0iMTEuMjIiIHkxPSIxMC41IiB4Mj0iMTQuMzciIHkyPSIxNS45MyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMC4xIiBzdG9wLWNvbG9yPSIjNTRhZWYwIiAvPjxzdG9wIG9mZnNldD0iMC4yOSIgc3RvcC1jb2xvcj0iIzRmYWJlZSIgLz48c3RvcCBvZmZzZXQ9IjAuNTEiIHN0b3AtY29sb3I9IiM0MWEyZTkiIC8+PHN0b3Agb2Zmc2V0PSIwLjc0IiBzdG9wLWNvbG9yPSIjMmE5M2UwIiAvPjxzdG9wIG9mZnNldD0iMC44OCIgc3RvcC1jb2xvcj0iIzE5ODhkOSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48dGl0bGU+SWNvbi1pZGVudGl0eS0yMjc8L3RpdGxlPjxnPjxwb2x5Z29uIHBvaW50cz0iMS4xNSAxMC4yMiA4LjkzIDE1LjI3IDE2Ljg1IDEwLjIxIDE3Ljg1IDExLjM2IDguOTMgMTcuMTEgMC4xNSAxMS4zNyAxLjE1IDEwLjIyIiBmaWxsPSIjNTBlNmZmIiAvPjxwb2x5Z29uIHBvaW50cz0iMS43MyA5LjU4IDguOTMgMSAxNi4yOCA5LjU5IDguOTMgMTQuMjMgMS43MyA5LjU4IiBmaWxsPSIjZmZmIiAvPjxwb2x5Z29uIHBvaW50cz0iOC45MyAxIDguOTMgMTQuMjMgMS43MyA5LjU4IDguOTMgMSIgZmlsbD0iIzUwZTZmZiIgLz48cG9seWdvbiBwb2ludHM9IjguOTMgMSA4LjkzIDE0LjIzIDE2LjI4IDkuNTkgOC45MyAxIiBmaWxsPSJ1cmwoI2JiNjdiMTU0LWFmOGYtNGE1My1hOWNlLWFhMDQ2YjkzOThlOSkiIC8+PHBvbHlnb24gcG9pbnRzPSI4LjkzIDcuODMgMTYuMjggOS41OSA4LjkzIDE0LjIzIDguOTMgNy44MyIgZmlsbD0iIzUzYjFlMCIgLz48cG9seWdvbiBwb2ludHM9IjguOTMgMTQuMjMgMS43MyA5LjU4IDguOTMgNy44MyA4LjkzIDE0LjIzIiBmaWxsPSIjOWNlYmZmIiAvPjxwb2x5Z29uIHBvaW50cz0iOC45MyAxNy4xMSAxNy44NSAxMS4zNiAxNi44NSAxMC4yMSA4LjkzIDE1LjI3IDguOTMgMTcuMTEiIGZpbGw9InVybCgjYTQ3ZDcxMzgtMDg0YS00NzFkLThkNjMtNzQ0ZTc1YjllOGEzKSIgLz48Zz48cGF0aCBpZD0iZTE4OWE2MWYtNjMxYS00MTIyLWJiMmItMDc5ZTg2MDA0ZDk2IiBkPSJNMTYuMzIsMTEuODhhMS4xNiwxLjE2LDAsMCwwLDAtMS42NWgwbC0yLTJhMS4xNiwxLjE2LDAsMCwwLTEuNjQsMGgwbC0yLDJhMS4xOCwxLjE4LDAsMCwwLDAsMS42NWwxLjY3LDEuNjdhLjMyLjMyLDAsMCwxLC4wOS4yM3YzLjFhLjM2LjM2LDAsMCwwLC4xMi4yOGwuNzYuNzZhLjI1LjI1LDAsMCwwLC4zNywwbC43My0uNzNoMGwuNDQtLjQ0YS4xNS4xNSwwLDAsMCwwLS4yMWwtLjMxLS4zMWEuMTYuMTYsMCwwLDEsMC0uMjRsLjMxLS4zMWEuMTYuMTYsMCwwLDAsMC0uMjJsLS4zMS0uMzFhLjE1LjE1LDAsMCwxLDAtLjIzbC4zMS0uMzJhLjE1LjE1LDAsMCwwLDAtLjIxbC0uNDQtLjQ0di0uMTZaTTEzLjUsOC43MWEuNjYuNjYsMCwxLDEtLjY2LjY2LjY2LjY2LDAsMCwxLC42Ni0uNjZaIiBmaWxsPSIjZmZjYTAwIiAvPjxwYXRoIGlkPSJmYjcwMzNlZS00NjUwLTQ4ODYtODBjNy1lZGRmNjI1NjBmODUiIGQ9Ik0xMywxN2gwYS4xNC4xNCwwLDAsMCwuMjQtLjExVjE0LjMzYS4xNi4xNiwwLDAsMC0uMDYtLjEzaDBhLjE0LjE0LDAsMCwwLS4yMi4xM3YyLjUxQS4xNS4xNSwwLDAsMCwxMywxN1oiIGZpbGw9IiNmZjkzMDAiIG9wYWNpdHk9IjAuNzUiIC8+PHJlY3QgaWQ9ImIxNjZiOGMyLWI5ZWUtNGMzZC1iZjdhLTc3YmQ1Y2UwNTcwYiIgeD0iMTEuOSIgeT0iMTAuOSIgd2lkdGg9IjMuMjkiIGhlaWdodD0iMC4zOSIgcng9IjAuMTgiIGZpbGw9IiNmZjkzMDAiIG9wYWNpdHk9IjAuNzUiIC8+PHJlY3QgaWQ9ImJhZjQzN2ZlLTM0ODMtNGEyNS05NGJhLTFlODRhNjRjZDJlYiIgeD0iMTEuOSIgeT0iMTEuNTMiIHdpZHRoPSIzLjI5IiBoZWlnaHQ9IjAuMzkiIHJ4PSIwLjE4IiBmaWxsPSIjZmY5MzAwIiBvcGFjaXR5PSIwLjc1IiAvPjwvZz48L2c+PC9zdmc+" role="img" aria-label="Managed Identities"><title>Managed Identities</title></image>
+<text x="994" y="530" class="la-et" fill="#3C4043">Managed identities</text>
+<text x="994" y="547" class="la-ets" fill="#80868B">id-backend · id-mcp</text>
+
+<!-- fila inferior -->
+<rect x="460" y="605" width="200" height="125" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Azure Container Registry -->
+<image x="478" y="628" width="44" height="44" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBpZD0iZTlmN2JhNzMtNTZiOC00ODY0LTk2ZmYtZGNlODBiZWY3MjlhIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImJkZjI3ZGM2LTAyNWMtNDgwNS04YmZkLTNhMDVkZWZkM2ZiZCIgeDE9IjguNjM3IiB5MT0iLTEuOTkxIiB4Mj0iOC42MzciIHkyPSIxNi43MzkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM1ZWEwZWYiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA3OGQ0IiAvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJmY2Q2YzZjNy1lMmViLTRhMzItYjkxNC0zYTg0ODU1ODVhMWIiIHgxPSIxMi45NiIgeTE9IjguNTYxIiB4Mj0iMTIuOTYiIHkyPSI2LjE0MSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAtMSwgMCwgMjApIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMzMzMTMyIiAvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzViNWE1YyIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cGF0aCBkPSJNNy40Myw4LjE3OGwyLjU4OS0xLjU3Myw3LjI1NSwyLjczMUEzLjY2NCwzLjY2NCwwLDAsMCwxNi4yMyw3LjQ5bC0uMDEtLjA1QTQuMTk0LDQuMTk0LDAsMCwwLDE0LDYuMzJhNC45MSw0LjkxLDAsMCwwLTUuMS00LjdBNS4wNzEsNS4wNzEsMCwwLDAsNC4wNiw0LjkxLDQuNjIxLDQuNjIxLDAsMCwwLDAsOS4zOWE0LjczLDQuNzMsMCwwLDAsNC44OSw0LjU0SDcuNDNaIiBmaWxsPSJ1cmwoI2JkZjI3ZGM2LTAyNWMtNDgwNS04YmZkLTNhMDVkZWZkM2ZiZCkiIC8+PHBvbHlnb24gcG9pbnRzPSIxMC4wNyA3LjE1OSAxMC4wOCAxMS40MzkgMTcuOTkgMTMuMTE5IDE3Ljk5IDEwLjEzOSAxMC4wNyA3LjE1OSIgZmlsbD0iIzc2NzY3NiIgLz48cG9seWxpbmUgcG9pbnRzPSIxMC4wNyA3LjE1OSA3LjkzIDguNDU5IDcuOTMgMTIuNDM5IDEwLjA4IDExLjQzOSIgZmlsbD0iIzk5OSIgLz48cG9seWdvbiBwb2ludHM9IjEzLjY4IDExLjQ5OSAxNC40IDExLjY5OSAxNC40IDkuMzY5IDEzLjY4IDkuMTE5IDEzLjY4IDExLjQ5OSIgZmlsbD0iI2EzYTNhMyIgLz48cG9seWdvbiBwb2ludHM9IjEyLjk2IDguODg5IDEyLjI0IDguNjI5IDEyLjI0IDExLjExOSAxMi45NiAxMS4zMTkgMTIuOTYgOC44ODkiIGZpbGw9IiNhM2EzYTMiIC8+PHBvbHlnb24gcG9pbnRzPSIxNS4xMiAxMS44ODkgMTUuODIgMTIuMDc5IDE1Ljg0IDkuODU5IDE1LjEyIDkuNjE5IDE1LjEyIDExLjg4OSIgZmlsbD0iI2EzYTNhMyIgLz48cG9seWdvbiBwb2ludHM9IjEwLjgxIDEwLjc0OSAxMS41MyAxMC45MjkgMTEuNTMgOC4zOTkgMTAuODEgOC4xNTkgMTAuODEgMTAuNzQ5IiBmaWxsPSIjYTNhM2EzIiAvPjxwb2x5Z29uIHBvaW50cz0iMTcuMjcgMTAuMzQ5IDE2LjU1IDEwLjA5OSAxNi41NSAxMi4yNjkgMTcuMjcgMTIuNDY5IDE3LjI3IDEwLjM0OSIgZmlsbD0iI2EzYTNhMyIgLz48cGF0aCBpZD0iZWYwZDFiNTQtYTFlNy00Y2I5LWE0ZTUtOGE4NTE4ZTdjMTI3IiBkPSJNOC42NiwxMS4zNjlsLS4zNi4yMVY4Ljc0OWwuMzYtLjE5Wm0uNzEtMy4yMkw5LDguMzg5djIuNzVsLjM3LS4yWiIgZmlsbD0iI2IzYjNiMyIgLz48cG9seWdvbiBwb2ludHM9IjE3Ljk5IDEzLjExOSAxNS44MyAxMy44NTkgNy45MyAxMi40MzkgMTAuMDggMTEuNDM5IDE3Ljk5IDEzLjExOSIgZmlsbD0idXJsKCNmY2Q2YzZjNy1lMmViLTRhMzItYjkxNC0zYTg0ODU1ODVhMWIpIiAvPjxwb2x5Z29uIHBvaW50cz0iMTcuOTkgMTYuMTY5IDEwLjA0IDE3LjY3OSAxMC4wOCAxMi4wODkgMTcuOTkgMTMuNTU5IDE3Ljk5IDE2LjE2OSIgZmlsbD0iIzc2NzY3NiIgLz48cG9seWdvbiBwb2ludHM9IjEwLjgxIDE2Ljc1OSAxMC44MSAxMy4yMDkgMTEuNTMgMTMuMjk5IDExLjUzIDE2LjYzOSAxMC44MSAxNi43NTkiIGZpbGw9IiNhM2EzYTMiIC8+PHBvbHlnb24gcG9pbnRzPSIxMi45NiAxNi4zOTkgMTIuMjQgMTYuNTI5IDEyLjI0IDEzLjM4OSAxMi45NiAxMy40OTkgMTIuOTYgMTYuMzk5IDEyLjk2IDE2LjM5OSIgZmlsbD0iI2EzYTNhMyIgLz48cG9seWdvbiBwb2ludHM9IjEzLjY4IDE2LjI4OSAxMy42OCAxMy41NjkgMTQuNCAxMy42NTkgMTQuNCAxNi4xNTkgMTMuNjggMTYuMjg5IiBmaWxsPSIjYTNhM2EzIiAvPjxwb2x5Z29uIHBvaW50cz0iMTUuODMgMTUuOTA5IDE1LjEyIDE2LjAzOSAxNS4xMiAxMy43NDkgMTUuODMgMTMuODU5IDE1LjgzIDE1LjkwOSIgZmlsbD0iI2EzYTNhMyIgLz48cG9seWdvbiBwb2ludHM9IjE3LjI5IDE1LjY3OSAxNi41NSAxNS44MDkgMTYuNTUgMTMuOTI5IDE3LjI0IDE0LjAxOSAxNy4yOSAxNS42NzkiIGZpbGw9IiNhM2EzYTMiIC8+PHBhdGggaWQ9ImI5ZjI1ZWI0LTRjODgtNDVjMi1iYzRkLWY5OTI3NTdkN2UwZSIgZD0iTTcuOTMsMTYuNHYtMy4yNmwyLjE2LTF2NS42WiIgZmlsbD0iIzk5OSIgLz48cGF0aCBpZD0iZWI5MjAwYTctNDY5My00NDI3LWJkYWUtYjMzY2U5MGZmN2YyIiBkPSJNOC42MSwxNi4zODlsLS4zMi0uMTZ2LTIuNzZsLjMyLS4xNVptLjc3LTMuNDUtLjM4LjE5djMuNDhsLjM3LjE5di0zLjg2WiIgZmlsbD0iI2IzYjNiMyIgLz48L3N2Zz4=" role="img" aria-label="Azure Container Registry"><title>Azure Container Registry</title></image>
+<text x="532" y="645" class="la-et" fill="#3C4043">Container</text>
+<text x="532" y="661" class="la-et" fill="#3C4043">Registry</text>
+<text x="476" y="696" class="la-ets" fill="#80868B">imagen del backend,</text>
+<text x="476" y="711" class="la-ets" fill="#80868B">la usan backend y MCP</text>
+
+<rect x="680" y="605" width="220" height="125" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Bicep -->
+<image x="698" y="628" width="44" height="44" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI0LjIuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiCgkgdmlld0JveD0iMCAwIDEyOCAxMjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDEyOCAxMjg7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPGcgaWQ9IkxheWVyXzIiPgoJPGxpbmVhckdyYWRpZW50IGlkPSJTVkdJRF8xXyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHgxPSI2NCIgeTE9IjEyOCIgeDI9IjY0IiB5Mj0iMS40MzQ5MjNlLTA2Ij4KCQk8c3RvcCAgb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjojMUQ0QTc5Ii8+CgkJPHN0b3AgIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6IzQ1Q0FGMiIvPgoJPC9saW5lYXJHcmFkaWVudD4KCTxwb2x5Z29uIHN0eWxlPSJmaWxsOnVybCgjU1ZHSURfMV8pOyIgcG9pbnRzPSI2NCwwIDguOCwzMiA4LjgsOTYgNjQsMTI4IDY0LDEyOCA2NCwxMjggMTE5LjIsOTYgMTE5LjIsMzIgCSIvPgoJPGcgc3R5bGU9Im9wYWNpdHk6MC43OyI+CgkJPHBvbHlnb24gc3R5bGU9ImZpbGw6IzE1NkFCMztzdHJva2U6IzAwNzhENDtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiIHBvaW50cz0iMTE4LjgsMzIuMyAKCQkJMTE4LjgsOTUuOCA2NCwxMjcuNSA2NCw2NCAJCSIvPgoJCTxwb2x5Z29uIHN0eWxlPSJmaWxsOiMxRDRBNzk7c3Ryb2tlOiMwMDc4RDQ7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTA7IiBwb2ludHM9IjExOC44LDMyLjMgCgkJCTY0LDY0IDkuMiwzMi4zIDY0LDAuNSAJCSIvPgoJCTxwb2x5Z29uIHN0eWxlPSJmaWxsOiMxODVBOTc7c3Ryb2tlOiMwMDc4RDQ7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTA7IiBwb2ludHM9IjY0LDY0IAoJCQk2NCwxMjcuNSA5LjIsOTUuOCA5LjIsMzIuMyAJCSIvPgoJCTxwb2x5Z29uIHN0eWxlPSJmaWxsOiMxRDRBNzk7c3Ryb2tlOiMwMDc4RDQ7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTA7IiBwb2ludHM9IjkuMiw5NS44IAoJCQk2NCw2NCA2NCwxMjcuNSAJCSIvPgoJCTxwb2x5Z29uIHN0eWxlPSJmaWxsOiMxODVBOTc7c3Ryb2tlOiMwMDc4RDQ7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTA7IiBwb2ludHM9IjExOC44LDk1LjggCgkJCTY0LDY0IDY0LDEyNy41IAkJIi8+Cgk8L2c+CjwvZz4KPGcgaWQ9IkxheWVyXzMiPgoJPHBhdGggc3R5bGU9ImZpbGw6IzFENEE3OTsiIGQ9Ik04Ny41LDY2LjFDODcsNjYsODYuNSw2Niw4Niw2NnYwSDU0LjlMNjQsNDMuMWMwLjEsMCwwLjYsMC4yLDEsMC4yYzAuMiwwLDAuNCwwLDAuNi0wLjFsOS42LTMuMQoJCWMwLjMtMC4xLDAuNi0wLjMsMC45LTAuNmw2LjMtN2wtMC4yLTIuOGwtMS41LTEuM2wtNy4zLDguMWwtOCwyLjZsLTUuOC01LjJsMS43LTguMmw3LjMtOC4xbC0xLjUtMS40bC0yLjgsMC4ybC02LjMsNwoJCWMtMC4yLDAuMy0wLjQsMC42LTAuNSwwLjlsLTIuMSw5LjhjLTAuMSwwLjcsMC4xLDEuNCwwLjYsMS45YzAsMC0xLDAuMy0xLjIsMC42TDMwLjEsNjguNWMtMy4zLDIuMy01LjcsNi02LDEwLjMKCQljLTAuMywzLjcsMC45LDcuMywzLjMsMTAuMmMyLjMsMi43LDUuNCw0LjMsOC45LDQuOGwwLDBsNDcsNy45bDAtMC4xYzAuNSwwLjEsMC45LDAuMiwxLjQsMC4zYzAuNSwwLDEsMC4xLDEuNSwwLjEKCQljOS4zLDAsMTcuMS03LjEsMTcuOS0xNi41QzEwNC44LDc1LjYsOTcuNCw2Ni45LDg3LjUsNjYuMXoiLz4KCTxnPgoJCTxwYXRoIHN0eWxlPSJvcGFjaXR5OjAuMztmaWxsOiNGRkZGRkY7IiBkPSJNMzgsOTIuOGMwLDAtMTIuMS0zLjQtMTIuMS0xNC4yYzAtOS4yLDEyLjUtMTEuMywxMi41LTExLjNMODYuOSw2OAoJCQljMCwwLDE1LjUsMS44LDE1LjUsMTZjMCwxNC0xNS41LDE1LjktMTUuNSwxNS45TDM4LDkyLjh6Ii8+CgkJPGNpcmNsZSBzdHlsZT0ib3BhY2l0eTowLjM7ZmlsbDojRkZGRkZGOyIgY3g9IjM4IiBjeT0iODAiIHI9IjEyIi8+CgkJPHBvbHlnb24gc3R5bGU9Im9wYWNpdHk6MC4yO2ZpbGw6I0ZGRkZGRjsiIHBvaW50cz0iNTguOCwzNC45IDY0LjQsMzguNSA1Mi42LDY4LjQgMzMuOSw2OCAJCSIvPgoJCTxwYXRoIHN0eWxlPSJvcGFjaXR5OjAuMztmaWxsOiNGRkZGRkY7IiBkPSJNODIsOTJIOTBjMC40LDAsMC43LTAuMiwwLjktMC41bDQtN2MwLjItMC4zLDAuMi0wLjcsMC0xbC00LTcKCQkJQzkwLjcsNzYuMiw5MC40LDc2LDkwLDc2SDgyYy0wLjQsMC0wLjcsMC4yLTAuOSwwLjVsLTQsN2MtMC4yLDAuMy0wLjIsMC43LDAsMWw0LDdDODEuMyw5MS44LDgxLjYsOTIsODIsOTJ6Ii8+Cgk8L2c+CjwvZz4KPGcgaWQ9IkxheWVyXzEiPgoJPGNpcmNsZSBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojRkZGRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiIGN4PSIzOCIgY3k9IjgwIiByPSIxMiIvPgoJPGc+CgkJPHBhdGggc3R5bGU9ImZpbGw6I0ZGRkZGRjsiIGQ9Ik0zNiw4NGg0YzAuMiwwLDAuMy0wLjEsMC40LTAuM2wyLTMuNWMwLjEtMC4yLDAuMS0wLjMsMC0wLjVsLTItMy41QzQwLjQsNzYuMSw0MC4yLDc2LDQwLDc2aC00CgkJCWMtMC4yLDAtMC4zLDAuMS0wLjQsMC4zbC0yLDMuNWMtMC4xLDAuMi0wLjEsMC4zLDAsMC41bDIsMy41QzM1LjYsODMuOSwzNS44LDg0LDM2LDg0eiIvPgoJPC9nPgoJPGc+CgkJPHBhdGggc3R5bGU9ImZpbGw6I0ZGRkZGRjsiIGQ9Ik04Niw2NnY0YzAuNCwwLDAuOCwwLDEuMiwwYzMuNywwLjMsNy4xLDIsOS41LDQuOWMyLjQsMi45LDMuNiw2LjUsMy4zLDEwLjIKCQkJQzk5LjQsOTIuNCw5My4yLDk4LDg2LDk4Yy0wLjQsMC0wLjgsMC0xLjIsMGMtMy43LTAuMy03LjEtMi05LjUtNC45Yy0yLjQtMi45LTMuNi02LjUtMy4zLTEwLjJDNzIuNiw3NS42LDc4LjgsNzAsODYsNzBMODYsNjYKCQkJIE04Niw2NmMtOS4zLDAtMTcuMSw3LjEtMTcuOSwxNi41Yy0wLjgsOS45LDYuNiwxOC42LDE2LjUsMTkuNGMwLjUsMCwxLDAuMSwxLjUsMC4xYzkuMywwLDE3LjEtNy4xLDE3LjktMTYuNQoJCQljMC44LTkuOS02LjYtMTguNi0xNi41LTE5LjRDODcsNjYsODYuNSw2Niw4Niw2Nkw4Niw2NnoiLz4KCTwvZz4KCTxnPgoJCTxwYXRoIHN0eWxlPSJmaWxsOiNGRkZGRkY7IiBkPSJNODkuNSw3OGwzLjUsNmwtMy41LDZoLTYuOWwtMy41LTZsMy41LTZIODkuNSBNOTAsNzZIODJjLTAuNCwwLTAuNywwLjItMC45LDAuNWwtNCw3CgkJCWMtMC4yLDAuMy0wLjIsMC43LDAsMWw0LDdjMC4yLDAuMywwLjUsMC41LDAuOSwwLjVIOTBjMC40LDAsMC43LTAuMiwwLjktMC41bDQtN2MwLjItMC4zLDAuMi0wLjcsMC0xbC00LTcKCQkJQzkwLjcsNzYuMiw5MC40LDc2LDkwLDc2TDkwLDc2eiIvPgoJPC9nPgoJPGxpbmUgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I0ZGRkZGRjtzdHJva2Utd2lkdGg6NDtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiIHgxPSIzNi41IiB5MT0iOTEuOSIgeDI9IjgzLjUiIHkyPSI5OS44Ii8+Cgk8Zz4KCQk8bGluZSBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojRkZGRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1taXRlcmxpbWl0OjEwOyIgeDE9Ijg2IiB5MT0iNjgiIHgyPSIzOCIgeTI9IjY4Ii8+Cgk8L2c+CgkKCQk8cGF0aCBzdHlsZT0iZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7ZmlsbDpub25lO3N0cm9rZTojRkZGRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiIGQ9IgoJCU0zMS42LDY5LjhsMjQuOS0zMS45YzEtMS4yLDIuOC0xLjQsNC0wLjRsMS4yLDEuMWMwLjksMC43LDEuMSwxLjksMC43LDNMNTIsNjgiLz4KCTxwYXRoIHN0eWxlPSJmaWxsOiNGRkZGRkY7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLW1pdGVybGltaXQ6MTA7IiBkPSJNODIuNSwyOS41TDgxLDI4LjFsLTcuMyw4LjFsLTgsMi42TDYwLDMzLjZsMS43LTguMmw3LjMtOC4xCgkJTDY3LjQsMTZsLTIuOCwwLjJsLTYuMyw3Yy0wLjIsMC4zLTAuNCwwLjYtMC41LDAuOWwtMi4xLDkuOGMtMC4xLDAuNywwLjEsMS40LDAuNiwxLjlsNy41LDYuN2MwLjQsMC4zLDAuOCwwLjUsMS4zLDAuNQoJCWMwLjIsMCwwLjQsMCwwLjYtMC4xbDkuNi0zLjFjMC4zLTAuMSwwLjYtMC4zLDAuOS0wLjZsNi4zLTdMODIuNSwyOS41eiIvPgo8L2c+Cjwvc3ZnPgo=" role="img" aria-label="Bicep"><title>Bicep</title></image>
+<text x="752" y="645" class="la-et" fill="#3C4043">Bicep</text>
+<text x="752" y="661" class="la-ets" fill="#80868B">infra/azure/main.bicep</text>
+<text x="696" y="696" class="la-ets" fill="#80868B">un archivo de parámetros</text>
+<text x="696" y="711" class="la-ets" fill="#80868B">por entorno · what-if</text>
+
+<rect x="920" y="605" width="240" height="125" rx="6" fill="#FFFFFF" stroke="#DADCE0" stroke-width="1.3"/>
+<!-- Icono: Log Analytics -->
+<image x="940" y="628" width="44" height="44" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBpZD0iYjM4OGU5NDQtNTUwOS00OWM5LTg0ZDctZjM4YmZmYTk5NWIyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImE5OTdlMjAzLTFkN2QtNGNiOS1iMTMxLTVkYzQ0ZTAyOWI0NiIgeDE9IjUuMjMiIHkxPSIxNy40NSIgeDI9IjUuMjMiIHkyPSI4LjA5IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMTk4OGQ5IiAvPjxzdG9wIG9mZnNldD0iMC45IiBzdG9wLWNvbG9yPSIjNTRhZWYwIiAvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJlMTIyZTlkOC1hZWU1LTRmMWEtYTYwZS1iMWVhZTM1NWRhYTUiIHgxPSIxMS41IiB5MT0iMTIuNDUiIHgyPSIxMS41IiB5Mj0iMC41NSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzE5OGFiMyIgLz48c3RvcCBvZmZzZXQ9IjAuMDEiIHN0b3AtY29sb3I9IiMxOThiYjQiIC8+PHN0b3Agb2Zmc2V0PSIwLjQ0IiBzdG9wLWNvbG9yPSIjMjdiMmQ3IiAvPjxzdG9wIG9mZnNldD0iMC43OSIgc3RvcC1jb2xvcj0iIzJmY2JlZCIgLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzMmQ0ZjUiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHRpdGxlPkljb24tbWFuYWdlLTMwNzwvdGl0bGU+PHBhdGggZD0iTTUuNTksMTMuMTNIOS45MXY0LjMySDUuNTlaTTEuMTUsMTcuNDVINC44N1YxMy4xM0guNTV2My43MkEuNi42LDAsMCwwLDEuMTUsMTcuNDVabS0uNi01SDQuODdWOC4wOUguNTVaIiBmaWxsPSJ1cmwoI2E5OTdlMjAzLTFkN2QtNGNiOS1iMTMxLTVkYzQ0ZTAyOWI0NikiIC8+PHBhdGggZD0iTTExLjUuNTVhNS44OSw1Ljg5LDAsMCwxLDUuOTUsNiw1Ljg5LDUuODksMCwwLDEtNS45NSw1Ljk1SDUuNTVWNi41QTUuODksNS44OSwwLDAsMSwxMS41LjU1WiIgZmlsbC1ydWxlPSJldmVub2RkIiBmaWxsPSJ1cmwoI2UxMjJlOWQ4LWFlZTUtNGYxYS1hNjBlLWIxZWFlMzU1ZGFhNSkiIC8+PHJlY3QgeD0iNy41OSIgeT0iNS42NSIgd2lkdGg9IjEuMzYiIGhlaWdodD0iNC4wOCIgZmlsbD0iI2ZmZiIgLz48cmVjdCB4PSIxMC4zMSIgeT0iNy4wMSIgd2lkdGg9IjEuMzYiIGhlaWdodD0iMi43MiIgZmlsbD0iI2ZmZiIgLz48cmVjdCB4PSIxMy4wMyIgeT0iNC4yOSIgd2lkdGg9IjEuMzYiIGhlaWdodD0iNS40NCIgZmlsbD0iI2ZmZiIgLz48L3N2Zz4=" role="img" aria-label="Log Analytics"><title>Log Analytics</title></image>
+<text x="994" y="645" class="la-et" fill="#3C4043">Log Analytics</text>
+<text x="994" y="661" class="la-ets" fill="#80868B">logs de Container Apps</text>
+<text x="936" y="696" class="la-ets" fill="#80868B">reemplaza a Cloud Logging</text>
+
+<!-- Entrega continua -->
+<rect x="20" y="770" width="390" height="190" rx="6" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1.3"/>
+<text x="34" y="792" class="la-gt" fill="#80868B">Entrega continua</text>
+<!-- Icono: GitHub -->
+<image x="58" y="806" width="52" height="52" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTgiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5OCA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzczMF8yNzEyNikiPgo8cGF0aCBkPSJNNDEuNDM5NSA2OS4zODQ4QzI4LjgwNjYgNjcuODUzNSAxOS45MDYyIDU4Ljc2MTcgMTkuOTA2MiA0Ni45OTAyQzE5LjkwNjIgNDIuMjA1MSAyMS42Mjg5IDM3LjAzNzEgMjQuNSAzMy41OTE4QzIzLjI1NTkgMzAuNDMzNiAyMy40NDczIDIzLjczNDQgMjQuODgyOCAyMC45NTlDMjguNzEwOSAyMC40ODA1IDMzLjg3ODkgMjIuNDkwMiAzNi45NDE0IDI1LjI2NTZDNDAuNTc4MSAyNC4xMTcyIDQ0LjQwNjIgMjMuNTQzIDQ5LjA5NTcgMjMuNTQzQzUzLjc4NTIgMjMuNTQzIDU3LjYxMzMgMjQuMTE3MiA2MS4wNTg2IDI1LjE2OTlDNjQuMDI1NCAyMi40OTAyIDY5LjI4OTEgMjAuNDgwNSA3My4xMTcyIDIwLjk1OUM3NC40NTcgMjMuNTQzIDc0LjY0ODQgMzAuMjQyMiA3My40MDQzIDMzLjQ5NjFDNzYuNDY2OCAzNy4xMzI4IDc4LjA5MzcgNDIuMDEzNyA3OC4wOTM3IDQ2Ljk5MDJDNzguMDkzNyA1OC43NjE3IDY5LjE5MzQgNjcuNjYyMSA1Ni4zNjkxIDY5LjI4OTFDNTkuNjIzIDcxLjM5NDUgNjEuODI0MiA3NS45ODgzIDYxLjgyNDIgODEuMjUyTDYxLjgyNDIgOTEuMjA1MUM2MS44MjQyIDk0LjA3NjIgNjQuMjE2OCA5NS43MDMxIDY3LjA4NzkgOTQuNTU0N0M4NC40MTAyIDg3Ljk1MTIgOTggNzAuNjI4OSA5OCA0OS4xOTE0Qzk4IDIyLjEwNzQgNzUuOTg4MyA2LjY5NTM5ZS0wNyA0OC45MDQzIDQuMzA5ZS0wN0MyMS44MjAzIDEuOTIyNjFlLTA3IC0xLjk0NzllLTA3IDIyLjEwNzQgLTQuMzM0M2UtMDcgNDkuMTkxNEMtNi4yMDYzMWUtMDcgNzAuNDM3NSAxMy40OTQxIDg4LjA0NjkgMzEuNjc3NyA5NC42NTA0QzM0LjI2MTcgOTUuNjA3NCAzNi43NSA5My44ODQ4IDM2Ljc1IDkxLjMwMDhMMzYuNzUgODMuNjQ0NUMzNS40MTAyIDg0LjIxODggMzMuNjg3NSA4NC42MDE2IDMyLjE1NjIgODQuNjAxNkMyNS44Mzk4IDg0LjYwMTYgMjIuMTA3NCA4MS4xNTYzIDE5LjQyNzcgNzQuNzQ0MUMxOC4zNzUgNzIuMTYwMiAxNy4yMjY2IDcwLjYyODkgMTUuMDI1NCA3MC4zNDE4QzEzLjg3NyA3MC4yNDYxIDEzLjQ5NDEgNjkuNzY3NiAxMy40OTQxIDY5LjE5MzRDMTMuNDk0MSA2OC4wNDQ5IDE1LjQwODIgNjcuMTgzNiAxNy4zMjIzIDY3LjE4MzZDMjAuMDk3NyA2Ny4xODM2IDIyLjQ5MDIgNjguOTA2MyAyNC45Nzg1IDcyLjQ0NzNDMjYuODkyNiA3NS4yMjI3IDI4LjkwMjMgNzYuNDY2OCAzMS4yOTQ5IDc2LjQ2NjhDMzMuNjg3NSA3Ni40NjY4IDM1LjIxODcgNzUuNjA1NSAzNy40MTk5IDczLjQwNDNDMzkuMDQ2OSA3MS43NzczIDQwLjI5MSA3MC4zNDE4IDQxLjQzOTUgNjkuMzg0OFoiIGZpbGw9ImJsYWNrIi8+CjwvZz4KPGRlZnM+CjxjbGlwUGF0aCBpZD0iY2xpcDBfNzMwXzI3MTI2Ij4KPHJlY3Qgd2lkdGg9Ijk4IiBoZWlnaHQ9Ijk2IiBmaWxsPSJ3aGl0ZSIvPgo8L2NsaXBQYXRoPgo8L2RlZnM+Cjwvc3ZnPgo=" role="img" aria-label="GitHub"><title>GitHub</title></image>
+<text x="84" y="880" class="la-et" text-anchor="middle" fill="#3C4043">GitHub Actions</text>
+<text x="84" y="896" class="la-ets" text-anchor="middle" fill="#80868B">OIDC federado</text>
+<text x="84" y="910" class="la-ets" text-anchor="middle" fill="#80868B">sin claves guardadas</text>
+<text x="176" y="864" class="la-ets" fill="#3C4043">rama preprod → pre-prod</text>
+<text x="176" y="880" class="la-ets" fill="#3C4043">rama prod → prod, con aprobación</text>
+<text x="176" y="896" class="la-ets" fill="#3C4043">infra.yml → Bicep, con aprobación</text>
+<text x="176" y="912" class="la-ets" fill="#80868B">deploy GCP: desactivado</text>
+
+<!-- Terceros -->
+<rect x="440" y="770" width="740" height="190" rx="6" fill="#F8F9FA" stroke="#DADCE0" stroke-width="1.3"/>
+<text x="454" y="792" class="la-gt" fill="#80868B">Terceros</text>
+<!-- Icono: Microsoft — Microsoft Graph -->
+<image x="506" y="816" width="48" height="48" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABO0lEQVR42u3bMWoCQRSA4X8Xq0UE8QZ2scwhYusBchfBs3gA2+QKaSwsUnmFQALDkmLWYlTGwiqQvMD/Vys2j09msXgDZn9Zc3n4XM0BxoFmS5PdMQOsX2mBLshceYC0eSofRtUXY+ArEOAD8H5+fgTeovywDcyAHqD1EP4sAQUUUEABTUABBRTQBBRQQAFNQAEFFNAEFFBAAU1AAQUU0AQUUEABTUABBRTwt8r/BbBe8U2UtdooHavnQ6DZMvDt2bMYXa85sP1oKdvwUTrwPO0Bhhc6YBHoCO+bZXlP1+/AjjhXCeD2msMi0GwJrzn4P1BAAU1AAQUUUEAJBBRQQAFNQAEFFNAEFFBAAU1AAQUU0AQUUEABTUABBRTQ7ldvqGbK9mWUctDZ0j3Ay+pqlOqrBPtgs/WePYvRCfKZLRIUo/e5AAAAAElFTkSuQmCC" role="img" aria-label="Microsoft — Microsoft Graph"><title>Microsoft — Microsoft Graph</title></image>
+<text x="530" y="884" class="la-et" text-anchor="middle" fill="#3C4043">Microsoft Graph</text>
+<text x="530" y="900" class="la-ets" text-anchor="middle" fill="#80868B">valida usuarios al darlos de alta</text>
+<text x="530" y="914" class="la-ets" text-anchor="middle" fill="#80868B">con el token de id-backend</text>
+<!-- Icono: Resend -->
+<image x="686" y="816" width="48" height="48" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwMCIgaGVpZ2h0PSIxODAwIiB2aWV3Qm94PSIwIDAgMTgwMCAxODAwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTAwMC40NiA0NTBDMTE3NC43NyA0NTAgMTI3OC40MyA1NTMuNjY5IDEyNzguNDMgNjkxLjI4MkMxMjc4LjQzIDgyOC44OTYgMTE3NC43NyA5MzIuNTYzIDEwMDAuNDYgOTMyLjU2M0g5MTIuMzgyTDEzNTAgMTM1MEgxMDQwLjgyTDcwNy43OTQgMTAzMy40OEM2ODMuOTQ0IDEwMTEuNDcgNjcyLjkzNiA5ODUuNzgxIDY3Mi45MzUgOTYzLjc2NUM2NzIuOTM1IDkzMi41NzIgNjk0Ljk1OSA5MDUuMDQ5IDczNy4xNjEgODkzLjEyMkw5MDguNzEyIDg0Ny4yNDRDOTczLjg1IDgyOS44MTIgMTAxOC44MSA3NzkuMzUzIDEwMTguODEgNzEzLjI5OEMxMDE4LjggNjMyLjU2NyA5NTIuNzQ1IDU4NS43OCA4NzEuMDk1IDU4NS43OEg0NTBWNDUwSDEwMDAuNDZaIiBmaWxsPSJibGFjayIvPgo8L3N2Zz4K" role="img" aria-label="Resend"><title>Resend</title></image>
+<text x="710" y="884" class="la-et" text-anchor="middle" fill="#3C4043">Resend</text>
+<text x="710" y="900" class="la-ets" text-anchor="middle" fill="#80868B">correo con el contrato firmado</text>
+<!-- Icono: Claude API -->
+<image x="866" y="816" width="48" height="48" preserveAspectRatio="xMidYMid meet" href="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRDk3NzU3IiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Q2xhdWRlPC90aXRsZT48cGF0aCBkPSJtNC43MTQ0IDE1Ljk1NTUgNC43MTc0LTIuNjQ3MS4wNzktLjIzMDctLjA3OS0uMTI3NWgtLjIzMDdsLS43ODkzLS4wNDg2LTIuNjk1Ni0uMDcyOS0yLjMzNzUtLjA5NzEtMi4yNjQ2LS4xMjE0LS41NzA3LS4xMjE1LS41MzQzLS43MDQyLjA1NDYtLjM1MjIuNDc5Ny0uMzIxOC42ODYuMDYwOCAxLjUxNzkuMTAzMiAyLjI3NjcuMTU3OCAxLjY1MTQuMDk3MiAyLjQ0NjguMjU1aC4zODg2bC4wNTQ2LS4xNTc5LS4xMzM2LS4wOTcxLS4xMDMyLS4wOTcyTDYuOTczIDkuODM1NmwtMi41NS0xLjY4NzktMS4zMzU2LS45NzE0LS43MjI1LS40OTE4LS4zNjQzLS40NjE0LS4xNTc4LTEuMDA3OC42NTU3LS43MjI1Ljg4MDMuMDYwNy4yMjQ2LjA2MDcuODkyNS42ODYgMS45MDY0IDEuNDc1NCAyLjQ4OTMgMS44MzM2LjM2NDMuMzAzNS4xNDU3LS4xMDMyLjAxODItLjA3MjgtLjE2NC0uMjczMy0xLjM1MzktMi40NDY3LTEuNDQ1LTIuNDg5My0uNjQzNS0xLjAzMi0uMTctLjYxOTRjLS4wNjA3LS4yNTUtLjEwMzItLjQ2NzQtLjEwMzItLjcyODVMNi4yODcuMTMzNSA2LjY5OTcgMGwuOTk1Ny4xMzM2LjQxOS4zNjQyLjYxOTIgMS40MTQ3IDEuMDAxOCAyLjIyODIgMS41NTQzIDMuMDI5Ni40NTUzLjg5ODUuMjQyOS44MzE4LjA5MS4yNTVoLjE1Nzl2LS4xNDU3bC4xMjc1LTEuNzA2LjIzNjgtMi4wOTQ3LjIzMDctMi42OTU3LjA3ODktLjc1ODkuMzc2NC0uOTEwNy43NDY4LS40OTE4LjU4MjguMjc5My40Nzk3LjY4Ni0uMDY2OC40NDMzLS4yODUzIDEuODUxNy0uNTU4NiAyLjkwMjEtLjM2NDMgMS45NDI5aC4yMTI1bC4yNDI5LS4yNDI5Ljk4MzUtMS4zMDUzIDEuNjUxNC0yLjA2NDMuNzI4Ni0uODE5Ni44NS0uOTA0Ni41NDY0LS40MzExaDEuMDMyMWwuNzU5IDEuMTI5My0uMzQgMS4xNjU3LTEuMDYyNSAxLjM0NzgtLjg4MDQgMS4xNDE0LTEuMjYyOCAxLjctLjc4OTMgMS4zNi4wNzI5LjEwOTMuMTg4Mi0uMDE4MyAyLjg1MzUtLjYwNyAxLjU0MjEtLjI3OTQgMS44Mzk2LS4zMTU3LjgzMTguMzg4Ni4wOTEuMzk0Ni0uMzI3OC44MDc1LTEuOTY3LjQ4NTctMi4zMDcyLjQ2MTQtMy40MzY0LjgxMzYtLjA0MjUuMDMwNC4wNDg2LjA2MDcgMS41NDgyLjE0NTcuNjYxOC4wMzY0aDEuNjIxbDMuMDE3NS4yMjQ3Ljc4OTIuNTIyLjQ3MzYuNjM3Ni0uMDc5LjQ4NTctMS4yMTQyLjYxOTMtMS42MzkzLS4zODg2LTMuODI1LS45MTA3LTEuMzExMy0uMzI3OWgtLjE4MjJ2LjEwOTNsMS4wOTI5IDEuMDY4NiAyLjAwMzUgMS44MDkyIDIuNTA3NSAyLjMzMTQuMTI3NS41NzY4LS4zMjE4LjQ1NTQtLjM0LS4wNDg2LTIuMjAzOS0xLjY1NzUtLjg1LS43NDY4LTEuOTI0Ni0xLjYyMWgtLjEyNzV2LjE3bC40NDMyLjY0OTYgMi4zNDM2IDMuNTIxNC4xMjE0IDEuMDgwNy0uMTcuMzUyMS0uNjA3MS4yMTI1LS42Njc5LS4xMjE0LTEuMzcyMS0xLjkyNDZMMTQuMzggMTcuOTU5bC0xLjE0MTQtMS45NDI4LS4xMzk3LjA3OS0uNjc0IDcuMjU1Mi0uMzE1Ni4zNzAzLS43Mjg2LjI3OTMtLjYwNzEtLjQ2MTQtLjMyMTgtLjc0NjguMzIxOC0xLjQ3NTMuMzg4Ni0xLjkyNDYuMzE1Ny0xLjUzLjI4NTMtMS45MDA0LjE3LS42MzE0LS4wMTIxLS4wNDI1LS4xMzk3LjAxODItMS40MzI4IDEuOTY3Mi0yLjE3OTYgMi45NDQ2LTEuNzI0MyAxLjg0NTYtLjQxMjguMTY0LS43MTY0LS4zNzA0LjA2NjctLjY2MTguNDAwOC0uNTg4OSAyLjM4Ni0zLjAzNTcgMS40Mzg5LTEuODgyLjkyOS0xLjA4NjgtLjAwNjItLjE1NzloLS4wNTQ2bC02LjMzODUgNC4xMTY0LTEuMTI5My4xNDU3LS40ODU3LS40NTU0LjA2MDgtLjc0NjcuMjMwNy0uMjQyOSAxLjkwNjQtMS4zMTE0WiIvPjwvc3ZnPg==" role="img" aria-label="Claude API"><title>Claude API</title></image>
+<text x="890" y="884" class="la-et" text-anchor="middle" fill="#3C4043">API de Claude</text>
+<text x="890" y="900" class="la-ets" text-anchor="middle" fill="#80868B">revisión de la redacción</text>
+<text x="890" y="914" class="la-ets" text-anchor="middle" fill="#80868B">(rama sin fusionar)</text>
+<!-- Icono: Firme.cl — futuro, sin uso -->
+<rect x="1024" y="812" width="92" height="56" rx="6" fill="#F1F3F4" stroke="#9AA0A6" stroke-width="1.4" stroke-dasharray="3 2"/>
+<image x="1029" y="816" width="82" height="48" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,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" role="img" aria-label="Firme.cl — futuro, sin uso"><title>Firme.cl — futuro, sin uso</title></image>
+<text x="1070" y="884" class="la-et" text-anchor="middle" fill="#80868B">Firme.cl</text>
+<text x="1070" y="900" class="la-ets" text-anchor="middle" fill="#80868B">firma electrónica simple</text>
+<text x="1070" y="914" class="la-ets" text-anchor="middle" fill="#80868B">cliente escrito, sin uso</text>
+
+<!-- flechas: peticiones -->
+<path d="M110,174 L110,124 L780,124 L780,252" stroke="#0078D4" stroke-width="2" fill="none" marker-end="url(#m-blue)"/>
+<text x="470" y="120" class="la-fl" fill="#0078D4">MCP por HTTP (/mcp)</text>
+<path d="M136,380 L290,380" stroke="#0078D4" stroke-width="2" fill="none" marker-end="url(#m-blue)"/>
+<text x="214" y="372" class="la-fl" fill="#0078D4">carga la app</text>
+<path d="M136,392 L208,392 L208,522 L430,522 L430,282 L550,282" stroke="#0078D4" stroke-width="2" fill="none" marker-end="url(#m-blue)"/>
+<text x="232" y="538" class="la-fl" fill="#0078D4">API REST (JWT)</text>
+
+<!-- login -->
+<path d="M132,368 L205,368 L205,214 L290,214" stroke="#107C10" stroke-width="2" fill="none" marker-end="url(#m-green)"/>
+<text x="216" y="200" class="la-fl" fill="#107C10">login</text>
+
+<!-- datos -->
+<path d="M580,364 L580,444" stroke="#D83B01" stroke-width="2" fill="none" marker-end="url(#m-orange)"/>
+<path d="M780,364 L780,384 L620,384 L620,444" stroke="#D83B01" stroke-width="2" fill="none" marker-end="url(#m-orange)"/>
+<path d="M650,472 L752,471" stroke="#D83B01" stroke-width="2" fill="none" marker-end="url(#m-orange)"/>
+<path d="M600,256 L600,244 L905,244 L905,222 L1014,222" stroke="#D83B01" stroke-width="2" fill="none" marker-end="url(#m-orange)"/>
+<path d="M780,256 L780,244" stroke="#D83B01" stroke-width="2" fill="none"/>
+<text x="912" y="238" class="la-fl" fill="#D83B01">archivos</text>
+<path d="M884,330 L912,330 L912,425 L938,425" stroke="#D83B01" stroke-width="1.6" fill="none" stroke-dasharray="5 3" marker-end="url(#m-orange)"/>
+<text x="846" y="402" class="la-fl" fill="#D83B01">secretos</text>
+
+<!-- operación manual -->
+<path d="M136,590 L908,590 L908,476 L808,476" stroke="#8661C5" stroke-width="2" fill="none" marker-end="url(#m-purple)"/>
+<text x="240" y="584" class="la-fl" fill="#8661C5">migraciones · firewall + TLS</text>
+
+<!-- llamadas hacia fuera -->
+<path d="M552,300 L450,300 L450,751 L1070,751 L1070,814" stroke="#008575" stroke-width="2" fill="none" marker-end="url(#m-teal)"/>
+<path d="M530,751 L530,814" stroke="#008575" stroke-width="2" fill="none" marker-end="url(#m-teal)"/>
+<path d="M710,751 L710,814" stroke="#008575" stroke-width="2" fill="none" marker-end="url(#m-teal)"/>
+<path d="M890,751 L890,814" stroke="#008575" stroke-width="2" fill="none" marker-end="url(#m-teal)"/>
+
+<!-- despliegue -->
+<path d="M112,832 L380,832 L380,650 L476,650" stroke="#5F6368" stroke-width="2" fill="none" marker-end="url(#m-gray)"/>
+<path d="M380,650 L380,502" stroke="#5F6368" stroke-width="2" fill="none" marker-end="url(#m-gray)"/>
+<text x="372" y="724" class="la-fl" fill="#5F6368" text-anchor="end">build · push · deploy</text>
+</svg>
+    </figure>
+    <div class="prosa">
+      <p>
+        El diagrama usa íconos oficiales de Microsoft Azure y logotipos de terceros, embebidos
+        en este HTML para verlos sin conexión. El borde punteado de Firme.cl indica que todavía no se usa. El dibujo vale para
+        los dos entornos: pre-prod y prod tienen las mismas piezas, cada uno en su suscripción y con
+        su propio tenant de login.
+      </p>
+      <p>
+        Hay dos conexiones que no se dibujan para no tapar el resto. El backend valida cada token
+        contra las claves públicas de Entra, y el navegador baja avatares, rúbricas y PDF directo de
+        Blob Storage, con una URL temporal (SAS) que firma el backend.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Zona por zona</div>
+    <h2>Qué hace cada bloque</h2>
+    <div class="zonas">
+      <div class="zona">
+        <h4>Usuarios</h4>
+        <p>El equipo de Incrementa entra con el navegador. Quien trabaja con el agente usa Claude, que
+        habla con el MCP por HTTP. El MCP queda abierto como hoy en pre-prod, y el servidor HTTP abierto
+        sigue negándose a arrancar con <code>ENVIRONMENT=prod</code>.</p>
+      </div>
+      <div class="zona">
+        <h4>Identidad</h4>
+        <p>Microsoft Entra ID, igual que hoy. Pre-prod usa el tenant de David
+        (<code>dvdrocogmail.onmicrosoft.com</code>) y su app registration
+        <code>incrementa-gestion-dev</code>. Prod usa el tenant de Incrementa, con una app registration
+        propia que crea su administrador. El backend reconoce a cada persona por su email, así que los
+        mismos datos sirven en los dos tenants.</p>
+      </div>
+      <div class="zona">
+        <h4>Frontend</h4>
+        <p>Static Web Apps sirve la aplicación compilada desde su CDN. Reemplaza al contenedor de nginx,
+        que solo servía archivos. La URL del API se sigue fijando al compilar, como hoy. También permite
+        definir cabeceras de seguridad, que hoy no hay.</p>
+      </div>
+      <div class="zona">
+        <h4>Cómputo</h4>
+        <p>Dos Container Apps en un mismo <em>environment</em>: el backend (Express) y el MCP, con la
+        misma imagen y otro comando, igual que en Cloud Run. Escalan a cero, y cada uno tiene su propia
+        identidad. Los dos corren con <code>NODE_ENV=production</code>, para que un error no devuelva el
+        stack trace.</p>
+      </div>
+      <div class="zona">
+        <h4>Red privada</h4>
+        <p>El environment de Container Apps vive en una VNet. La base tiene un endpoint privado en esa
+        red: el backend y el MCP la alcanzan sin pasar por internet. El firewall de la base solo deja
+        entrar, desde fuera, la IP del Mac de David.</p>
+      </div>
+      <div class="zona">
+        <h4>Base de datos</h4>
+        <p>PostgreSQL 16 en Flexible Server, con TLS obligatorio. Pre-prod en un tier
+        <em>Burstable</em>. Prod en <em>General Purpose</em>; si lleva alta disponibilidad se decide con el
+        negocio. Las migraciones de Knex corren sin cambios. Al principio la clave de la base va en Key
+        Vault.</p>
+      </div>
+      <div class="zona">
+        <h4>Archivos</h4>
+        <p>Una cuenta de Blob Storage con dos contenedores. <code>documentos</code> guarda los borradores,
+        las rúbricas y los avatares. <code>firmados</code> guarda los PDF firmados, con una política WORM
+        de 5 años, desbloqueada al inicio. Las rutas son las mismas que hoy en GCS: el servicio elige el
+        contenedor según el prefijo, y la base no se toca. Soft delete y versionado en los dos.</p>
+      </div>
+      <div class="zona">
+        <h4>Secretos e identidades</h4>
+        <p>Un Key Vault por entorno, que Container Apps lee por referencia. <code>id-backend</code> e
+        <code>id-mcp</code> tienen solo los permisos de su tarea. El backend pide su token de Graph con su
+        identidad: desaparecen <code>GRAPH_CLIENT_SECRET</code> y la key JSON de GCS.</p>
+      </div>
+      <div class="zona">
+        <h4>Entrega continua</h4>
+        <p>GitHub Actions entra a Azure con OIDC federado, sin claves. Un registro de imágenes por entorno.
+        El workflow de la app solo construye, publica y despliega. La infraestructura la cambia
+        <code>infra.yml</code>, que muestra el <code>what-if</code> y espera la aprobación de David.
+        Desplegar a prod también requiere su aprobación.</p>
+      </div>
+      <div class="zona">
+        <h4>Terceros</h4>
+        <p>No cambian con la migración: Microsoft Graph, Resend, la API de Claude (cuando se fusione la
+        revisión de redacción) y Firme.cl, cuyo cliente está escrito pero todavía no se llama desde
+        ningún lado.</p>
+      </div>
+      <div class="zona">
+        <h4>Operación</h4>
+        <p>Desde su Mac, David aplica el Bicep, carga los valores de los secretos y corre las migraciones,
+        como hoy. El cambio futuro a un Container Apps Job está descrito en su propio documento.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">La equivalencia</div>
+    <h2>Qué reemplaza a qué</h2>
+    <div class="marco">
+      <table>
+        <thead><tr><th>Hoy en GCP</th><th>En Azure</th><th>Qué cambia en el código</th></tr></thead>
+        <tbody>
+          <tr><td>Cloud Run · <code>incrementa-backend</code></td><td>Container App · backend</td><td class="suave">Nada</td></tr>
+          <tr><td>Cloud Run · <code>incrementa-mcp</code></td><td>Container App · MCP</td><td class="suave">Nada</td></tr>
+          <tr><td>Cloud Run · <code>incrementa-frontend</code> (nginx)</td><td>Static Web Apps</td><td class="suave">Se deja de usar el Dockerfile y el <code>nginx.conf</code>; se agrega la configuración de SWA (rutas de la SPA y cabeceras)</td></tr>
+          <tr><td>Cloud SQL PostgreSQL 16 · <code>incrementa-db</code></td><td>PostgreSQL Flexible Server 16</td><td class="suave"><code>knexfile.js</code>: sin el socket de Cloud SQL y con TLS que valide el certificado</td></tr>
+          <tr><td>Cloud Storage · <code>incrementa-contratos-dev</code></td><td>Blob Storage · <code>documentos</code> + <code>firmados</code></td><td class="suave"><code>gcsService.js</code> se reemplaza por un servicio de Blob con la misma interfaz</td></tr>
+          <tr><td>URLs firmadas V4 (IAM signBlob)</td><td>SAS de delegación de usuario</td><td class="suave">Dentro del mismo servicio de Blob</td></tr>
+          <tr><td>Secret Manager</td><td>Key Vault</td><td class="suave">Nada: los valores siguen llegando como variables de entorno</td></tr>
+          <tr><td>Cuenta de servicio de runtime (compartida)</td><td><code>id-backend</code> e <code>id-mcp</code></td><td class="suave">Nada</td></tr>
+          <tr><td><code>GRAPH_CLIENT_SECRET</code></td><td>Token de la identidad del backend</td><td class="suave"><code>lib/graphClient.js</code> pide el token con <code>@azure/identity</code></td></tr>
+          <tr><td>Artifact Registry</td><td>Azure Container Registry</td><td class="suave">Nada</td></tr>
+          <tr><td>Workload Identity Federation</td><td>Credencial federada OIDC en Entra</td><td class="suave">Workflows nuevos de GitHub</td></tr>
+          <tr><td>Cloud Logging</td><td>Log Analytics</td><td class="suave">Nada</td></tr>
+          <tr><td>Cloud SQL Auth Proxy (local)</td><td>Firewall con la IP del Mac + TLS</td><td class="suave"><code>set-env-local.sh</code> apunta a la base nueva</td></tr>
+          <tr><td>Key JSON en <code>backend/secrets/</code> (local)</td><td><code>az login</code> de David</td><td class="suave">Desaparece la key</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Los entornos</div>
+    <h2>Dos entornos con las mismas piezas</h2>
+    <div class="cifras">
+      <div class="cifra"><b>2</b><span>entornos en la nube</span></div>
+      <div class="cifra"><b>2</b><span>suscripciones</span></div>
+      <div class="cifra"><b>2</b><span>tenants de login</span></div>
+      <div class="cifra"><b>1</b><span>código Bicep</span></div>
+      <div class="cifra"><b>0</b><span>claves en GitHub</span></div>
+    </div>
+    <div class="marco">
+      <table>
+        <thead><tr><th></th><th>Pre-prod</th><th>Prod</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Suscripción</strong></td><td class="suave">Nueva, de David, creada desde su cuenta de facturación</td><td class="suave">La de Incrementa</td></tr>
+          <tr><td><strong>Tenant del login</strong></td><td class="suave"><code>60322b4a…</code> (de David), que ya existe</td><td class="suave">El de Incrementa, con app registration nueva</td></tr>
+          <tr><td><strong>Resource group</strong></td><td class="ident">rg-incrementa-preprod</td><td class="ident">rg-incrementa-prod</td></tr>
+          <tr><td><strong>Rama que despliega</strong></td><td class="ident">preprod</td><td class="ident">prod <span class="suave">(con aprobación)</span></td></tr>
+          <tr><td><strong><code>ENVIRONMENT</code></strong></td><td class="ident">dev</td><td class="ident">prod</td></tr>
+          <tr><td><strong>Base</strong></td><td class="suave">Burstable (B1ms o B2s)</td><td class="suave">General Purpose; alta disponibilidad a decidir</td></tr>
+          <tr><td><strong>WORM de firmados</strong></td><td class="suave">5 años, desbloqueado</td><td class="suave">5 años, desbloqueado al inicio; bloquearlo se decide después</td></tr>
+          <tr><td><strong>Datos iniciales</strong></td><td class="suave">Copia completa de pre-prod en GCP</td><td class="suave">Copia completa de pre-prod (todo es de prueba)</td></tr>
+          <tr><td><strong>Local</strong></td><td class="suave" colspan="2">El Mac de David apunta a la base de pre-prod, igual que hoy</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Quién entra a qué</div>
+    <h2>Cuatro identidades, cada una con lo justo</h2>
+    <div class="marco">
+      <table>
+        <thead><tr><th>Identidad</th><th>Puede</th><th>No puede</th></tr></thead>
+        <tbody>
+          <tr><td class="ident"><strong>id-backend</strong></td><td class="suave">Leer sus secretos de Key Vault · leer y escribir en <code>documentos</code> · crear en <code>firmados</code> · firmar SAS · bajar imágenes del ACR · pedir token de Graph con <code>User.Read.All</code></td><td class="suave">Borrar ni reemplazar un PDF firmado: lo impide la política WORM, no el código</td></tr>
+          <tr><td class="ident"><strong>id-mcp</strong></td><td class="suave">Lo mismo que el backend, salvo Graph</td><td class="suave">Consultar el directorio de usuarios</td></tr>
+          <tr><td class="ident"><strong>GitHub · preprod</strong></td><td class="suave">Publicar imágenes y actualizar las Container Apps y la SWA de <code>rg-incrementa-preprod</code></td><td class="suave">Tocar prod: la credencial federada solo acepta la rama <code>preprod</code></td></tr>
+          <tr><td class="ident"><strong>GitHub · prod</strong></td><td class="suave">Lo mismo sobre <code>rg-incrementa-prod</code>, después de la aprobación de David</td><td class="suave">Desplegar sin aprobación</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="nota">
+      El usuario técnico del MCP (<code>MCP_SERVICE</code>, con <code>manage all</code>) sigue existiendo
+      en la base y pasa tal cual en la copia. Es una identidad interna del sistema, no de Azure. Sacarle
+      ese alcance total es otro trabajo, y no es parte de la migración.
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">El recorrido</div>
+    <h2>Qué pasa cuando se genera y firma un contrato</h2>
+    <div class="marco">
+      <table>
+        <thead><tr><th>Paso</th><th>Qué pasa en Azure</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>La persona entra</td><td class="suave">El navegador carga la app desde Static Web Apps y hace el login con MSAL contra Entra</td><td><span class="et aviso">por construir</span></td></tr>
+          <tr><td>Llama al API</td><td class="suave">El backend valida el JWT con las claves públicas de Entra, resuelve la persona por email en <code>user_profile</code> y arma sus permisos con CASL</td><td><span class="et si">sin cambios</span></td></tr>
+          <tr><td>Genera el borrador</td><td class="suave">El backend arma el PDF y lo sube a <code>documentos/contratos/…</code>. El registro va a PostgreSQL por el endpoint privado</td><td><span class="et aviso">por construir</span></td></tr>
+          <tr><td>Lo revisa</td><td class="suave">El backend firma una SAS de corta duración y el navegador baja el PDF directo desde Blob</td><td><span class="et aviso">por construir</span></td></tr>
+          <tr><td>Lo firma</td><td class="suave">El backend baja la rúbrica, vuelve a armar el PDF con la constancia y lo sube a <code>firmados/contratos-firmados/…</code>. Desde ese momento nadie lo puede borrar durante 5 años</td><td><span class="et aviso">por construir</span></td></tr>
+          <tr><td>Avisa</td><td class="suave">Resend envía el PDF firmado al correo de la empresa, con la clave leída de Key Vault</td><td><span class="et si">sin cambios</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">La mudanza</div>
+    <h2>En qué orden se migra</h2>
+    <figure>
+<svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cinco fases de la migración, de izquierda a derecha: código, infraestructura de pre-prod, copia y verificación, aviso a Marcela, y prod en la suscripción de Incrementa">
+<defs><marker id="m-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5F6368"/></marker></defs>
+<rect width="1000" height="300" fill="#FFFFFF"/>
+<rect x="10" y="20" width="176" height="200" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.4"/>
+<text x="24" y="44" font-size="11" font-weight="700" fill="#0B5CAD" letter-spacing="1.2">FASE 0</text>
+<text x="24" y="66" font-size="14" font-weight="600" fill="#202124">Código</text>
+<text x="24" y="90" font-size="11.5" fill="#3C4043">Recortes de AOD:</text>
+<text x="24" y="106" font-size="11.5" fill="#3C4043">Blob, Graph con identidad,</text>
+<text x="24" y="122" font-size="11.5" fill="#3C4043">TLS, NODE_ENV y SWA</text>
+<text x="24" y="146" font-size="11.5" fill="#3C4043">Antes: desactivar el</text>
+<text x="24" y="162" font-size="11.5" fill="#3C4043">deploy a GCP</text>
+<line x1="186" y1="120" x2="208" y2="120" stroke="#5F6368" stroke-width="2" marker-end="url(#m-f)"/>
+<rect x="212" y="20" width="176" height="200" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.4"/>
+<text x="226" y="44" font-size="11" font-weight="700" fill="#0B5CAD" letter-spacing="1.2">FASE 1</text>
+<text x="226" y="66" font-size="14" font-weight="600" fill="#202124">Infra de pre-prod</text>
+<text x="226" y="90" font-size="11.5" fill="#3C4043">Crear la suscripción</text>
+<text x="226" y="106" font-size="11.5" fill="#3C4043">Aplicar el Bicep</text>
+<text x="226" y="122" font-size="11.5" fill="#3C4043">Cargar los secretos</text>
+<text x="226" y="138" font-size="11.5" fill="#3C4043">Permiso de Graph</text>
+<text x="226" y="154" font-size="11.5" fill="#3C4043">Redirecciones del login</text>
+<line x1="388" y1="120" x2="410" y2="120" stroke="#5F6368" stroke-width="2" marker-end="url(#m-f)"/>
+<rect x="414" y="20" width="176" height="200" rx="6" fill="#FFF8F3" stroke="#D83B01" stroke-width="1.4"/>
+<text x="428" y="44" font-size="11" font-weight="700" fill="#A33000" letter-spacing="1.2">FASE 2</text>
+<text x="428" y="66" font-size="14" font-weight="600" fill="#202124">Copia y verificación</text>
+<text x="428" y="90" font-size="11.5" fill="#3C4043">pg_dump → pg_restore</text>
+<text x="428" y="106" font-size="11.5" fill="#3C4043">azcopy desde GCS</text>
+<text x="428" y="122" font-size="11.5" fill="#3C4043">Conteos por tabla</text>
+<text x="428" y="138" font-size="11.5" fill="#3C4043">SHA-256 de cada PDF</text>
+<text x="428" y="154" font-size="11.5" fill="#3C4043">firmado = signed_sha256</text>
+<text x="428" y="170" font-size="11.5" fill="#3C4043">Pruebas de punta a punta</text>
+<line x1="590" y1="120" x2="612" y2="120" stroke="#5F6368" stroke-width="2" marker-end="url(#m-f)"/>
+<rect x="616" y="20" width="176" height="200" rx="6" fill="#E6F4EA" stroke="#107C10" stroke-width="1.4"/>
+<text x="630" y="44" font-size="11" font-weight="700" fill="#107C10" letter-spacing="1.2">FASE 3</text>
+<text x="630" y="66" font-size="14" font-weight="600" fill="#202124">Pre-prod en uso</text>
+<text x="630" y="90" font-size="11.5" fill="#3C4043">Avisar a Marcela:</text>
+<text x="630" y="106" font-size="11.5" fill="#3C4043">URL nueva y MCP nuevo</text>
+<text x="630" y="122" font-size="11.5" fill="#3C4043">en Claude</text>
+<text x="630" y="146" font-size="11.5" fill="#3C4043">Sin ventana: nadie</text>
+<text x="630" y="162" font-size="11.5" fill="#3C4043">usa pre-prod hoy</text>
+<line x1="792" y1="120" x2="814" y2="120" stroke="#5F6368" stroke-width="2" marker-end="url(#m-f)"/>
+<rect x="818" y="20" width="172" height="200" rx="6" fill="#EFF6FC" stroke="#0078D4" stroke-width="1.4"/>
+<text x="832" y="44" font-size="11" font-weight="700" fill="#0B5CAD" letter-spacing="1.2">FASE 4</text>
+<text x="832" y="66" font-size="14" font-weight="600" fill="#202124">Prod en Incrementa</text>
+<text x="832" y="90" font-size="11.5" fill="#3C4043">App registration en</text>
+<text x="832" y="106" font-size="11.5" fill="#3C4043">su tenant</text>
+<text x="832" y="122" font-size="11.5" fill="#3C4043">Bicep de prod</text>
+<text x="832" y="138" font-size="11.5" fill="#3C4043">Copia de pre-prod</text>
+<text x="832" y="154" font-size="11.5" fill="#3C4043">deploy-prod.yml</text>
+<text x="832" y="170" font-size="11.5" fill="#3C4043">con aprobación</text>
+<rect x="10" y="240" width="980" height="44" rx="6" fill="#F1F3F4" stroke="#9AA0A6" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text x="24" y="267" font-size="12.5" fill="#3C4043">GCP queda intacto, sin borrar nada, desde la fase 0 hasta que Marcela haya usado Azure un tiempo. Es el respaldo y la vuelta atrás.</text>
+</svg>
+      <figcaption>
+        El código pasa directo a Azure, sin mantener las dos nubes en paralelo, porque nadie está usando
+        pre-prod. Por lo mismo, la copia de la fase 2 ya es la definitiva. La pieza más importante es la
+        verificación por SHA-256: es lo que demuestra que ningún contrato firmado cambió al
+        copiarlo.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="rubro">Lo que falta</div>
+    <h2>Lo que queda abierto, y por qué</h2>
+    <div class="marco">
+      <table>
+        <thead><tr><th>Tema</th><th>Qué falta</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Suscripción de pre-prod</strong></td><td class="suave">Crearla en el tenant <code>60322b4a…</code> desde la cuenta de facturación de David. Hoy esa cuenta no tiene ninguna suscripción</td><td><span class="et aviso">primer paso</span></td></tr>
+          <tr><td><strong>Suscripción y tenant de prod</strong></td><td class="suave">Confirmar con Incrementa la suscripción, quién administra su tenant y que invite a David (<code>dvd.roco@gmail.com</code>)</td><td><span class="et aviso">depende de Incrementa</span></td></tr>
+          <tr><td><strong>PostgreSQL en la región</strong></td><td class="suave">Verificar con <code>az postgres flexible-server list-skus --location brazilsouth</code> los tiers elegidos</td><td><span class="et aviso">verificar</span></td></tr>
+          <tr><td><strong>Alta disponibilidad de prod</strong></td><td class="suave">Si la base de prod va con réplica en otra zona. Duplica su costo</td><td><span class="et aviso">decide el negocio</span></td></tr>
+          <tr><td><strong>Bloquear el WORM de prod</strong></td><td class="suave">Hacerlo después de limpiar los contratos de prueba copiados desde pre-prod. Bloqueado, ya no se pueden borrar durante 5 años</td><td><span class="et aviso">más adelante</span></td></tr>
+          <tr><td><strong>Migraciones con un Job</strong></td><td class="suave">Pasar de correrlas desde el Mac a un Container Apps Job lanzado por el workflow</td><td><span class="et aviso">documentado, para después</span></td></tr>
+          <tr><td><strong>Base sin clave</strong></td><td class="suave">Que el backend entre a PostgreSQL con su identidad en vez de usuario y clave</td><td><span class="et aviso">para después</span></td></tr>
+          <tr><td><strong>Dominios propios</strong></td><td class="suave">Static Web Apps y Container Apps dan una URL propia de Azure. Un dominio de Incrementa se agrega cuando se decida</td><td><span class="et aviso">para después</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="rubro">Dónde está cada cosa</div>
+    <h2>Nombres propuestos de los recursos</h2>
+    <div class="marco">
+      <table>
+        <thead><tr><th>Recurso</th><th>Nombre (pre-prod)</th><th>Nota</th></tr></thead>
+        <tbody>
+          <tr><td>Resource group</td><td class="ident">rg-incrementa-preprod</td><td class="suave">En prod, <code>-prod</code> en todos los nombres</td></tr>
+          <tr><td>Red privada</td><td class="ident">vnet-incrementa-preprod</td><td class="suave">Subredes <code>snet-apps</code> y <code>snet-endpoints</code></td></tr>
+          <tr><td>Container Apps environment</td><td class="ident">cae-incrementa-preprod</td><td class="suave">Con perfil de carga Consumption</td></tr>
+          <tr><td>Backend</td><td class="ident">ca-incrementa-backend</td><td class="suave"></td></tr>
+          <tr><td>MCP</td><td class="ident">ca-incrementa-mcp</td><td class="suave">Comando <code>node mcp-http.mjs</code></td></tr>
+          <tr><td>Frontend</td><td class="ident">swa-incrementa-preprod</td><td class="suave"></td></tr>
+          <tr><td>Base</td><td class="ident">psql-incrementa-preprod</td><td class="suave">Base <code>incrementa</code></td></tr>
+          <tr><td>Storage</td><td class="ident">stincrementapreprod</td><td class="suave">Sin guiones: Azure no los acepta en este nombre. Contenedores <code>documentos</code> y <code>firmados</code></td></tr>
+          <tr><td>Key Vault</td><td class="ident">kv-incrementa-preprod</td><td class="suave">Los nombres de secretos usan <code>-</code>, no <code>_</code></td></tr>
+          <tr><td>Registro de imágenes</td><td class="ident">acrincrementapreprod</td><td class="suave">Sin guiones</td></tr>
+          <tr><td>Identidades</td><td class="ident">id-incrementa-backend · id-incrementa-mcp</td><td class="suave"></td></tr>
+          <tr><td>Logs</td><td class="ident">log-incrementa-preprod</td><td class="suave"></td></tr>
+          <tr><td>Infraestructura como código</td><td class="ident">infra/azure/</td><td class="suave"><code>main.bicep</code>, módulos, <code>preprod.bicepparam</code>, <code>prod.bicepparam</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    incrementa-gestion · arquitectura objetivo en Azure · 18 de octubre de 2026<br>
+    Es la arquitectura acordada, no la construida. Cuando exista, se vuelve a medir con
+    <code>az resource list -g rg-incrementa-preprod -o table</code> y con el <code>what-if</code> del Bicep.
+  </footer>
+
+</div>
+</body>
+</html>

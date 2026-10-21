@@ -1,0 +1,12 @@
+{
+  "color": "amarillo",
+  "resumen": "Implementación fiel a proposal/design/specs: catálogo, VARIABLE_META, contexto, normalización con tope de 500, MCP, Constructor y chip del editor coinciden línea a línea con lo especificado. openspec validate pasa y las pruebas ya corrieron en verde con este código. Amarillo solo por el hallazgo heredado de la revisión de diseño.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "frontend/src/components/RichTextEditor/VariableRenderer.jsx (heredado de veredicto-revision.json)",
+      "que": "El escenario de spec «Editor chip is marked dynamic text» (dynamic-text/spec.md) pide que el chip tenga data-kind=\"dynamic_text\" al renderizar, pero ninguna prueba monta un editor Tiptap real con el nodo `variable` para ejercitar VariableRenderer; la cobertura nueva (styles.module.css.dynamicText.test.js, VariableCatalog.dynamicText.test.jsx) verifica el CSS como texto y la etiqueta del modal, no la ejecución del componente que fija el atributo.",
+      "como_arreglar": "Confirmar (humano) que aceptar la prueba de CSS como proxy es suficiente para este recorte, tal como propuso la revisión de diseño, o encargar aparte un fixture mínimo de editor Tiptap para probar VariableRenderer con ejecución real."
+    }
+  ]
+}

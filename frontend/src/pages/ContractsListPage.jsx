@@ -20,6 +20,8 @@ function openPdfBlob(blob) {
 }
 
 function formatRedSocial(row) {
+  const entregables = row.servicios_entregables
+  if (typeof entregables === 'string' && entregables !== '') return entregables
   const network = row.proveedor_red_social
   const account = row.proveedor_cuenta_social
   if (network && account) return `${network} — ${account}`

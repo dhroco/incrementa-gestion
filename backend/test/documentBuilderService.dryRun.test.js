@@ -145,7 +145,7 @@ test('generateAndPersist dryRun succeeds without GCS or DB writes', async () => 
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {
           uploadCalled = true
         },
@@ -171,7 +171,7 @@ test('generateAndPersist dryRun returns MISSING_PLACEHOLDERS without persisting'
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateDoc: DOC_WITH_PLACEHOLDER }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {
           uploadCalled = true
         },
@@ -207,7 +207,7 @@ test('generateAndPersist dryRun returns enriched missingFields for known variabl
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateDoc: docWithKnownVar }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -245,7 +245,7 @@ test('generateAndPersist dryRun maps precio_texto missing to precio_numero', asy
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateDoc: docWithPrice }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -279,7 +279,7 @@ test('generateAndPersist preprocesses numeric overrides and generates precio_tex
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateDoc: docWithPrice }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -320,7 +320,7 @@ test('generateAndPersist missingFields includes supplier social network options'
       supplierService: {
         getSupplierById: async () => ({ ok: true, data: { supplier: supplierWithNetworks } })
       },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -358,7 +358,7 @@ test('generateAndPersist missingFields falls back to text when supplier has no s
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateDoc: docWithSocial }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -403,7 +403,7 @@ test('generateAndPersist missingFields includes client campaign options', async 
           }
         })
       },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -445,7 +445,7 @@ test('generateAndPersist dryRun skips DUPLICATE_DRAFT check', async () => {
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {
           uploadCalled = true
         },

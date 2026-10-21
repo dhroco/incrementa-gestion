@@ -127,7 +127,7 @@ function baseGenerateArgs(bodyExtra = {}) {
   }
 }
 
-function gcsService(hooks = {}) {
+function storageService(hooks = {}) {
   return {
     uploadBuffer: async () => {
       if (hooks.onUpload) hooks.onUpload()
@@ -219,7 +219,7 @@ async function generatePrice({ precioNumero, dryRun = false, currencyCode = 'CLP
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: gcsService({
+      storageService: storageService({
         onUpload: () => {
           uploads += 1
         }

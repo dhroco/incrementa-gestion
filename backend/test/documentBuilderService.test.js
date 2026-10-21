@@ -161,7 +161,7 @@ test('generateAndPersist returns 404 when user profile is missing', async () => 
   await withReadableCompany(COMPANY_ID, async ({ createDocumentBuilderService }) => {
     const service = createDocumentBuilderService({
       db: {},
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -190,7 +190,7 @@ test('generateAndPersist returns 409 DUPLICATE_DRAFT when active duplicate exist
     const service = createDocumentBuilderService({
       db: createGenerateDb({ duplicateRow: duplicate }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {
           uploadCalled = true
         },
@@ -238,7 +238,7 @@ test('generateAndPersist overwrites duplicate when overwrite is true', async () 
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async ({ gcsPath }) => {
@@ -272,7 +272,7 @@ test('generateAndPersist inserts draft_document.content_snapshot on generate', a
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -309,7 +309,7 @@ test('generateAndPersist inserts draft_document.content_snapshot on overwrite', 
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -338,7 +338,7 @@ test('generateAndPersist proceeds when only signed draft exists in same month', 
         }
       }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -367,7 +367,7 @@ test('getGeneratedDocumentForDownload reads buffer from GCS', async () => {
         file_name: 'test.pdf',
         gcs_path
       }),
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async ({ gcsPath }) => {
           downloadedPath = gcsPath
@@ -407,7 +407,7 @@ test('generateAndPersist rejects Mexican supplier with Chilean template without 
           }
         })
       },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -430,7 +430,7 @@ test('generateAndPersist rejects Chilean supplier with Mexican template', async 
     const service = createDocumentBuilderService({
       db: createGenerateDb({ templateCountry: 'MX' }),
       supplierService: { getSupplierById: async () => ({ ok: true, data: { supplier: SUPPLIER } }) },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
@@ -462,7 +462,7 @@ test('generateAndPersist dryRun accepts Mexican supplier with Mexican template',
           }
         })
       },
-      gcsService: {
+      storageService: {
         uploadBuffer: async () => {},
         downloadBuffer: async () => Buffer.alloc(0),
         deleteFile: async () => {}
