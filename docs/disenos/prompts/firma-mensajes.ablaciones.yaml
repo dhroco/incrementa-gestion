@@ -1,0 +1,10 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: correo-omitido-sin-resend
+    que: sin RESEND_API_KEY el servicio de correo informa skipped; el backend usa ese dato para decir si se envió, y hace falta una prueba de emailSent con skipped
+    archivo: backend/services/emailService.js
+    buscar: "    return { ok: true, skipped: true }"
+    reemplazar: "    return { ok: true }"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
