@@ -22,6 +22,9 @@ param storageAccount string
 param corsOrigin string
 param resendFromEmail string
 
+@description('false: sin Resend. No se lee RESEND-API-KEY de Key Vault y el backend omite el envío de correos.')
+param usarResend bool
+
 @description('El MCP HTTP abierto no arranca con ENVIRONMENT=prod: en prod no se despliega.')
 param incluirMcp bool
 
@@ -64,8 +67,12 @@ func secretosDe(kvUri string, identidad string, nombres array) array =>
     identity: identidad
   })
 
-var secretosBackend = secretosCargados ? secretosDe(keyVaultUri, idBackendId, ['DATABASE-URL', 'RESEND-API-KEY']) : []
-var secretosMcp = secretosCargados ? secretosDe(keyVaultUri, idMcpId, ['DATABASE-URL', 'RESEND-API-KEY']) : []
+var nombresSecretos = usarResend ? ['DATABASE-URL', 'RESEND-API-KEY'] : ['DATABASE-URL']
+var secretosBackend = secretosCargados ? secretosDe(keyVaultUri, idBackendId, nombresSecretos) : []
+var secretosMcp = secretosCargados ? secretosDe(keyVaultUri, idMcpId, nombresSecretos) : []
+var envResend = usarResend ? [
+  { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
+] : []
 
 var envComun = [
   { name: 'ENVIRONMENT', value: environmentApp }
@@ -83,15 +90,13 @@ var envBackend = secretosCargados ? concat(envComun, [
   { name: 'OIDC_AUDIENCE', value: oidcAudience }
   { name: 'CORS_ORIGIN', value: corsOrigin }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-  { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
-]) : []
+], envResend) : []
 
 var envMcp = secretosCargados ? concat(envComun, [
   { name: 'AZURE_CLIENT_ID', value: idMcpClientId }
   { name: 'GRAPH_ENABLED', value: 'false' }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-  { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
-]) : []
+], envResend) : []
 
 var sonda = secretosCargados ? [
   {

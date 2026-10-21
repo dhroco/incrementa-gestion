@@ -7,7 +7,8 @@
 set -euo pipefail
 
 ENTORNO="${1:-preprod}"
-RG="rg-incrementa-${ENTORNO}"
+# El resource group de prod lleva el nombre del sistema (rg-incrementa-gestion-prod).
+if [[ "$ENTORNO" == "prod" ]]; then RG="rg-incrementa-gestion-prod"; else RG="rg-incrementa-${ENTORNO}"; fi
 IDENTIDAD="id-incrementa-backend-${ENTORNO}"
 GRAPH_APP_ID="00000003-0000-0000-c000-000000000000"   # Microsoft Graph, igual en todos los tenants
 
