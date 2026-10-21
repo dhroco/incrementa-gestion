@@ -24,8 +24,11 @@ Infraestructura de **incrementa-gestion** en **Microsoft Azure**, definida con B
   federado, sin claves guardadas.
 - **Infraestructura:** `.github/workflows/infra.yml`, solo a mano. Pide la aprobación de David dos
   veces: para ver los cambios (what-if) y para aplicarlos.
-- **Producción:** en una suscripción de Azure de Incrementa, por crear (workflow análogo al de pre-prod,
-  disparado en la rama `prod`).
+- **Producción:** `.github/workflows/deploy-azure-prod.yml`, disparado por un push a la rama `prod` (que solo
+  avanza en fast-forward desde `preprod`). Corre en el environment `produccion` de GitHub: espera la
+  aprobación de David, solo acepta la rama `prod` y entra a Azure con OIDC, sin claves. Vive en
+  `rg-incrementa-gestion-prod` (suscripción de Incrementa) y no tiene MCP. Los parámetros están en
+  `azure/prod.bicepparam`.
 
 ## Documentación
 
