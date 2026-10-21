@@ -291,7 +291,9 @@ sistema de diseño (`openspec/config.yaml`), íconos de MUI Outlined, sin librer
   este contrato en representación de **{empresa}**; su rúbrica quedará estampada y se enviará a
   **{correo}** para su firma electrónica.», la casilla «He revisado el contrato y autorizo su envío a
   firma» y el botón **«Aprobar y enviar a firma»** (**«Enviando…»** mientras espera). Éxito: el contrato
-  sale de la lista y se muestra «Contrato aprobado y enviado a firma.» durante 8 segundos. Con error,
+  sale de la lista y se muestra «Contrato en proceso de firma.» durante 8 segundos (la palabra «firmado» solo
+  se usa cuando firmaron las dos partes, es decir, cuando el intento pasa a `signed`; entonces «Actualizar
+  estado» muestra «Contrato firmado.» durante 8 segundos y la fila sale de «En firma»). Con error,
   el mensaje del backend dentro del modal. Si `signing_mode === 'internal'`, el modal es el de hoy.
   Para eso, `pending-signature` devuelve también, por item,
   `signee_suggestion: { first_names, last_name, maternal_last_name, document_number, email }`: para un

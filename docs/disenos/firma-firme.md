@@ -250,8 +250,8 @@ Migración nueva (`202610220001_firme_signing.js`; la aplica el arquitecto, no l
 - **Por aprobar** (lo de hoy). Para un contrato con firma por Firme, el modal pasa a: datos del
   firmante prellenados y editables; texto «Al confirmar, usted aprueba este contrato en representación
   de {empresa}; su rúbrica quedará estampada y se enviará a {correo del firmante} para su firma
-  electrónica»; casilla de revisión; botón **«Aprobar y enviar a firma»**. Éxito: «Contrato aprobado y
-  enviado a firma.» Para un contrato por el camino interno, el modal es el de hoy (con las correcciones
+  electrónica»; casilla de revisión; botón **«Aprobar y enviar a firma»**. Éxito: «Contrato en proceso de
+  firma.» («Contrato firmado.» solo aparece cuando firmaron Yerko y la influencer) Para un contrato por el camino interno, el modal es el de hoy (con las correcciones
   del recorte `firma-mensajes`).
 - **En firma**: tabla con proveedor, firmante, enviado el, estado (chip) y acciones **Actualizar
   estado**, **Reenviar a firma** (solo `rejected`, `expired`, `cancelled`, `send_failed`) y **Ver PDF**.

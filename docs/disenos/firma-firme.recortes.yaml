@@ -58,14 +58,14 @@ recortes:
   - id: firma-mensajes
     objetivo: >
       Dos correcciones de mensajes en el camino interno de firma, vistas por David en pre-prod:
-      (a) la pantalla deja de afirmar «Contrato firmado» cuando no corresponde (la rúbrica no se pudo
-      estampar); (b) «Email enviado» aparece solo cuando de verdad se envió un correo, y las pantallas
+      (a) «Contrato firmado» solo aparece cuando firmaron Yerko (rúbrica automática) y la influencer; antes
+      dice «Contrato en proceso de firma»; (b) «Email enviado» aparece solo cuando de verdad se envió un correo, y las pantallas
       no prometen un correo cuando el envío está apagado (producción sale sin Resend).
     depende_de: [firme-flujo-a]
     fuera: >
       El flujo con Firme, la lógica de qué se firma, el contenido del correo, Resend y cualquier
       configuración o infraestructura.
     por_que_este_tamano: >
-      Dos campos nuevos en la respuesta de signContract y los textos de una pantalla. No cambia ninguna
+      Un campo nuevo en la respuesta de signContract y los textos de una pantalla. No cambia ninguna
       prueba existente. Va después de firme-flujo-a porque toca la misma pantalla y reutiliza el campo
       meta.email_enabled que ese recorte agrega.

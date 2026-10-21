@@ -1,13 +1,13 @@
 # Perfil de incrementa-gestion para agent-orchestrator. Esquema: docs/perfil.md de aod-framework.
 version: 1
 
-# El lint del frontend no va aquí: en preprod ya falla con 38 errores en archivos ajenos a los recortes
-# (28-sep-2026). Vuelve cuando un recorte lo deje en cero.
-# Sin base de datos: el backend inyecta mocks (312 pruebas, ~1,4 s). DATABASE_URL se quita a propósito:
-# en esta máquina apunta a la base de PRE-PROD (Cloud SQL Auth Proxy en 127.0.0.1:5432).
+# Sin base de datos: el backend inyecta mocks y DATABASE_URL se quita a propósito. La vía NO tiene ninguna base ni credencial de Azure
+# (en una máquina de desarrollo esa variable puede apuntar a la base de PRE-PROD en Azure; en la vía de la nube no existe).
+# El lint del frontend vuelve a las pruebas: tras el PR #4 (lint-frontend-cero) da 0 errores (quedan avisos, que no hacen fallar `npm run lint`).
 pruebas:
   - cd backend && env -u DATABASE_URL npm test
   - cd frontend && npm test
+  - cd frontend && npm run lint
 
 # CI/CD, infraestructura, conexión a la base, configuración por entorno y gobierno del proyecto.
 solo_lectura:
@@ -18,6 +18,7 @@ solo_lectura:
   - backend/config.js
   - frontend/config.js
   - frontend/vite.config.js
+  - frontend/public/staticwebapp.config.json
   - openspec/config.yaml
   - CLAUDE.md
   - .cursor/rules/**
@@ -28,11 +29,12 @@ solo_añadir:
   - backend/migrations/**
 
 prohibido:
-  # Nada que se conecte a la base: en local es la de PRE-PROD.
+  # Nada que se conecte a una base o a la nube: pre-prod y producción viven en Azure. Una migración la corre una persona antes del deploy.
   comandos:
-    - git push
-    - gcloud
-    - cloud-sql-proxy
+    - git push          # el agente nunca empuja; la rama y el PR los publica el paso fijo `publicar_al_cerrar` tras la firma
+    - az
+    - azd
+    - psql
     - npm run migrate:latest
     - npm run migrate:rollback
     - npm run seed:run
@@ -43,10 +45,15 @@ prohibido:
     - "!**/.env.example"
     - backend/set-env-local.sh
     - backend/secrets/**
+    - "postgresql-credenciales*.txt"
 
 ramas:
   formato: "{humano}/{cambio}"
   base: preprod
+
+# Al cerrar (tras la firma de quien aprueba y el commit): sube la rama de la corrida y abre el PR contra `preprod`. Nunca empuja `preprod`
+# (un push a esa rama despliega a pre-prod) y nunca fusiona.
+publicar_al_cerrar: pr
 
 # Cursor con el mismo modelo que en los otros proyectos (sin esto, Cursor usa Auto).
 modelos:
