@@ -1,0 +1,86 @@
+version: 1
+ablaciones:
+  - id: omitir-validacion-nombres-obligatorios
+    que: modo partes exige nombres (first_names) no vacíos antes de guardar
+    archivo: backend/services/supplierService.js
+    buscar: "    if (!stored[0]) errors.push('Los nombres son obligatorios.')"
+    reemplazar: ""
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='missing given names'
+    gravedad: grave
+  - id: omitir-validacion-apellido-paterno
+    que: modo partes exige apellido paterno (last_name) no vacío antes de guardar
+    archivo: backend/services/supplierService.js
+    buscar: "    if (!stored[1]) errors.push('El apellido paterno es obligatorio.')"
+    reemplazar: ""
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='incomplete persona parts'
+    gravedad: grave
+  - id: ignorar-partes-si-viene-nombre-compuesto
+    que: si vienen ambas partes y nombre completo, las partes ganan (no se ignoran)
+    archivo: backend/services/supplierService.js
+    buscar: "  const anyPart = partKeys.some((key) => bodyHas(body, key))"
+    reemplazar: "  const anyPart = false"
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='parts win over'
+    gravedad: grave
+  - id: omitir-spliteo-en-modo-texto
+    que: si viene solo nombre completo, se derivan las partes con splitFullName
+    archivo: backend/services/supplierService.js
+    buscar: "  const parts = splitFullName(trimmed)"
+    reemplazar: "  const parts = { firstNames: '', lastName: '', maternalLastName: '' }"
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='Create persona natural with only the composed name'
+    gravedad: grave
+  - id: omitir-composicion-desde-partes
+    que: se compone full_name desde las partes guardadas en modo partes
+    archivo: backend/services/supplierService.js
+    buscar: "        firstNames: stored[0],"
+    reemplazar: "        firstNames: '',"
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='create persona natural from parts'
+    gravedad: grave
+  - id: no-incluir-partes-en-detalle
+    que: la respuesta del detalle incluye las seis partes del nombre (cuatro de
+      persona, dos de empresa además de los compuestos)
+    archivo: backend/services/supplierService.js
+    buscar: "    first_names: row.first_names ?? null,"
+    reemplazar: ""
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='Detail includes all six parts'
+    gravedad: borde
+  - id: no-omitir-partes-en-listado
+    que: el listado no incluye las seis partes del nombre (solo campos visibles)
+    archivo: backend/services/supplierService.js
+    buscar: "    for (const key of LIST_OMITTED_NAME_PARTS) delete item[key]"
+    reemplazar: ""
+    prueba: node --test backend/test/supplierService.nameParts.test.js
+      --test-name-pattern='List shape is unchanged'
+    gravedad: borde
+  - id: omitir-forupdate-en-lectura-bloqueada
+    que: readLockedChild llama a forUpdate() para bloquear la fila antes de
+      actualizarla en modo concurrente
+    archivo: backend/services/supplierService.js
+    buscar: "  return query.forUpdate().first()"
+    reemplazar: "  return query.first()"
+    prueba: node --test backend/test/supplierService.updateNameLock.test.js
+      --test-name-pattern='concurrent partial updates'
+    gravedad: grave
+  - id: omitir-lectura-bloqueada-del-hijo
+    que: updateSupplier lee la fila hija con forUpdate dentro de una transacción
+      antes de validar y actualizar
+    archivo: backend/services/supplierService.js
+    buscar: "    const child = await readLockedChild(trx, childTable, id)"
+    reemplazar: "    const child = null"
+    prueba: node --test backend/test/supplierService.updateNameLock.test.js
+      --test-name-pattern='concurrent partial updates'
+    gravedad: grave
+  - id: lectura-sin-transaccion-bloqueada
+    que: readLockedChild se llama pasando la transacción (trx), no la conexión base
+      (db), para que el lock se mantenga dentro de la transacción
+    archivo: backend/services/supplierService.js
+    buscar: "    const child = await readLockedChild(trx, childTable, id)"
+    reemplazar: "    const child = await readLockedChild(db, childTable, id)"
+    prueba: node --test backend/test/supplierService.updateNameLock.test.js
+      --test-name-pattern='concurrent partial updates'
+    gravedad: grave

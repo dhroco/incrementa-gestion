@@ -1,6 +1,7 @@
-import { formatEsDateFromIso } from '../utils/dateUtils'
+import { formatEsDateFromIso, normalizeIsoDateOrNull } from '../utils/dateUtils'
 import { DateInputCL } from '../components/DateInputCL'
-import { formatRutDisplay } from '../utils/rut'
+import { formatRutDisplay, parseOptionalRut, parseRut } from '../utils/rut'
+import { splitFullName } from '../utils/personName'
 import { RutInput } from '../components/RutInput'
 import { SupplierTypeChip } from '../components/SupplierTypeChip'
 import { SocialNetworkSelector } from '../components/SocialNetworkSelector'
@@ -168,6 +169,9 @@ export function socialNetworksForSubmit(list) {
 /** @type {Record<string, 'datos_basicos' | 'redes_sociales'>} */
 const SUPPLIER_FIELD_ERROR_TAB = {
   full_name: 'datos_basicos',
+  first_names: 'datos_basicos',
+  last_name: 'datos_basicos',
+  maternal_last_name: 'datos_basicos',
   country_code: 'datos_basicos',
   rut: 'datos_basicos',
   email: 'datos_basicos',
@@ -175,8 +179,14 @@ const SUPPLIER_FIELD_ERROR_TAB = {
   razon_social: 'datos_basicos',
   rut_empresa: 'datos_basicos',
   rut_rep_legal: 'datos_basicos',
+  rep_first_names: 'datos_basicos',
+  rep_last_name: 'datos_basicos',
+  rep_maternal_last_name: 'datos_basicos',
   social_networks: 'redes_sociales'
 }
+
+const MSG_GIVEN_NAMES = 'Los nombres son obligatorios.'
+const MSG_PATERNAL_SURNAME = 'El apellido paterno es obligatorio.'
 
 export const COUNTRY_LABELS = { CL: 'Chile', MX: 'México' }
 
@@ -213,6 +223,154 @@ export function getFirstSupplierFormTabWithErrors(fieldErrors) {
     }
   }
   return null
+}
+
+function trimmedPart(value) {
+  return String(value || '').trim()
+}
+
+export function buildSupplierFormPayload(form, { emailRequired = false, identityDocumentTypes = [] } = {}) {
+  const fe = {}
+  const isEmpresa = form.supplier_type === 'empresa'
+  const docType = documentTypeForCountry(identityDocumentTypes, form.country_code)
+  let repFirst = ''
+  let repLast = ''
+  let repMaternal = ''
+  let repAny = false
+
+  if (!String(form.country_code || '').trim()) {
+    fe.country_code = 'Debe indicar el país del proveedor.'
+  }
+
+  if (isEmpresa) {
+    if (!String(form.razon_social || '').trim()) fe.razon_social = 'La razón social es obligatoria.'
+    if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
+      const rutEmp = parseRut(form.rut_empresa)
+      if (!String(form.rut_empresa || '').trim()) fe.rut_empresa = 'El RUT de la empresa es obligatorio.'
+      else if (!rutEmp.ok) fe.rut_empresa = rutEmp.message
+      if (String(form.rut_rep_legal || '').trim()) {
+        const rr = parseOptionalRut(form.rut_rep_legal)
+        if (!rr.ok) fe.rut_rep_legal = rr.message
+      }
+    } else {
+      const docErr = validateCatalogDocument(form.rut_empresa, docType, {
+        required: true,
+        role: 'empresa',
+        chileanLabel: 'RUT'
+      })
+      if (docErr) fe.rut_empresa = docErr
+      const repErr = validateCatalogDocument(form.rut_rep_legal, docType, {
+        required: false,
+        role: 'persona_natural',
+        chileanLabel: 'RUT'
+      })
+      if (repErr) fe.rut_rep_legal = repErr
+    }
+    repFirst = trimmedPart(form.rep_first_names)
+    repLast = trimmedPart(form.rep_last_name)
+    repMaternal = trimmedPart(form.rep_maternal_last_name)
+    repAny = Boolean(repFirst || repLast || repMaternal)
+    if (repAny) {
+      if (!repFirst) fe.rep_first_names = MSG_GIVEN_NAMES
+      if (!repLast) fe.rep_last_name = MSG_PATERNAL_SURNAME
+    }
+  } else {
+    if (!trimmedPart(form.first_names)) fe.first_names = MSG_GIVEN_NAMES
+    if (!trimmedPart(form.last_name)) fe.last_name = MSG_PATERNAL_SURNAME
+    if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
+      const rut = parseRut(form.rut)
+      if (!String(form.rut || '').trim()) fe.rut = 'El RUT es obligatorio.'
+      else if (!rut.ok) fe.rut = rut.message
+    } else {
+      const docErr = validateCatalogDocument(form.rut, docType, {
+        required: true,
+        role: 'persona_natural',
+        chileanLabel: 'RUT'
+      })
+      if (docErr) fe.rut = docErr
+    }
+  }
+
+  const emailError = validateSupplierEmail(form.email, { required: emailRequired })
+  if (emailError) fe.email = emailError
+  const phoneError = validateSupplierPhone(form.phone)
+  if (phoneError) fe.phone = phoneError
+  if (Object.keys(fe).length) return { ok: false, fieldErrors: fe }
+
+  const socialNetworkError = validateSocialNetworksForForm(form.social_networks)
+  if (socialNetworkError) return { ok: false, fieldErrors: { social_networks: socialNetworkError } }
+
+  const payload = {
+    supplier_type: form.supplier_type,
+    country_code: String(form.country_code || '').trim(),
+    email: String(form.email || '').trim() || null,
+    phone: String(form.phone || '').trim() || null,
+    social_networks: socialNetworksForSubmit(form.social_networks)
+  }
+
+  if (isEmpresa) {
+    payload.razon_social = String(form.razon_social).trim()
+    payload.rut_empresa = String(form.rut_empresa).trim()
+    payload.giro = String(form.giro || '').trim() || null
+    payload.direccion_empresa = String(form.direccion_empresa || '').trim() || null
+    payload.rut_rep_legal = String(form.rut_rep_legal || '').trim() || null
+    payload.personeria_type = form.personeria_type || null
+    if (repAny) {
+      payload.rep_first_names = repFirst
+      payload.rep_last_name = repLast
+      payload.rep_maternal_last_name = repMaternal
+    }
+    if (form.personeria_type === 'empresa_en_un_dia') {
+      payload.fecha_certificado_estatuto = normalizeIsoDateOrNull(form.fecha_certificado_estatuto)
+      payload.codigo_cve = String(form.codigo_cve || '').trim() || null
+    } else if (form.personeria_type === 'escritura_publica') {
+      payload.fecha_escritura_publica = normalizeIsoDateOrNull(form.fecha_escritura_publica)
+      payload.nombre_notaria = String(form.nombre_notaria || '').trim() || null
+      payload.nombre_notario = String(form.nombre_notario || '').trim() || null
+    }
+  } else {
+    payload.first_names = trimmedPart(form.first_names)
+    payload.last_name = trimmedPart(form.last_name)
+    payload.maternal_last_name = trimmedPart(form.maternal_last_name)
+    payload.rut = String(form.rut).trim()
+    payload.address = String(form.address || '').trim() || null
+  }
+
+  return { ok: true, payload }
+}
+
+function NamePartFields({ idPrefix, form, onChange, readOnly, fieldErrors, keys, markRequired }) {
+  const c = inputClass(readOnly)
+  const fields = [
+    { key: keys.first, id: `${idPrefix}-first-names`, label: 'Nombres', required: markRequired },
+    { key: keys.last, id: `${idPrefix}-last-name`, label: 'Apellido paterno', required: markRequired },
+    { key: keys.maternal, id: `${idPrefix}-maternal-last-name`, label: 'Apellido materno', required: false }
+  ]
+  return (
+    <div className="clause-form-row clause-form-row--three-equal">
+      {fields.map((field) => (
+        <div className="clause-form-col" key={field.key}>
+          <label className="clause-form-label" htmlFor={field.id}>
+            {field.label}
+            {!readOnly && field.required ? <span className="clause-form-required"> *</span> : null}
+          </label>
+          {readOnly ? (
+            <input id={field.id} className={c} readOnly value={displayText(form[field.key])} />
+          ) : (
+            <input
+              id={field.id}
+              className={c}
+              value={form[field.key] ?? ''}
+              onChange={(e) => onChange(field.key, e.target.value)}
+            />
+          )}
+          {fieldErrors[field.key] && !readOnly ? (
+            <div className="clause-field-error">{fieldErrors[field.key]}</div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -327,25 +485,16 @@ export function SupplierBasicDataSection({
       {isPersona ? (
         <>
           <h3 className="clause-form-section-title">Identificación</h3>
-          <div className="clause-form-row clause-form-row--two-col">
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-full-name">
-                Nombre completo{!readOnly ? <span className="clause-form-required"> *</span> : null}
-              </label>
-              {readOnly ? (
-                <input id="sup-full-name" className={c} readOnly value={displayText(form.full_name)} />
-              ) : (
-                <input
-                  id="sup-full-name"
-                  className={c}
-                  value={form.full_name ?? ''}
-                  onChange={(e) => onChange('full_name', e.target.value)}
-                />
-              )}
-              {fieldErrors.full_name && !readOnly ? (
-                <div className="clause-field-error">{fieldErrors.full_name}</div>
-              ) : null}
-            </div>
+          <NamePartFields
+            idPrefix="sup"
+            form={form}
+            onChange={onChange}
+            readOnly={readOnly}
+            fieldErrors={fieldErrors}
+            markRequired
+            keys={{ first: 'first_names', last: 'last_name', maternal: 'maternal_last_name' }}
+          />
+          <div className="clause-form-row">
             <DocumentField
               id="sup-rut"
               formKey="rut"
@@ -502,22 +651,20 @@ export function SupplierBasicDataSection({
           </div>
 
           <h3 className="clause-form-section-title">Representante legal</h3>
-          <div className="clause-form-row clause-form-row--two-col">
-            <div className="clause-form-col">
-              <label className="clause-form-label" htmlFor="sup-rep-name">
-                Nombre representante legal
-              </label>
-              {readOnly ? (
-                <input id="sup-rep-name" className={c} readOnly value={displayText(form.nombre_rep_legal)} />
-              ) : (
-                <input
-                  id="sup-rep-name"
-                  className={c}
-                  value={form.nombre_rep_legal ?? ''}
-                  onChange={(e) => onChange('nombre_rep_legal', e.target.value)}
-                />
-              )}
-            </div>
+          <NamePartFields
+            idPrefix="sup-rep"
+            form={form}
+            onChange={onChange}
+            readOnly={readOnly}
+            fieldErrors={fieldErrors}
+            markRequired={false}
+            keys={{
+              first: 'rep_first_names',
+              last: 'rep_last_name',
+              maternal: 'rep_maternal_last_name'
+            }}
+          />
+          <div className="clause-form-row">
             <DocumentField
               id="sup-rep-rut"
               formKey="rut_rep_legal"
@@ -746,13 +893,49 @@ export function SupplierFormSections({
   )
 }
 
+function textPart(value) {
+  return value == null ? '' : String(value)
+}
+
+function partsFromDetail(source, keys, composed) {
+  const provided = keys.some((key) => Object.prototype.hasOwnProperty.call(source, key))
+  if (provided) {
+    return {
+      [keys[0]]: textPart(source[keys[0]]),
+      [keys[1]]: textPart(source[keys[1]]),
+      [keys[2]]: textPart(source[keys[2]])
+    }
+  }
+  const raw = textPart(composed)
+  if (!raw.trim()) {
+    return { [keys[0]]: '', [keys[1]]: '', [keys[2]]: '' }
+  }
+  const split = splitFullName(raw)
+  return {
+    [keys[0]]: split.firstNames,
+    [keys[1]]: split.lastName,
+    [keys[2]]: split.maternalLastName
+  }
+}
+
 export function supplierToForm(s) {
   if (!s) return emptySupplierForm()
   const isEmpresa = s.supplier_type === 'empresa'
+  const personaParts = partsFromDetail(
+    s,
+    ['first_names', 'last_name', 'maternal_last_name'],
+    s.full_name
+  )
+  const repParts = partsFromDetail(
+    s,
+    ['rep_first_names', 'rep_last_name', 'rep_maternal_last_name'],
+    s.nombre_rep_legal
+  )
   return {
     supplier_type: s.supplier_type ?? 'persona_natural',
     country_code: s.country_code ?? '',
     full_name: s.full_name ?? '',
+    ...personaParts,
     rut: isEmpresa ? '' : s.document_display || s.rut || '',
     email: s.email ?? '',
     phone: s.phone ?? '',
@@ -762,6 +945,7 @@ export function supplierToForm(s) {
     giro: s.giro ?? '',
     direccion_empresa: s.direccion_empresa ?? '',
     nombre_rep_legal: s.nombre_rep_legal ?? '',
+    ...repParts,
     rut_rep_legal: s.rep_document_display || '',
     personeria_type: s.personeria_type ?? '',
     fecha_certificado_estatuto: s.fecha_certificado_estatuto?.slice?.(0, 10) ?? s.fecha_certificado_estatuto ?? '',
@@ -785,6 +969,9 @@ export function emptySupplierForm() {
     supplier_type: 'persona_natural',
     country_code: '',
     full_name: '',
+    first_names: '',
+    last_name: '',
+    maternal_last_name: '',
     rut: '',
     email: '',
     phone: '',
@@ -794,6 +981,9 @@ export function emptySupplierForm() {
     giro: '',
     direccion_empresa: '',
     nombre_rep_legal: '',
+    rep_first_names: '',
+    rep_last_name: '',
+    rep_maternal_last_name: '',
     rut_rep_legal: '',
     personeria_type: '',
     fecha_certificado_estatuto: '',

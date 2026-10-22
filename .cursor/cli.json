@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Shell(git push)",
+      "Shell(az)",
+      "Shell(azd)",
+      "Shell(psql)",
+      "Shell(npm run migrate:latest)",
+      "Shell(npm run migrate:rollback)",
+      "Shell(npm run seed:run)",
+      "Shell(npx knex)",
+      "Read(**/.env)",
+      "Write(**/.env)",
+      "Read(**/.env.*)",
+      "Write(**/.env.*)",
+      "Read(backend/set-env-local.sh)",
+      "Write(backend/set-env-local.sh)",
+      "Read(backend/secrets/**)",
+      "Write(backend/secrets/**)",
+      "Read(postgresql-credenciales*.txt)",
+      "Write(postgresql-credenciales*.txt)",
+      "Write(.github/workflows/**)",
+      "Write(infra/**)",
+      "Write(backend/knexfile.js)",
+      "Write(backend/db/knex.js)",
+      "Write(backend/config.js)",
+      "Write(frontend/config.js)",
+      "Write(frontend/vite.config.js)",
+      "Write(frontend/public/staticwebapp.config.json)",
+      "Write(openspec/config.yaml)",
+      "Write(CLAUDE.md)",
+      "Write(.cursor/rules/**)",
+      "Write(docs/**)"
+    ]
+  }
+}
