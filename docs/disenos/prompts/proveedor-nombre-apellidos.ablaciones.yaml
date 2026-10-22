@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar (el modo texto sigue como hoy). Cada
+# prueba corre la suite completa del backend.
+ablaciones:
+  - id: nombre-completo-obligatorio
+    que: en modo texto el nombre completo sigue siendo obligatorio con su mensaje; hace falta una prueba del modo texto sin full_name
+    archivo: backend/services/supplierService.js
+    buscar: "if (!fullName) errors.push('El nombre completo es obligatorio.')"
+    reemplazar: "if (!fullName) errors.push('Falta el nombre.')"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: razon-social-obligatoria
+    que: la validación de empresa no cambia salvo el representante; hace falta una prueba de empresa sin razón social tras el cambio
+    archivo: backend/services/supplierService.js
+    buscar: "if (!rs) errors.push('La razón social es obligatoria.')"
+    reemplazar: "if (!rs) errors.push('Falta la razón social.')"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

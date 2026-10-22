@@ -1,0 +1,7 @@
+# Hallazgos de cierre del cambio proveedor-nombre-apellidos
+
+Devoluciones desde «confirmar cierre». El último es el que corrige la fase devolver.
+
+## 2026-10-22T14:14:42.069Z · via
+
+Devolución 1 de 2: (1) Corrige el hallazgo de concurrencia del update parcial del proveedor: hoy supplierService.js lee la fila hija con db(childTable).first() fuera de la transacción y mezcla ahí las partes del nombre, así que dos PUT concurrentes sobre partes distintas pierden en silencio el cambio del primero. Lee la fila hija DENTRO de db.transaction con forUpdate() (bloqueada hasta el commit) y mezcla y escribe sobre esa fila bloqueada. Añade en un archivo de prueba nuevo, con mocks (sin base de datos ni red), una prueba que ejecute dos actualizaciones parciales sobre partes distintas y compruebe que ninguna pisa a la otra y que la lectura usa la transacción con forUpdate. (2) Reescribe el «buscar» de la ablación sobre if (!fullName) errors.push('El nombre completo es obligatorio.'): ese texto aparece 0 veces en supplierService.js (el código real es otro o está en otra línea); usa el texto tal como está en el archivo, que aparezca una sola vez, y repite la ablación; exige que una prueba la cace (✓). (3) No toques nada más: ni las tres cajas vacías del representante, ni el respaldo supplier_child_backup, ni la migración (ya revisada), ni pruebas existentes ni archivos de solo lectura. Corre las pruebas del perfil (backend sin base, frontend y lint) hasta verde, repite las ablaciones y deja ablaciones.md y tasks.md al día.

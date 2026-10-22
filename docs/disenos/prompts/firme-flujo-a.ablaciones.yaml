@@ -1,0 +1,23 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend. Lo demás del recorte son archivos nuevos: sus mutaciones las escribe el Revisor por
+# ablación mirando el diff.
+ablaciones:
+  - id: prefijo-firmados-worm
+    que: el PDF firmado y su evidencia deben caer en el contenedor firmados (WORM) por el prefijo; hace falta una prueba que lo compruebe con la ruta final del flujo
+    archivo: backend/services/storageService.js
+    buscar: "const SIGNED_PREFIX = 'contratos-firmados/'"
+    reemplazar: "const SIGNED_PREFIX = 'contratos-firmados-x/'"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: ruta-firmado-estable
+    que: la ruta del firmado usa el document_id reservado y el sufijo _firmado.pdf; hace falta una prueba que fije la ruta completa
+    archivo: backend/services/contractSigningService.js
+    buscar: "${docId}_firmado.pdf"
+    reemplazar: "${docId}.pdf"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: huella-sha256
+    que: la huella del PDF estampado es SHA-256 (64 hex); hace falta una prueba del flujo que compare contra un valor calculado aparte
+    archivo: backend/services/contractSigningService.js
+    buscar: "  return crypto.createHash('sha256').update(buffer).digest('hex')"
+    reemplazar: "  return crypto.createHash('sha1').update(buffer).digest('hex')"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

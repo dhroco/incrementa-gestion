@@ -1,0 +1,16 @@
+version: 1
+# Solo sobre texto que ya existe y que el recorte no debe cambiar. Cada prueba corre la suite completa
+# del backend.
+ablaciones:
+  - id: faltantes-siguen-antes
+    que: con campos faltantes, generar y revisar siguen devolviendo MISSING_PLACEHOLDERS
+    archivo: backend/services/documentBuilderService.js
+    buscar: "code: 'MISSING_PLACEHOLDERS'"
+    reemplazar: "code: 'VALIDATION_ERROR'"
+    prueba: "cd backend && env -u DATABASE_URL npm test"
+  - id: mcp-confirmacion-generar
+    que: generar_contrato sigue exigiendo confirmación explícita de los valores
+    archivo: backend/mcpTools.mjs
+    buscar: "espera confirmación explícita"
+    reemplazar: "sigue adelante"
+    prueba: "cd backend && env -u DATABASE_URL npm test"

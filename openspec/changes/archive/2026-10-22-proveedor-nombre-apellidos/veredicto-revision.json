@@ -1,0 +1,5 @@
+{
+  "color": "verde",
+  "resumen": "El cambio valida con openspec y cubre el prompt del propose; no encontré pruebas existentes que se opongan (la prueba de contacto usa full_name y sigue valiendo). Agregué a tasks.md los casos de prueba que faltaban para varios escenarios (down de la migración, listado sin partes, MCP, representante incompleto).",
+  "hallazgos": []
+}

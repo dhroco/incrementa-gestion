@@ -14,3 +14,58 @@ recortes:
     por_que_este_tamano: >
       Un módulo nuevo y sus pruebas, con fetch inyectado: nada del sistema lo llama aún, así que no
       puede romper nada. Sirve igual a la opción A (un firmante) y a la B (dos).
+
+  - id: proveedor-nombre-apellidos
+    objetivo: >
+      El proveedor guarda nombres, apellido paterno y apellido materno por separado (persona natural, y el
+      representante legal de las empresas), porque Firme.cl los exige así. El formulario los pide por
+      separado, full_name y nombre_rep_legal se componen a partir de ellos y siguen siendo lo que usan las
+      plantillas, los proveedores existentes se rellenan con una división automática (con respaldo) y la
+      API y el MCP siguen aceptando solo el nombre completo.
+    depende_de: []
+    fuera: >
+      Todo el flujo con Firme, el cambio de cómo se muestra el nombre en documentos y listados, el
+      renombre de columnas existentes y la corrección manual de los proveedores ya cargados.
+    por_que_este_tamano: >
+      Una migración con respaldo, una función pura, el servicio de proveedores y su formulario. Es
+      requisito de firme-flujo-a (el firmante sale de estos datos) y se puede probar y fusionar solo.
+      No cambia ninguna prueba existente: crear un proveedor con solo full_name sigue igual.
+
+  - id: firme-flujo-a
+    objetivo: >
+      Flujo A de firma con Firme.cl, de punta a punta: Yerko aprueba el contrato en el sistema, el
+      sistema estampa su rúbrica, guarda la huella SHA-256 del PDF estampado y lo envía a Firme con
+      un solo firmante (la influencer); el contrato queda «En proceso de firma»; al llegar la firma
+      (webhook de Firme, consulta al abrir o barrido) se descarga el PDF y la evidencia, se verifica
+      que la primera revisión del firmado coincide con la huella, se guarda en el contenedor firmados
+      y el contrato pasa a «Firmado». Incluye la migración (firme_signing, firme_webhook_event), el
+      manejo de rechazo, vencimiento, falta de créditos y RUT inválido, la pestaña «En firma» y el
+      chip de estado.
+    depende_de: [firme-cliente, proveedor-nombre-apellidos]
+    fuera: >
+      Extranjeros sin RUT y proveedores mexicanos (siguen por el camino interno actual), firma del
+      representante en Firme, timbre junto al bloque de firma del cuerpo, recordatorios, cancelación
+      manual, nuevas variables en config.js, infraestructura Azure y workflows, y toda
+      llamada real a Firme (la aceptación en staging la hacen David e Ignacio después).
+    por_que_este_tamano: >
+      David pidió dejar la integración funcionando esta semana, así que va en un solo recorte. Es
+      grande pero cerrado: un servicio nuevo (firmeSigningService), un módulo de estampado, una
+      ruta pública, una migración y una pantalla, con las pruebas del flujo completo contra un
+      Firme simulado. No cambia ninguna prueba existente: signContract y el camino interno quedan
+      intactos. Si la corrida se vuelve inmanejable, el corte natural es (1) modelo + aprobación +
+      envío y (2) recepción + verificación + guardado, en dos recortes encadenados.
+
+  - id: firma-mensajes
+    objetivo: >
+      Dos correcciones de mensajes en el camino interno de firma, vistas por David en pre-prod:
+      (a) «Contrato firmado» solo aparece cuando firmaron Yerko (rúbrica automática) y la influencer; antes
+      dice «Contrato en proceso de firma»; (b) «Email enviado» aparece solo cuando de verdad se envió un correo, y las pantallas
+      no prometen un correo cuando el envío está apagado (producción sale sin Resend).
+    depende_de: [firme-flujo-a]
+    fuera: >
+      El flujo con Firme, la lógica de qué se firma, el contenido del correo, Resend y cualquier
+      configuración o infraestructura.
+    por_que_este_tamano: >
+      Un campo nuevo en la respuesta de signContract y los textos de una pantalla. No cambia ninguna
+      prueba existente. Va después de firme-flujo-a porque toca la misma pantalla y reutiliza el campo
+      meta.email_enabled que ese recorte agrega.

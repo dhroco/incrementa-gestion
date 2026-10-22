@@ -27,6 +27,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || 'https://staging.api.documentos.firme.cl',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'debug',
     CORS_ORIGIN: 'http://localhost:5173'
   },
@@ -45,6 +46,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || '',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'info',
     // En Azure la inyecta la Container App: la URL de Static Web Apps del entorno.
     CORS_ORIGIN: process.env.CORS_ORIGIN || ''
@@ -64,6 +66,7 @@ const config = {
     FIRME_API_URL: process.env.FIRME_API_URL || '',
     FIRME_API_TOKEN: process.env.FIRME_API_TOKEN || '',
     FIRME_LEGAL_ENTITY_ID: process.env.FIRME_LEGAL_ENTITY_ID || '',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     LOG_LEVEL: 'error',
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://gestion-contratos.com'
   }
