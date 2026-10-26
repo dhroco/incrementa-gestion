@@ -11,6 +11,7 @@ const supplierServiceDefault = require('./supplierService')
 const clientServiceDefault = require('./clientService')
 const { numberToWords } = require('../utils/numberToWords')
 const { formatDuracion, formatDias } = require('../utils/formatDuracion')
+const { parseCantidad, formatCantidad, CANTIDAD_MESSAGE_SUFFIX } = require('../utils/formatCantidad')
 const {
   formatCantidadReels,
   formatFormatoReel,
@@ -66,6 +67,15 @@ const VARIABLE_META = {
   duracion_ejecucion: { label: 'Duración ejecución', type: 'text', source: 'contract' },
   dias_cesion:     { label: 'Días de cesión',      type: 'text',   source: 'contract' },
   cantidad_reels:  { label: 'Cantidad de reels',   type: 'number', source: 'contract' },
+  // Plazos y cantidades que antes eran texto de relleno en las plantillas: el usuario da un
+  // entero y el contrato lo muestra como «treinta (30)»; la unidad queda fija en la plantilla.
+  dias_no_competencia:         { label: 'Días de no competencia',                  type: 'number', source: 'contract' },
+  activaciones_cantidad:       { label: 'Cantidad máxima de activaciones',         type: 'number', source: 'contract' },
+  activaciones_horas:          { label: 'Horas máximas por activación',            type: 'number', source: 'contract' },
+  activaciones_antelacion_dias: { label: 'Días de antelación para las activaciones', type: 'number', source: 'contract' },
+  vigencia_meses:              { label: 'Vigencia del contrato (meses)',           type: 'number', source: 'contract' },
+  meses_cesion:                { label: 'Plazo de cesión (meses)',                 type: 'number', source: 'contract' },
+  dias_boost:                  { label: 'Días de amplificación (boost)',           type: 'number', source: 'contract' },
   formato_reel:    { label: 'Formato de reel',     type: 'select', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
@@ -151,6 +161,34 @@ function formatPriceNumber(amount, currencyCode) {
   return `${prefix}${formatted}`
 }
 
+// Cantidades «en palabras y cifra» sin unidad. `fem` concuerda con el sustantivo fijo que sigue
+// en la plantilla («participaciones», «horas»).
+const CANTIDAD_VARIABLES = {
+  dias_no_competencia: { fem: false },
+  activaciones_cantidad: { fem: true },
+  activaciones_horas: { fem: true },
+  activaciones_antelacion_dias: { fem: false },
+  vigencia_meses: { fem: false },
+  meses_cesion: { fem: false },
+  dias_boost: { fem: false }
+}
+
+function validateCantidadOverrides(overrides) {
+  const raw = overrides && typeof overrides === 'object' ? overrides : {}
+  for (const key of Object.keys(CANTIDAD_VARIABLES)) {
+    if (!isNonEmptyOverride(raw[key])) continue
+    if (!parseCantidad(raw[key]).ok) {
+      return {
+        ok: false,
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: `${VARIABLE_META[key].label} ${CANTIDAD_MESSAGE_SUFFIX}`
+      }
+    }
+  }
+  return { ok: true }
+}
+
 // Variables de tipo fecha: el override llega en ISO (YYYY-MM-DD) desde el
 // formulario o el MCP y debe escribirse como "15 de marzo de 2024" en el contrato.
 // Sin esto el override pisa el valor ya formateado por `buildSubstitutionMap`.
@@ -185,6 +223,12 @@ function preprocessMissingFieldOverrides(overrides, { currencyCode } = {}) {
 
   if (out.dias_cesion != null && String(out.dias_cesion).trim() !== '') {
     out.dias_cesion = formatDias(out.dias_cesion)
+  }
+
+  for (const [key, { fem }] of Object.entries(CANTIDAD_VARIABLES)) {
+    if (out[key] != null && String(out[key]).trim() !== '') {
+      out[key] = formatCantidad(out[key], { fem })
+    }
   }
 
   let priceParsed = null
@@ -668,6 +712,9 @@ function createDocumentBuilderService({
       }
     }
 
+    const cantidadCheck = validateCantidadOverrides(overridesRaw)
+    if (!cantidadCheck.ok) return cantidadCheck
+
     const dynamicTextCheck = normalizeDynamicTextOverrides(overridesRaw)
     if (!dynamicTextCheck.ok) return dynamicTextCheck
 
@@ -877,5 +924,7 @@ module.exports = {
   validateSelectOverrides,
   preprocessMissingFieldOverrides,
   parsePriceInput,
+  validateCantidadOverrides,
+  CANTIDAD_VARIABLES,
   SECONDARY_FIELDS
 }
