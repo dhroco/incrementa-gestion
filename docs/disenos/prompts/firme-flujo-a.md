@@ -150,19 +150,26 @@ Devuelve, en este orden:
 2. **Reservar**: inserta `firme_signing` en `sending` con `attempt` = último + 1, `document_id` =
    `crypto.randomUUID()` y los datos del firmante. Si el índice único parcial lo rechaza → 409
    `ENVIO_EN_CURSO` («Este contrato ya tiene un envío a firma en curso.»). Antes de reservar, un intento
-   `sending` con más de 10 minutos se pasa a `send_failed` (código `ENVIO_INTERRUMPIDO`) y, si ya tenía
-   `firme_document_code`, se intenta `firmeClient.deleteDocument`.
+   `sending` con más de 10 minutos se **recupera**: si ya tenía `firme_document_code`, se consulta el documento
+   (`firmeClient.getDocument`): en `PENDING_SIGNATURE` (o más avanzado) el intento se **adopta** y pasa a
+   `pending_signature` (la transacción ya estaba completa y pagada: **no se reenvía**); en `DRAFT` se borra con
+   `firmeClient.deleteDocument` (no hubo cargo) y el intento pasa a `send_failed` (código `ENVIO_INTERRUMPIDO`);
+   si no tenía código, pasa a `send_failed` sin llamar a Firme.
 3. **Créditos**: `firmeClient.getQuota()`; si `simple` < 1 → intento `send_failed` con
    `FIRME_NO_CREDITS` y el mensaje del cliente; no se crea nada en Firme.
 4. **Estampar** (sección 4) y guardar el PDF estampado en `storageService.uploadBuffer` bajo
    `contratos-en-firma/{companyId}/{supplierId}/{templateCode}/{yyyy}/{mm}/{intentoId}_estampado.pdf`
    (usa `yearMonthInSantiago` y `sanitizeFilePart` como `buildSignedGcsPath`). **Ese prefijo no puede
    empezar con `contratos-firmados/`**: no es WORM. Guarda ruta, `sha256`, `byteLength` y la posición.
-5. **Enviar**: `firmeClient.sendForSignature({ pdf, name, signees: [{ ...firmante, signature: stampPosition }] })`.
+5. **Enviar**: `firmeClient.sendForSignature({ pdf, name, signees: [{ ...firmante, signature: stampPosition }] }, { onProgress })`.
+   `onProgress(progress)` (función opcional del cliente, sección 8) se llama tras crear la transacción, el
+   documento y el firmante, y **antes de `complete`**; el servicio guarda ahí `firme_transaction_id`,
+   `firme_document_code` y `firme_signee_private_code` en el intento. Los créditos se descuentan **al completar** la
+   transacción (confirmado en staging): no completes dos veces la misma.
    `name` = `Contrato Incrementa — {plantilla} — {proveedor}` («Incrementa» fijo: el nombre de fantasía, no la
    razón social ni `company.*`; nombre de la plantilla y nombre del proveedor, ≤ 120 caracteres): es lo que la influencer lee en el correo de Firme y
-   debe identificar el contrato de Incrementa. **Nunca crees dos transacciones ni cargues dos veces el mismo
-   contrato** (el índice único y el paso 2 lo impiden). Si Firme responde 422 al crear el firmante con el detalle
+   debe identificar el contrato de Incrementa. **Nunca crees dos transacciones ni completes dos veces la misma**
+   (el índice único y el paso 2 lo impiden). Si Firme responde 422 al crear el firmante con el detalle
    «RUT ingresado no es válido» (paso `signees` del cliente), el intento queda `send_failed` con el código
    `RUT_INVALIDO` y el mensaje «Firme no aceptó el RUT del firmante.» (sin llamar a `deleteDocument` si el documento
    sigue en `DRAFT`: bórralo igual, es el mismo `deleteDocument`). Guarda `firme_transaction_id`,
@@ -184,9 +191,9 @@ llamar a Firme). `firmeClient.getDocument(firme_document_code)`:
 
 | Firme `status` | Acción |
 |---|---|
-| `PENDING_SIGNATURE` (u otro de espera) | actualiza `firme_status` y `last_checked_at`; si pasaron más de **10 días** desde `approved_at` (o la fecha `approvedUntil` del firmante, si Firme la informa y ya pasó) → `expired`. Firme no tiene evento de vencimiento |
+| `PENDING_SIGNATURE` (u otro de espera) | actualiza `firme_status` y `last_checked_at`; si ya pasó la fecha `approvedUntil` del firmante (la informa `GET /documents/{code}`), o, si no viene, pasaron más de **10 días** desde `approved_at` (o desde `link_renewed_at`) → `expired`. Firme no tiene evento de vencimiento |
 | `SIGNED` o `COMPLETED` | `finalize` |
-| `REJECTED` | intento `rejected` (guarda en `rejection_reason` el motivo, si el evento o Firme lo traen) |
+| `REJECTED` | intento `rejected` (guarda en `rejection_reason` el `rejectionDetail` del firmante que devuelve `GET /documents/{code}`, o el motivo del evento si falta) |
 | `CANCELLED` o `REFUNDED` | intento `cancelled` |
 
 `refresh` toma el intento con `SELECT … FOR UPDATE SKIP LOCKED` (`forUpdate().skipLocked()`) dentro de una
@@ -355,6 +362,10 @@ cambian):
 - `createWebhook({ url, eventTypes })` → `POST /webhooks/subscriptions` con `{ legalEntityId, url, eventTypes }`;
   `listWebhooks()` → `GET /webhooks/subscriptions?legalEntityId=…`; `deleteWebhook(id)` →
   `DELETE /webhooks/subscriptions/{id}`; `getWebhook(id)` → `GET /webhooks/subscriptions/{id}/status`.
+- `sendForSignature(input, { onProgress } = {})`: segundo parámetro **opcional**; si viene, se llama con una copia
+  de `progress` (`{ transactionId?, documentCode?, signees }`) después de cada paso que crea algo y **antes de
+  `complete`**; un error dentro del callback no interrumpe el envío (se ignora). Sin él, el comportamiento y las
+  respuestas son exactamente los de hoy (las pruebas existentes no cambian).
 - **Encabezado `User-Agent: Incrementa-Contratos/1.0`** en **todas** las llamadas a `apiUrl` (las existentes
   y las nuevas). **No** en la subida a S3 ni en las descargas por URL firmada. Las pruebas existentes solo
   inspeccionan `Authorization` y `Content-Type`, así que no cambian.
@@ -442,7 +453,7 @@ como las pruebas existentes del frontend):
   `send_failed`, nada creado en Firme); **`FIRME_NO_CREDITS` en `complete`** (422 del cliente: intento
   `send_failed`, se llama `deleteDocument` con el código guardado, el borrador queda como estaba);
   **fallo a medias** (el cliente lanza con `progress`: se guarda lo creado); **doble envío**
-  (`ENVIO_EN_CURSO`); **intento `sending` colgado** (> 10 min pasa a `send_failed`); **sin rúbrica**
+  (`ENVIO_EN_CURSO`); **intento `sending` colgado** (> 10 min: con código de documento en `PENDING_SIGNATURE` se **adopta** y pasa a `pending_signature` sin volver a llamar a `sendForSignature`; con el documento en `DRAFT` se borra y pasa a `send_failed`; sin código pasa a `send_failed` sin llamar a Firme); **los ids se guardan antes de `complete`** (con un `sendForSignature` doble que falla en `complete`, el intento ya tiene transacción y documento guardados); **sin rúbrica**
   (`RUBRICA_NO_DISPONIBLE`, no se envía nada); **reenvío** (intento 2 tras `rejected`); **modo interno**
   (proveedor con RFC → `NO_APLICA_FIRME`).
 - `backend/test/firmeSigningService.finalize.test.js`: **firmado válido** (PDF firmado = bytes estampados
@@ -486,7 +497,7 @@ como las pruebas existentes del frontend):
   sin RUT chileno) y siguen igual cuando no hay servicio de Firme inyectado; `getSigningMode` devuelve
   `blocked` solo con `ENVIRONMENT=prod` y sin configuración (en otros ambientes devuelve `internal`).
 - `backend/test/firmeClient.extension.test.js`: `getQuota`, `deleteDocument`, `resendInvitation` y los cuatro métodos de webhooks (URL, método,
-  `Authorization`, errores, el token nunca en mensajes) y que **todas** las llamadas a `apiUrl` llevan
+  `Authorization`, errores, el token nunca en mensajes) que `onProgress` se llama tras cada paso y antes de `complete`, que un error del callback no interrumpe el envío y que sin él las respuestas son las de hoy, y que **todas** las llamadas a `apiUrl` llevan
   `User-Agent: Incrementa-Contratos/1.0` y la subida a S3 y las descargas por URL firmada no.
 - `backend/test/storageService.once.test.js`: `uploadBufferOnce` (crea; existe con la misma huella →
   `created: false`; existe con otra → `STORAGE_CONFLICT`; usa `ifNoneMatch`).

@@ -67,12 +67,14 @@ que `SigningCertURL` sea de `*.amazonaws.com`. La URL tiene que ser HTTPS y púb
 - Solo RUT chileno (para pruebas, `11.111.111-1`); los extranjeros siguen fuera de la API. Apellido
   materno obligatorio (si no hay, `.`); **pasa a opcional en la segunda quincena de noviembre**, y hasta
   entonces se manda `.` (una constante, `MATERNAL_PLACEHOLDER`, para cambiarlo después).
-- **Cobro de créditos: dos fuentes que no coinciden.** El correo de Firme dice que se descuentan «al cargar el
-  documento»; la guía exige créditos suficientes al **completar** la transacción (paso 10, pago con
-  `CREDITS`). **Por confirmar en staging** (script `firme-resend-check.mjs`, que imprime el saldo antes de
-  cargar, después de cargar y después de completar). En los dos casos el envío es **idempotente: nunca se
-  crean dos transacciones ni se cargan dos documentos para el mismo contrato**. Un documento en `DRAFT` se
-  puede borrar y devuelve los créditos.
+- **Cobro de créditos: se descuenta AL COMPLETAR la transacción** (paso 10, pago con `CREDITS`), no al cargar
+  el documento. **Confirmado en staging el 27-oct** con `firme-resend-check.mjs`: saldo 18 antes de cargar, 18 después
+  de cargar y 17 después de completar; el reenvío del enlace (`resend`) no cambió el saldo. Lo que importa para
+  la idempotencia es **no completar dos veces la misma transacción** ni crear dos transacciones para el mismo
+  contrato. Un envío que falla **antes** de `complete` no cuesta nada (el documento en `DRAFT` se borra); el
+  riesgo real es que `complete` tenga éxito y nuestro proceso se caiga antes de registrarlo (ver «Aprobar y
+  enviar», paso 6: los ids se guardan **antes** de completar y un intento colgado se **adopta** en vez de
+  reenviarlo).
 - **Endpoints que el correo menciona y la guía no documenta** (`/sign-url`, `/documents/{code}/logs`,
   `/legal-entities/{id}/quota`, `POST /tokens/{id}/refresh`): **comprobados el 26-oct** en los `openapi.json`
   de producción (v0.0.147) y staging (v0.0.147-pre): existen los cuatro y los dos ambientes tienen las
@@ -152,7 +154,7 @@ Detalle del envío en una tabla nueva, `firme_signing` (un registro por intento)
 | `rejected` | La influencer rechazó (con motivo, si Firme lo informa) | «Firma rechazada» + motivo + «Reenviar a firma» (**usa 1 crédito nuevo**) |
 | `expired` | El enlace venció sin firmar (≥ 10 días) | «Firma vencida» + **«Renovar enlace»** (mismo documento de Firme, sin crédito nuevo) |
 | `cancelled` | Cancelado en Firme | «Firma cancelada» + «Reenviar a firma» (**usa 1 crédito nuevo**) |
-| `send_failed` | Falló el envío (créditos, RUT, red…) | mensaje del error + «Reenviar a firma» (si el documento llegó a cargarse en Firme, se borra antes: devuelve los créditos) |
+| `send_failed` | Falló el envío (créditos, RUT, red…) | mensaje del error + «Reenviar a firma» (si el documento llegó a cargarse en Firme sin completarse, se borra antes; no hay cargo) |
 | `hash_mismatch` | El firmado no parte del PDF aprobado | «Requiere revisión» (sin botón; avisar a Ignacio) |
 
 Un contrato tiene **a lo más un intento activo** (`sending` o `pending_signature`): índice único parcial
@@ -181,11 +183,16 @@ y un proceso posterior a la respuesta podría cortarse.
 5. **Huella:** calcula `sha256` y `byte_length` de **esos bytes exactos** y los guarda en el intento.
    Guarda el PDF estampado en `documentos` bajo `contratos-en-firma/{companyId}/{supplierId}/{templateCode}/{yyyy}/{mm}/{intentoId}_estampado.pdf`
    (prefijo distinto de `contratos-firmados/`: no es WORM ni definitivo).
-6. **Enviar a Firme:** `sendForSignature` con 1 firmante y la posición del timbre (abajo). El nombre del
+6. **Enviar a Firme:** `sendForSignature` con 1 firmante y la posición del timbre (abajo). El cliente avisa
+   cada paso por un callback opcional (`onProgress`) y el servicio guarda `firme_transaction_id`,
+   `firme_document_code` y el `privateCode` **apenas existan y antes de completar**; así, si el proceso cae
+   después de `complete`, el intento colgado se puede **adoptar** (consulta del documento: si está en
+   `PENDING_SIGNATURE`, pasa a `pending_signature`; si está en `DRAFT`, se borra) sin cobrar dos veces. El nombre del
    documento es lo que ve la influencer en el correo de Firme, así que identifica el contrato de Incrementa:
    `Contrato Incrementa — {plantilla} — {proveedor}` («Incrementa» fijo, el nombre de fantasía; ≤ 120 caracteres). **Nunca se crean dos transacciones ni
-   se carga dos veces el mismo contrato** (el índice único del paso 2 impide dos intentos activos; un
-   intento que falla después de cargar se limpia con `DELETE` antes de poder reintentar). Si Firme responde
+   se completa dos veces la misma** (el índice único del paso 2 impide dos intentos activos; un intento que
+   falla antes de completar se limpia con `DELETE` del documento en `DRAFT`, y uno que ya se completó se
+   adopta, no se reenvía). Si Firme responde
    422 «RUT ingresado no es válido» al crear el firmante, el error es `RUT_INVALIDO` con mensaje en español y
    el intento queda `send_failed` sin cargos.
    Guarda `firme_transaction_id`, `firme_document_code` y el `privateCode` del firmante en cuanto
@@ -241,7 +248,7 @@ pantalla y un **barrido programado desde fuera del backend** (porque el backend 
    la configuración. **No hay barrido dentro del proceso del backend** (un `setInterval` no sirve con
    escala a 0).
 
-**Qué hace `refresh`** según el estado que informa Firme:
+**Qué hace `refresh`** según el estado que informa Firme (`GET /documents/{code}` trae, por firmante, `approvedUntil` —hasta cuándo vale el enlace—, `rejectionDetail` —el motivo del rechazo—, `invitationSentAt`, `emailDeliveryStatus` y `hub_signee_id`; la respuesta de crear el firmante solo trae `privateCode`, no un `id`):
 
 | Firme | Acción |
 |---|---|
@@ -429,7 +436,7 @@ a. En producción se **bloquea la firma** mientras no estén cargadas las `FIRME
 b. «Reenviar a firma» después de un rechazo usa 1 crédito nuevo.
 c. Aviso de saldo bajo con 10 créditos o menos.
 d. Nombre del documento: «Contrato Incrementa — {plantilla} — {proveedor}» (nombre de fantasía).
-e. Cuándo se cobra el crédito (al cargar o al completar): lo confirma el chequeo en staging.
+e. Cuándo se cobra el crédito: **resuelto el 27-oct** con el chequeo en staging: **al completar la transacción**.
 f. El webhook de producción lo registra el administrador de la cuenta de Firme que designe Yerko, con David al
    lado, usando el script de operación `backend/scripts/firme-webhook.js` (lo corre David).
 
