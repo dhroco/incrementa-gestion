@@ -41,6 +41,7 @@ const { createContractsQueryService } = require('./services/contractsQueryServic
 const { createContractsController } = require('./controllers/contractsController')
 const { createContractSigningService } = require('./services/contractSigningService')
 const { createContractSigningController } = require('./controllers/contractSigningController')
+const { createFirmeSigningController } = require('./controllers/firmeSigningController')
 const emailService = require('./services/emailService')
 const { createLegalRepSignatureService } = require('./services/legalRepSignatureService')
 
@@ -62,6 +63,7 @@ function createApp({
   dashboardService: dashboardServiceInjected = null,
   contractsQueryService: contractsQueryServiceInjected = null,
   contractSigningService: contractSigningServiceInjected = null,
+  firmeSigningService: firmeSigningServiceInjected = null,
   legalRepSignatureService: legalRepSignatureServiceInjected = null,
   emailService: emailServiceInjected = emailService,
   storageService: storageServiceInjected = storageService,
@@ -92,6 +94,16 @@ function createApp({
       timestamp: new Date().toISOString()
     })
   })
+
+  const firmeSigningController = createFirmeSigningController({
+    service: firmeSigningServiceInjected,
+    userProfileIdResolver
+  })
+  app.post(
+    '/api/webhooks/firme',
+    express.text({ type: '*/*', limit: '256kb' }),
+    firmeSigningController.postWebhook
+  )
 
   const effectiveResolveInternalIdentity =
     resolveInternalIdentityMiddleware ??
@@ -197,7 +209,8 @@ function createApp({
     })
   const contractSigningController = createContractSigningController({
     service: contractSigningService,
-    userProfileIdResolver: userProfileIdResolver
+    userProfileIdResolver: userProfileIdResolver,
+    firmeSigningService: firmeSigningServiceInjected
   })
 
   const meController =
@@ -365,6 +378,14 @@ function createApp({
     authorize('sign', 'Contract'),
     contractSigningController.getList
   )
+  app.get(
+    '/api/contracts/in-signature',
+    authorize('sign', 'Contract'),
+    firmeSigningController.getInSignature
+  )
+  app.post('/api/contracts/:id/send-to-firme', authorize('sign', 'Contract'), firmeSigningController.postSend)
+  app.post('/api/contracts/:id/refresh-signature', authorize('sign', 'Contract'), firmeSigningController.postRefresh)
+  app.post('/api/contracts/:id/resend-link', authorize('sign', 'Contract'), firmeSigningController.postResend)
   app.post('/api/contracts/:id/sign', authorize('sign', 'Contract'), contractSigningController.postSign)
   app.get('/api/contracts/:id/pdf', authorize('read', 'Contract'), contractsController.getPdf)
 

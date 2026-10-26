@@ -12,7 +12,7 @@ function parsePositiveInt(value, fallback) {
 
 function normalizeStatus(value) {
   const s = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  if (s === 'draft' || s === 'signed') return s
+  if (s === 'draft' || s === 'signed' || s === 'in_signature') return s
   return 'all'
 }
 
@@ -121,12 +121,45 @@ function buildSignedSubquery(db, filters) {
   return q
 }
 
+function buildInSignatureSubquery(db, filters) {
+  const q = db('draft_document as dd')
+    .join('supplier as s', 's.id', 'dd.supplier_id')
+    .leftJoin('supplier_persona_natural as spn', 'spn.supplier_id', 's.id')
+    .leftJoin('supplier_empresa as se', 'se.supplier_id', 's.id')
+    .leftJoin('client as c', 'c.id', 'dd.client_id')
+    .leftJoin('template as t', 't.id', 'dd.template_id')
+    .where('dd.status', 'in_signature')
+    .select(
+      'dd.id',
+      db.raw("'draft' as source"),
+      'dd.supplier_id',
+      'dd.company_id',
+      'dd.client_id',
+      'dd.template_id',
+      'dd.file_name',
+      'dd.gcs_path',
+      'dd.status',
+      'dd.created_at',
+      'dd.contract_overrides',
+      db.raw('COALESCE(se.razon_social, spn.full_name) as supplier_name'),
+      's.supplier_type',
+      'c.name as client_name',
+      't.name as template_name'
+    )
+
+  applySharedFilters(q, filters, 'dd')
+  return q
+}
+
 function buildUnionQuery(db, filters) {
   if (filters.status === 'draft') {
     return buildDraftSubquery(db, filters)
   }
   if (filters.status === 'signed') {
     return buildSignedSubquery(db, filters)
+  }
+  if (filters.status === 'in_signature') {
+    return buildInSignatureSubquery(db, filters)
   }
   const draftQ = buildDraftSubquery(db, filters)
   const signedQ = buildSignedSubquery(db, filters)
@@ -253,6 +286,7 @@ const defaultService = createContractsQueryService()
 module.exports = {
   createContractsQueryService,
   mapContractListItem,
+  normalizeStatus,
   normalizeFilters,
   listContracts: defaultService.listContracts,
   getContractPdf: defaultService.getContractPdf

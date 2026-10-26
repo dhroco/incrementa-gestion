@@ -1,0 +1,388 @@
+version: 1
+ablaciones:
+  - id: indice-intento-activo
+    que: la restricción única parcial previene envíos duplicados al mismo contrato
+    archivo: backend/migrations/202610220001_firme_signing.js
+    buscar: |
+      const ACTIVE_ATTEMPT_INDEX = `
+        CREATE UNIQUE INDEX firme_signing_one_active_attempt
+        ON firme_signing (draft_document_id)
+        WHERE status IN ('sending', 'pending_signature')
+      `
+    reemplazar: |
+      const ACTIVE_ATTEMPT_INDEX = `
+        CREATE INDEX firme_signing_one_active_attempt
+        ON firme_signing (draft_document_id)
+        WHERE status IN ('sending', 'pending_signature')
+      `
+    prueba: cd backend && node --test test/firmeSigningService.send.test.js --test-name-pattern="a second active send is rejected"
+    gravedad: grave
+
+  - id: hash-prefix-pdf-verificacion
+    que: la verificación de hash del PDF estampado previene PDFs con prefijo distinto
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      const prefix = signed.subarray(0, stampedLen)
+      const prefixOk = prefix.length === stampedLen && sha256Hex(prefix) === attempt.stamped_sha256
+    reemplazar: |
+      const prefix = signed.subarray(0, stampedLen)
+      const prefixOk = true
+    prueba: cd backend && node --test test/firmeSigningService.finalize.test.js --test-name-pattern="a different prefix is a hash mismatch"
+    gravedad: grave
+
+  - id: byterange-validacion
+    que: la búsqueda de /ByteRange en el PDF válida su estructura de firma
+    archivo: backend/services/firmeSigningService.js
+    buscar: "const byteRange = signed.includes(Buffer.from('/ByteRange'))"
+    reemplazar: "const byteRange = true"
+    prueba: cd backend && node --test test/firmeSigningService.finalize.test.js --test-name-pattern="missing ByteRange is a hash mismatch"
+    gravedad: grave
+
+  - id: almacenamiento-idempotente
+    que: uploadBufferOnce solo crea documento una sola vez si la huella coincide
+    archivo: backend/services/storageService.js
+    buscar: |
+      if (incoming === stored) return { created: false }
+      const conflict = new Error('Ya existe un archivo distinto en esa ruta.')
+      conflict.code = 'STORAGE_CONFLICT'
+      throw conflict
+    reemplazar: |
+      if (incoming === stored) return { created: true }
+      const conflict = new Error('Ya existe un archivo distinto en esa ruta.')
+      conflict.code = 'STORAGE_CONFLICT'
+      throw conflict
+    prueba: cd backend && node --test test/firmeSigningService.finalize.test.js --test-name-pattern="the same blob hash does not duplicate the document"
+    gravedad: grave
+
+  - id: modo-bloqueado-produccion
+    que: producción sin Firme configurado bloquea la firma de todos los contratos
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function getSigningMode(draftDocumentId) {
+        if (currentEnv() === 'prod' && !configured()) return 'blocked'
+        if (!configured()) return 'internal'
+    reemplazar: |
+      async function getSigningMode(draftDocumentId) {
+        if (currentEnv() === 'prod' && !configured()) return 'internal'
+        if (!configured()) return 'internal'
+    prueba: cd backend && node --test test/firmeSigningService.send.test.js --test-name-pattern="production without Firme is blocked"
+    gravedad: grave
+
+  - id: recuperacion-intento-colgado
+    que: los intentos sin código de documento no se recuperan
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function recoverHung(row) {
+        if (!row.firme_document_code) {
+          await markFailed(row.id, 'ENVIO_INTERRUMPIDO', 'El envío a firma se interrumpió antes de crear el documento.')
+          return 'failed'
+        }
+    reemplazar: |
+      async function recoverHung(row) {
+        if (!row.firme_document_code) {
+          return 'blocked'
+        }
+    prueba: cd backend && node --test test/firmeSigningService.send.test.js --test-name-pattern="a hung attempt without a code does not call Firme"
+    gravedad: grave
+
+  - id: validacion-email-firmante
+    que: el email debe contener @ y un dominio para ser válido
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      function isEmail(value) {
+        if (typeof value !== 'string' || /\s/.test(value)) return false
+        const parts = value.split('@')
+        if (parts.length !== 2) return false
+        const [local, domain] = parts
+        return Boolean(local && domain && domain.includes('.'))
+      }
+    reemplazar: |
+      function isEmail(value) {
+        return typeof value === 'string' && value.trim().length > 0
+      }
+    prueba: cd backend && node --test test/firmeSigningService.send.test.js --test-name-pattern="incomplete signee names the correo field"
+    gravedad: borde
+
+  - id: rut-valido-rechaza-invalidos
+    que: el parseRut debe rechazar RUTs con formato incorrecto antes de enviar a Firme
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+        const rut = parseRut(source.documentNumber)
+        if (!rut.ok) return fail(422, 'RUT_INVALIDO', RUT_INVALIDO)
+    reemplazar: |
+        const rut = { ok: true, rut_body: '12345678', rut_dv: '5' }
+    prueba: cd backend && node --test test/firmeSigningService.send.test.js --test-name-pattern="invalid RUT does not call Firme"
+    gravedad: borde
+
+  - id: validacion-topic-arn
+    que: la validación de TopicArn previene webhooks de topics SNS ajenos
+    archivo: backend/lib/snsVerify.js
+    buscar: "    if (expectedTopicArn && message.TopicArn !== expectedTopicArn) return { ok: false, reason: 'topic' }"
+    reemplazar: ""
+    prueba: cd backend && node --test test/snsVerify.topic.test.js --test-name-pattern="a notification from another topic is rejected"
+    gravedad: grave
+
+  - id: adopcion-intento-colgado
+    que: adoptSending recupera intentos en 'sending' cuando el documento ya está PENDING en Firme
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function adoptSending(row, remote) {
+        let adopted = false
+        await db.transaction(async (trx) => {
+          const locked = await trx('firme_signing')
+            .where({ id: row.id, status: 'sending' })
+            .forUpdate()
+            .skipLocked()
+            .first()
+          if (!locked) return
+          await trx('firme_signing').where({ id: row.id, status: 'sending' }).update({
+            status: 'pending_signature',
+            firme_status: remote?.status || null,
+            updated_at: clock()
+          })
+          await trx('draft_document').where({ id: row.draft_document_id }).update({ status: 'in_signature' })
+          adopted = true
+        })
+        return adopted
+      }
+    reemplazar: |
+      async function adoptSending(row, remote) {
+        let adopted = false
+        await db.transaction(async (trx) => {
+          const locked = await trx('firme_signing')
+            .where({ id: row.id, status: 'sending' })
+            .forUpdate()
+            .skipLocked()
+            .first()
+          if (!locked) return
+          await trx('firme_signing').where({ id: row.id, status: 'sending' }).update({
+            status: 'send_failed',
+            firme_status: remote?.status || null,
+            updated_at: clock()
+          })
+          await trx('draft_document').where({ id: row.draft_document_id }).update({ status: 'draft' })
+          adopted = false
+        })
+        return adopted
+      }
+    prueba: cd backend && node --test test/firmeSigningService.revision.test.js --test-name-pattern="a failed send adopts a document that is already pending signature"
+    gravedad: grave
+
+  - id: evidencia-idempotente
+    que: sameEvidence permite reintentos de almacenamiento con la misma evidencia
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      function sameEvidence(stored, incoming) {
+        try {
+          const left = JSON.parse(Buffer.isBuffer(stored) ? stored.toString('utf8') : String(stored))
+          const right = JSON.parse(Buffer.isBuffer(incoming) ? incoming.toString('utf8') : String(incoming))
+          return stableJson(evidenceCore(left)) === stableJson(evidenceCore(right))
+        } catch {
+          return false
+        }
+      }
+    reemplazar: |
+      function sameEvidence(stored, incoming) {
+        return false
+      }
+    prueba: cd backend && node --test test/firmeSigningService.revision.test.js --test-name-pattern="a retry after the evidence upload survives a different clock"
+    gravedad: grave
+
+  - id: bloqueo-transaccion-pending
+    que: lockPending previene condiciones de carrera en refresh simultáneos
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function lockPending(signingId) {
+        let locked = null
+        await db.transaction(async (trx) => {
+          const row = await trx('firme_signing')
+            .where({ id: signingId, status: 'pending_signature' })
+            .forUpdate()
+            .skipLocked()
+            .first()
+          if (row) locked = { ...row }
+        })
+        return locked
+      }
+    reemplazar: |
+      async function lockPending(signingId) {
+        let locked = null
+        await db.transaction(async (trx) => {
+          const row = await trx('firme_signing')
+            .where({ id: signingId, status: 'pending_signature' })
+            .first()
+          if (row) locked = { ...row }
+        })
+        return locked
+      }
+    prueba: cd backend && npm test 2>&1 | grep -q "a retry after the evidence upload"
+    gravedad: grave
+
+  - id: separacion-preparacion-commit
+    que: commitSigned hace commit transaccional después de preparar la firma
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function commitSigned(attempt, prepared) {
+        let wrote = false
+        await db.transaction(async (trx) => {
+          const still = await trx('firme_signing')
+            .where({ id: attempt.id, status: 'pending_signature' })
+            .forUpdate()
+            .skipLocked()
+            .first()
+          if (!still) return
+          const draft = prepared.draft
+          const existing = await trx('document').where({ id: attempt.document_id }).first()
+          if (!existing) {
+            const overrides = draft.contract_overrides && typeof draft.contract_overrides === 'object'
+              ? draft.contract_overrides
+              : null
+            await trx('document').insert({
+              id: attempt.document_id,
+              draft_document_id: draft.id,
+              supplier_id: draft.supplier_id,
+              company_id: draft.company_id,
+              template_id: draft.template_id,
+              client_id: draft.client_id ?? null,
+              contract_overrides: overrides,
+              gcs_path: prepared.gcsPath,
+              file_name: prepared.fileName,
+              source: 'generated',
+              signed_at: prepared.signedAt,
+              signed_by: signeeFullName(attempt),
+              uploaded_by: attempt.approved_by,
+              draft_sha256: prepared.originalSha,
+              signed_sha256: prepared.signedSha
+            })
+          }
+          await trx('firme_signing').where({ id: attempt.id, status: 'pending_signature' }).update({
+            status: 'signed',
+            verified_at: prepared.verifiedAt,
+            signed_gcs_path: prepared.gcsPath,
+            evidence_gcs_path: prepared.evidencePath,
+            signed_sha256: prepared.signedSha,
+            firme_status: prepared.firmeStatus,
+            signee_signed_on: prepared.signeeSignedOn,
+            last_checked_at: clock(),
+            updated_at: clock()
+          })
+          await trx('draft_document').where({ id: draft.id }).update({ status: 'signed' })
+          wrote = true
+        })
+        return wrote
+      }
+    reemplazar: |
+      async function commitSigned(attempt, prepared) {
+        await db('firme_signing').where({ id: attempt.id }).update({
+          status: 'signed',
+          verified_at: prepared.verifiedAt,
+          signed_gcs_path: prepared.gcsPath,
+          evidence_gcs_path: prepared.evidencePath,
+          signed_sha256: prepared.signedSha,
+          firme_status: prepared.firmeStatus,
+          signee_signed_on: prepared.signeeSignedOn,
+          last_checked_at: clock(),
+          updated_at: clock()
+        })
+        return true
+      }
+    prueba: cd backend && node --test test/firmeSigningService.revision.test.js --test-name-pattern="a retry after the evidence upload"
+    gravedad: grave
+
+  - id: markfailed-condicion-status
+    que: markFailed solo actualiza si el intento está aún en 'sending'
+    archivo: backend/services/firmeSigningService.js
+    buscar: "    await db('firme_signing').where({ id, status: 'sending' }).update({"
+    reemplazar: "    await db('firme_signing').where({ id }).update({"
+    prueba: cd backend && node --test test/firmeSigningService.revision.test.js --test-name-pattern="markFailed does not overwrite an attempt that is no longer sending"
+    gravedad: grave
+
+  - id: reconcile-check-draft
+    que: reconcileAfterSendError solo borra documentos que siguen siendo DRAFT
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      async function reconcileAfterSendError(row) {
+        let remote
+        try {
+          remote = await client.getDocument(row.firme_document_code)
+        } catch (lookupErr) {
+          logError(`no se pudo consultar el documento tras el fallo (${lookupErr.code || 'ERROR'})`)
+          return { pending: true }
+        }
+        if (remote?.status === 'PENDING_SIGNATURE' || LATER.has(remote?.status)) {
+          const adopted = await adoptSending(row, remote)
+          return adopted ? { adopted: true } : { pending: true }
+        }
+        if (!remote?.status || remote.status === 'DRAFT') {
+          try {
+            await client.deleteDocument(row.firme_document_code)
+          } catch (cleanupErr) {
+            logError(`no se pudo borrar el documento tras el fallo (${cleanupErr.code || 'ERROR'})`)
+          }
+          return { failed: true }
+        }
+        return { pending: true }
+      }
+    reemplazar: |
+      async function reconcileAfterSendError(row) {
+        let remote
+        try {
+          remote = await client.getDocument(row.firme_document_code)
+        } catch (lookupErr) {
+          logError(`no se pudo consultar el documento tras el fallo (${lookupErr.code || 'ERROR'})`)
+          return { pending: true }
+        }
+        if (remote?.status === 'PENDING_SIGNATURE' || LATER.has(remote?.status)) {
+          const adopted = await adoptSending(row, remote)
+          return adopted ? { adopted: true } : { pending: true }
+        }
+        try {
+          await client.deleteDocument(row.firme_document_code)
+        } catch (cleanupErr) {
+          logError(`no se pudo borrar el documento tras el fallo (${cleanupErr.code || 'ERROR'})`)
+        }
+        return { failed: true }
+      }
+    prueba: cd backend && node --test test/firmeSigningService.revision.test.js --test-name-pattern="a failed send deletes only a document that is still a draft"
+    gravedad: grave
+
+  - id: redirect-prevention-fetch
+    que: "los fetches de certificados y URLs SNS usan { redirect: 'error' } para prevenir ataques"
+    archivo: backend/lib/snsVerify.js
+    buscar: "    res = await fetchImpl(url, { redirect: 'error' })"
+    reemplazar: "    res = await fetchImpl(url)"
+    prueba: cd backend && node --test test/snsVerify.topic.test.js --test-name-pattern="certificate download asks fetch not to follow redirects"
+    gravedad: borde
+
+  - id: no-pasar-rejection-reason-webhook
+    que: los webhooks no transmiten rejectionReason del payload, solo el de Firme
+    archivo: backend/services/firmeSigningService.js
+    buscar: "        await refresh(attempt.id)"
+    reemplazar: "        await refresh(attempt.id, { rejectionReason: eventReason(inner) })"
+    prueba: cd backend && node --test test/snsVerify.topic.test.js --test-name-pattern="the webhook does not store a rejection reason that Firme did not report"
+    gravedad: borde
+
+  - id: sello-posicion-y-antigua
+    que: la posición Y del sello se calcula para que quede en la mitad inferior del PDF
+    archivo: backend/lib/firmeStamp.js
+    buscar: "  const y = height - STAMP_Y * height - STAMP_HEIGHT * height"
+    reemplazar: "  const y = STAMP_Y * height"
+    prueba: cd backend && node --test test/firmeStamp.test.js --test-name-pattern="drawStampBox paints the rectangle on the last page"
+    gravedad: borde
+
+  - id: webhook-no-json-se-inserta
+    que: los webhooks con cuerpo no-JSON no se guardan en la tabla de eventos
+    archivo: backend/services/firmeSigningService.js
+    buscar: |
+      } catch {
+        logError('webhook con cuerpo que no es JSON')
+        return { ok: true }
+      }
+    reemplazar: |
+      } catch {
+        await insertWebhookEvent({ event_id: null })
+        logError('webhook con cuerpo que no es JSON')
+        return { ok: true }
+      }
+    prueba: cd backend && node --test test/firmeWebhook.test.js --test-name-pattern="a non-JSON body is not stored"
+    gravedad: borde
