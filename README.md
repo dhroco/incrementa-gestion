@@ -200,14 +200,16 @@ El proyecto se despliega en **Microsoft Azure** con CI/CD en GitHub Actions y au
 
 **Ambientes:**
 - **Pre-Prod**: grupo de recursos `rg-incrementa-preprod`, Brazil South
-- **Producción**: en una suscripción de Azure de Incrementa, aún por crear — ver `docs/plan-migracion-azure.html` y `docs/accesos-produccion-azure.html`
+- **Producción**: grupo `rg-incrementa-gestion-prod`, Brazil South, en la suscripción de Azure de Incrementa. MCP en marcha blanca (solo por ruta secreta y desde la red de Anthropic) y sin correo saliente (Resend); el contenedor de contratos firmados aún sin WORM. Ver `docs/plan-migracion-azure.html` y `docs/accesos-produccion-azure.html`
 
 ### Pipeline CI/CD (GitHub Actions)
 
 **Flujo:**
 1. Push a `preprod` → despliega a **Pre-Prod** (`.github/workflows/deploy-azure-preprod.yml`): imagen del backend al ACR, MCP, backend y frontend a Static Web Apps.
 2. Cambios de infraestructura → `.github/workflows/infra.yml`, solo a mano y con aprobación (what-if y luego aplicar).
-3. Push a `prod` → despliega a **Producción** (cuando se configure el workflow de prod).
+3. Push a `prod` → despliega a **Producción** (`.github/workflows/deploy-azure-prod.yml`): espera la aprobación de David y solo acepta la rama `prod`.
+
+**Cómo llega un cambio a producción:** entra por PR a `preprod`, se prueba en pre-prod y David adelanta `prod` en fast-forward (`git push origin preprod:prod`). Nadie hace commits, PRs ni hotfixes directos en `prod`.
 
 ### Despliegue y documentación
 
