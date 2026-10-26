@@ -25,8 +25,14 @@ param resendFromEmail string
 @description('false: sin Resend. No se lee RESEND-API-KEY de Key Vault y el backend omite el envío de correos.')
 param usarResend bool
 
-@description('El MCP HTTP abierto no arranca con ENVIRONMENT=prod: en prod no se despliega.')
+@description('Despliega el MCP HTTP (sin login). En prod solo con mcpRutaSecreta=true: mcp-http.mjs no arranca con ENVIRONMENT=prod sin MCP_RUTA_SECRETA.')
 param incluirMcp bool
+
+@description('true: el MCP lee MCP-RUTA-SECRETA de Key Vault y atiende solo en /mcp/<secreto>. El secreto tiene que existir en Key Vault antes de aplicar.')
+param mcpRutaSecreta bool
+
+@description('Rangos de IP que pueden llegar al MCP (vacío: sin restricción). En prod, solo Anthropic.')
+param mcpIpPermitidas array
 
 // Imagen de ejemplo de Microsoft para la primera aplicación, antes de que exista la propia.
 var imagenEjemplo = 'mcr.microsoft.com/k8se/quickstart:latest'
@@ -69,7 +75,15 @@ func secretosDe(kvUri string, identidad string, nombres array) array =>
 
 var nombresSecretos = usarResend ? ['DATABASE-URL', 'RESEND-API-KEY'] : ['DATABASE-URL']
 var secretosBackend = secretosCargados ? secretosDe(keyVaultUri, idBackendId, nombresSecretos) : []
-var secretosMcp = secretosCargados ? secretosDe(keyVaultUri, idMcpId, nombresSecretos) : []
+var secretosMcp = secretosCargados ? secretosDe(keyVaultUri, idMcpId, concat(nombresSecretos, mcpRutaSecreta ? ['MCP-RUTA-SECRETA'] : [])) : []
+var envRutaMcp = mcpRutaSecreta ? [
+  { name: 'MCP_RUTA_SECRETA', secretRef: 'mcp-ruta-secreta' }
+] : []
+var restriccionesMcp = map(range(0, length(mcpIpPermitidas)), i => {
+  name: 'permitido-${i}'
+  ipAddressRange: mcpIpPermitidas[i]
+  action: 'Allow'
+})
 var envResend = usarResend ? [
   { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
 ] : []
@@ -96,7 +110,7 @@ var envMcp = secretosCargados ? concat(envComun, [
   { name: 'AZURE_CLIENT_ID', value: idMcpClientId }
   { name: 'GRAPH_ENABLED', value: 'false' }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-], envResend) : []
+], envResend, envRutaMcp) : []
 
 var sonda = secretosCargados ? [
   {
@@ -160,6 +174,7 @@ resource mcp 'Microsoft.App/containerApps@2024-03-01' = if (incluirMcp) {
         targetPort: puerto
         transport: 'auto'
         allowInsecure: false
+        ipSecurityRestrictions: restriccionesMcp
       }
       registries: secretosCargados ? [{ server: acrLoginServer, identity: idMcpId }] : []
       secrets: secretosMcp
