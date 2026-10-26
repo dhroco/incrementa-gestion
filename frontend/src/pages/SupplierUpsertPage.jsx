@@ -4,20 +4,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { createSupplier, fetchIdentityDocumentTypes, fetchSupplierDetail, updateSupplier } from '../api/suppliersApi'
 import { AbilityContext } from '../lib/ability'
-import { parseOptionalRut, parseRut } from '../utils/rut'
-import { normalizeIsoDateOrNull } from '../utils/dateUtils'
 import {
   SupplierBasicDataSection,
   SupplierSocialNetworksSection,
+  buildSupplierFormPayload,
   emptySupplierForm,
   getFirstSupplierFormTabWithErrors,
-  socialNetworksForSubmit,
-  supplierToForm,
-  validateCatalogDocument,
-  documentTypeForCountry,
-  validateSocialNetworksForForm,
-  validateSupplierEmail,
-  validateSupplierPhone
+  supplierToForm
 } from './SupplierFormSections'
 import { SupplierDocumentHistoryPanel } from './SupplierDocumentHistoryPanel'
 import '../styles/shared-form.css'
@@ -69,7 +62,10 @@ function SupplierUpsertContent({ mode }) {
     const tab = getFirstSupplierFormTabWithErrors(fe)
     if (tab && mode === 'edit') setActiveTab(tab)
     const firstMessage =
-      fe.full_name ||
+      fe.first_names ||
+      fe.last_name ||
+      fe.rep_first_names ||
+      fe.rep_last_name ||
       fe.country_code ||
       fe.rut ||
       fe.email ||
@@ -161,97 +157,12 @@ function SupplierUpsertContent({ mode }) {
   }
 
   function buildPayload() {
-    const fe = {}
-    const isEmpresa = form.supplier_type === 'empresa'
-    const docType = documentTypeForCountry(identityDocumentTypes, form.country_code)
-
-    if (!String(form.country_code || '').trim()) {
-      fe.country_code = 'Debe indicar el país del proveedor.'
-    }
-
-    if (isEmpresa) {
-      if (!String(form.razon_social || '').trim()) fe.razon_social = 'La razón social es obligatoria.'
-      if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
-        const rutEmp = parseRut(form.rut_empresa)
-        if (!String(form.rut_empresa || '').trim()) fe.rut_empresa = 'El RUT de la empresa es obligatorio.'
-        else if (!rutEmp.ok) fe.rut_empresa = rutEmp.message
-        if (String(form.rut_rep_legal || '').trim()) {
-          const rr = parseOptionalRut(form.rut_rep_legal)
-          if (!rr.ok) fe.rut_rep_legal = rr.message
-        }
-      } else {
-        const docErr = validateCatalogDocument(form.rut_empresa, docType, {
-          required: true,
-          role: 'empresa',
-          chileanLabel: 'RUT'
-        })
-        if (docErr) fe.rut_empresa = docErr
-        const repErr = validateCatalogDocument(form.rut_rep_legal, docType, {
-          required: false,
-          role: 'persona_natural',
-          chileanLabel: 'RUT'
-        })
-        if (repErr) fe.rut_rep_legal = repErr
-      }
-    } else {
-      if (!String(form.full_name || '').trim()) fe.full_name = 'El nombre completo es obligatorio.'
-      if (docType?.validator_key === 'rut_cl' || form.country_code === 'CL') {
-        const rut = parseRut(form.rut)
-        if (!String(form.rut || '').trim()) fe.rut = 'El RUT es obligatorio.'
-        else if (!rut.ok) fe.rut = rut.message
-      } else {
-        const docErr = validateCatalogDocument(form.rut, docType, {
-          required: true,
-          role: 'persona_natural',
-          chileanLabel: 'RUT'
-        })
-        if (docErr) fe.rut = docErr
-      }
-    }
-
-    const emailError = validateSupplierEmail(form.email, { required: mode === 'create' })
-    if (emailError) fe.email = emailError
-    const phoneError = validateSupplierPhone(form.phone)
-    if (phoneError) fe.phone = phoneError
-
-    if (Object.keys(fe).length) return failValidation(fe)
-
-    const socialNetworkError = validateSocialNetworksForForm(form.social_networks)
-    if (socialNetworkError) return failValidation({ social_networks: socialNetworkError })
-
-    const social_networks = socialNetworksForSubmit(form.social_networks)
-
-    const payload = {
-      supplier_type: form.supplier_type,
-      country_code: String(form.country_code || '').trim(),
-      email: String(form.email || '').trim() || null,
-      phone: String(form.phone || '').trim() || null,
-      social_networks
-    }
-
-    if (isEmpresa) {
-      payload.razon_social = String(form.razon_social).trim()
-      payload.rut_empresa = String(form.rut_empresa).trim()
-      payload.giro = String(form.giro || '').trim() || null
-      payload.direccion_empresa = String(form.direccion_empresa || '').trim() || null
-      payload.nombre_rep_legal = String(form.nombre_rep_legal || '').trim() || null
-      payload.rut_rep_legal = String(form.rut_rep_legal || '').trim() || null
-      payload.personeria_type = form.personeria_type || null
-      if (form.personeria_type === 'empresa_en_un_dia') {
-        payload.fecha_certificado_estatuto = normalizeIsoDateOrNull(form.fecha_certificado_estatuto)
-        payload.codigo_cve = String(form.codigo_cve || '').trim() || null
-      } else if (form.personeria_type === 'escritura_publica') {
-        payload.fecha_escritura_publica = normalizeIsoDateOrNull(form.fecha_escritura_publica)
-        payload.nombre_notaria = String(form.nombre_notaria || '').trim() || null
-        payload.nombre_notario = String(form.nombre_notario || '').trim() || null
-      }
-    } else {
-      payload.full_name = String(form.full_name).trim()
-      payload.rut = String(form.rut).trim()
-      payload.address = String(form.address || '').trim() || null
-    }
-
-    return payload
+    const built = buildSupplierFormPayload(form, {
+      emailRequired: mode === 'create',
+      identityDocumentTypes
+    })
+    if (!built.ok) return failValidation(built.fieldErrors)
+    return built.payload
   }
 
   async function onSubmit(e) {

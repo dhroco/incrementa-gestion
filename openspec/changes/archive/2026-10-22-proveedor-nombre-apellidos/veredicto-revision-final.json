@@ -1,0 +1,18 @@
+{
+  "color": "amarillo",
+  "resumen": "Las pruebas del perfil (backend, frontend, lint) pasaron con este mismo código y openspec validate da «valid». El cambio cumple tasks y la devolución de cierre (lectura de la fila hija con forUpdate en transacción, con prueba nueva). Quedan dos ablaciones marcadas «!» que debe mirar un humano.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "ablaciones.md · proveedor-nombre-apellidos.ablaciones/nombre-completo-obligatorio",
+      "que": "La ablación sigue sin aplicarse (no-aplica): su «buscar» (\"if (!fullName) errors.push('El nombre completo es obligatorio.')\") aparece 0 veces en supplierService.js. El mensaje real está en dos sitios (líneas 268 y 300), en un errors.push de varias líneas. La devolución de cierre pedía reescribirla y que una prueba la cazara (✓), y no se logró. Sí existe una prueba nueva (supplierService.updateNameLock.test.js:183) que exige el mensaje.",
+      "como_arreglar": "Un humano debe decidir en «confirmar cierre» si devuelve el cambio para reescribir el «buscar» con el texto exacto de una sola aparición, o si acepta la prueba nueva como cobertura."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "ablaciones.md · proveedor-nombre-apellidos.ablaciones/razon-social-obligatoria",
+      "que": "Ablación marcada ! (prueba-mal-elegida): la prueba elegida no la caza, aunque la compuerta completa sí. No se mandó a reparar.",
+      "como_arreglar": "Revisar si hace falta cambiar el campo «prueba» de esa ablación para que apunte a la prueba que sí la caza."
+    }
+  ]
+}
