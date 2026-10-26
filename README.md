@@ -200,7 +200,7 @@ El proyecto se despliega en **Microsoft Azure** con CI/CD en GitHub Actions y au
 
 **Ambientes:**
 - **Pre-Prod**: grupo de recursos `rg-incrementa-preprod`, Brazil South
-- **Producción**: grupo `rg-incrementa-gestion-prod`, Brazil South, en la suscripción de Azure de Incrementa. Sin MCP y sin correo saliente (Resend); el contenedor de contratos firmados aún sin WORM. Ver `docs/plan-migracion-azure.html` y `docs/accesos-produccion-azure.html`
+- **Producción**: grupo `rg-incrementa-gestion-prod`, Brazil South, en la suscripción de Azure de Incrementa. MCP en marcha blanca (solo por ruta secreta y desde la red de Anthropic) y sin correo saliente (Resend); el contenedor de contratos firmados aún sin WORM. Ver `docs/plan-migracion-azure.html` y `docs/accesos-produccion-azure.html`
 
 ### Pipeline CI/CD (GitHub Actions)
 

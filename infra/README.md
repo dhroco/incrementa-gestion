@@ -27,7 +27,7 @@ Infraestructura de **incrementa-gestion** en **Microsoft Azure**, definida con B
 - **Producción:** `.github/workflows/deploy-azure-prod.yml`, disparado por un push a la rama `prod` (que solo
   avanza en fast-forward desde `preprod`). Corre en el environment `produccion` de GitHub: espera la
   aprobación de David, solo acepta la rama `prod` y entra a Azure con OIDC, sin claves. Vive en
-  `rg-incrementa-gestion-prod` (suscripción de Incrementa) y no tiene MCP. Los parámetros están en
+  `rg-incrementa-gestion-prod` (suscripción de Incrementa) y su MCP está en marcha blanca (ruta secreta y restricción de IP). Los parámetros están en
   `azure/prod.bicepparam`.
 
 ## Documentación
