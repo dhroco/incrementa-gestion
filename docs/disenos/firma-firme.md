@@ -232,8 +232,10 @@ pantalla y un **barrido programado desde fuera del backend** (porque el backend 
      con un `firme_document_code` nuestro) y **refresca ese intento**. Del evento solo se usa, además, el
      motivo del rechazo (`reason`, `motivo`, `rejectionReason`) para mostrarlo; el estado real sale de Firme.
    - **Idempotente:** un mismo evento puede llegar dos veces. Cada mensaje se guarda una sola vez en
-     `firme_webhook_event` (`event_id` único —el `event_id` del payload—, `INSERT … ON CONFLICT DO NOTHING`) y `refresh` ya es
-     idempotente (finalizar dos veces no duplica el `document` ni reescribe `firmados`).
+     `firme_webhook_event` (`event_id` único, con `INSERT … ON CONFLICT DO NOTHING`; en la implementación ese
+     valor es el `MessageId` de SNS y no el `event_id` del payload de Firme: SNS reentrega con el mismo
+     `MessageId`) y `refresh` ya es idempotente (finalizar dos veces no duplica el `document` ni reescribe
+     `firmados`).
    - Responde siempre `200` rápido (SNS reintenta ante fallos; con el arranque en frío de ≈ 40 s el primer
      intento puede perderse, por eso existen las otras dos vías).
 2. **Consulta al abrir** (`firmeSigningService.refresh`): al listar «En firma» y con «Actualizar estado»
@@ -259,7 +261,7 @@ pantalla y un **barrido programado desde fuera del backend** (porque el backend 
 
 El vencimiento por tiempo es un respaldo mientras Firme no informe vencimientos. Dos procesos pueden
 coincidir (el barrido y alguien abriendo la pantalla): `refresh` toma el intento con
-`SELECT … FOR UPDATE SKIP LOCKED` y el que no lo consigue sigue con el siguiente.
+`SELECT … FOR UPDATE SKIP LOCKED` y el que no lo consigue sigue con el siguiente. **Alcance real (revisión del 26-oct):** ese bloqueo se toma al leer el intento y se libera antes de llamar a Firme, así que **no serializa** dos `refresh` simultáneos; lo que garantiza que no haya doble finalización es que (a) la escritura en `firmados` es única e idempotente (`uploadBufferOnce` con la ruta reservada) y (b) `commitSigned` vuelve a tomar el intento bajo bloqueo y solo escribe si sigue en `pending_signature`. Dos `refresh` a la vez pueden duplicar consultas a Firme, no resultados.
 
 **Renovar enlace** (`POST /api/contracts/:id/resend-link`, desde `expired` (renovar) o `pending_signature`
 (recordatorio)): llama a `POST /documents/{code}/signees/{privateCode}/resend` con el `privateCode` que ya
@@ -353,6 +355,14 @@ de **los dos ambientes antes de promover el código que las usa** (yo no toco in
 | `FIRME_API_URL` | no | `https://staging.api.documentos.firme.cl` | `https://api.documentos.firme.cl` |
 | `FIRME_API_TOKEN` | **sí** (Key Vault; nombre sugerido `FIRME-API-TOKEN`, inyectado como `FIRME_API_TOKEN`) | token de desarrollador de staging | token de la cuenta de producción de Incrementa (a nombre de Yerko Reckmann) |
 | `FIRME_LEGAL_ENTITY_ID` | no | `6aba57b936570f5e596a19af` | id de la entidad legal de producción (lo cargan David y la sesión de la nube) |
+
+**`FIRME_SNS_TOPIC_ARN` (opcional, endurecimiento).** El webhook valida la firma SNS de cada mensaje; si
+además existe esta variable, exige que el `TopicArn` coincida. **No es obligatoria y no se carga en Bicep ni
+en Key Vault por ahora**: el webhook es solo un aviso (lo único que hace es consultar a Firme por un documento
+que ya tenemos) y un tópico ajeno con firma válida no puede falsear una firma. Si David quiere fijarla, el ARN
+llega en la `SubscriptionConfirmation` y queda guardado:
+`select body->>'TopicArn' from firme_webhook_event where message_type = 'SubscriptionConfirmation';`
+(el script `firme-webhook.js registrar` no lo imprime: la API no lo devuelve al crear la suscripción).
 
 **Qué cambia entre staging y producción:** la URL, el token y la entidad legal; en staging el certificado
 de la firma es «TESTING» y los créditos son de prueba, y en producción son reales y prepagados
