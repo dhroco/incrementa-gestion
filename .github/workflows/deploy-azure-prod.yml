@@ -1,8 +1,8 @@
 name: Deploy Prod (Azure)
 
-# Push a `prod` → espera la aprobación de David → imagen del backend al ACR de prod → backend →
-# frontend a Static Web Apps. Prod no tiene MCP (el MCP HTTP abierto no arranca con
-# ENVIRONMENT=prod).
+# Push a `prod` → espera la aprobación de David → imagen del backend al ACR de prod → MCP →
+# backend → frontend a Static Web Apps. El MCP de prod (marcha blanca, sin login) solo atiende en
+# una ruta secreta de Key Vault y solo desde la red de Anthropic; eso lo pone el Bicep.
 #
 # Corre en el environment de GitHub `produccion`:
 #   - exige la aprobación de David antes de empezar;
@@ -36,6 +36,7 @@ env:
   ACR: acrincrementaprod
   ACR_SERVER: acrincrementaprod.azurecr.io
   BACKEND_APP: ca-incrementa-backend
+  MCP_APP: ca-incrementa-mcp
   SWA: swa-incrementa-prod
   NODE_VERSION: '22'
   # App registration del login de prod (incrementa-gestion, tenant de Incrementa). No es secreto.
@@ -83,6 +84,9 @@ jobs:
           docker push "$IMAGEN"
           docker push "$ACR_SERVER/backend:prod"
           echo "IMAGEN=$IMAGEN" >> "$GITHUB_ENV"
+
+      - name: Actualizar el MCP
+        run: az containerapp update -g "$RG" -n "$MCP_APP" --image "$IMAGEN" --output none
 
       - name: Actualizar el backend
         run: az containerapp update -g "$RG" -n "$BACKEND_APP" --image "$IMAGEN" --output none
@@ -137,4 +141,5 @@ jobs:
         run: |
           echo "Imagen:   $IMAGEN"
           echo "Backend:  $BACKEND_URL"
+          echo "MCP:      https://$(az containerapp show -g "$RG" -n "$MCP_APP" --query properties.configuration.ingress.fqdn -o tsv)/mcp/<ruta secreta>"
           echo "Frontend: https://$(az staticwebapp show -g "$RG" -n "$SWA" --query defaultHostname -o tsv)"

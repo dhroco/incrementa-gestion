@@ -245,13 +245,13 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'crear_proveedor',
-    'Crea un nuevo proveedor global. Requiere supplier_type (persona_natural o empresa), country_code (ISO-3166-1 alfa-2: CL o MX según el catálogo), document_number (identificador tributario canónico: RUT chileno o RFC mexicano; también se aceptan los alias rut / rut_empresa) y email (correo válido; se guarda en minúsculas). Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa; rep_document_number o alias rut_rep_legal es opcional. phone es opcional y se guarda como se escribe (sin normalizar a E.164). Usa listar_proveedores primero para evitar duplicados. Si incluye social_networks, llama listar_catalogo_redes antes para obtener catalog_id válidos. Retorna el proveedor creado con su id.',
+    'Crea un nuevo proveedor global. Requiere supplier_type (persona_natural o empresa), country_code (ISO-3166-1 alfa-2: CL o MX según el catálogo), document_number (identificador tributario canónico: RUT chileno o RFC mexicano; también se aceptan los alias rut / rut_empresa) y email (correo válido; se guarda en minúsculas). Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa; rep_document_number o alias rut_rep_legal es opcional. phone es opcional y se guarda como se escribe (sin normalizar a E.164). Las partes del nombre son opcionales: first_names, last_name, maternal_last_name, rep_first_names, rep_last_name y rep_maternal_last_name. Si se omiten, el alta se comporta como hasta ahora (full_name o nombre_rep_legal). Usa listar_proveedores primero para evitar duplicados. Si incluye social_networks, llama listar_catalogo_redes antes para obtener catalog_id válidos. Retorna el proveedor creado con su id.',
     {
       payload: z
         .object({})
         .passthrough()
         .describe(
-          'Datos del proveedor: supplier_type, country_code (CL o MX), email (obligatorio), phone (opcional), full_name/document_number o alias rut (persona natural) o razon_social/document_number o alias rut_empresa (empresa). RFC persona física 13 caracteres, persona moral 12. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
+          'Datos del proveedor: supplier_type, country_code (CL o MX), email (obligatorio), phone (opcional), full_name/document_number o alias rut (persona natural) o razon_social/document_number o alias rut_empresa (empresa). Partes de nombre opcionales: first_names, last_name, maternal_last_name, rep_first_names, rep_last_name y rep_maternal_last_name. RFC persona física 13 caracteres, persona moral 12. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
         )
     },
     async ({ payload }) => {
@@ -267,14 +267,14 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'actualizar_proveedor',
-    'Actualiza un proveedor existente por id. Acepta campos parciales; email y phone son opcionales (omitirlos no cambia el valor; un proveedor sin email se puede actualizar sin enviar email). country_code y document_number (o alias rut / rut_empresa) se revalidan si se envían. Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa. social_networks reemplaza la lista completa si se envía (llama listar_catalogo_redes antes para obtener catalog_id válidos). No permite cambiar supplier_type.',
+    'Actualiza un proveedor existente por id. Acepta campos parciales; email y phone son opcionales (omitirlos no cambia el valor; un proveedor sin email se puede actualizar sin enviar email). country_code y document_number (o alias rut / rut_empresa) se revalidan si se envían. Para supplier_type empresa, email es el correo del representante legal (quien firmará el contrato), no una casilla general de la empresa. Las partes del nombre son opcionales: first_names, last_name, maternal_last_name, rep_first_names, rep_last_name y rep_maternal_last_name. Si se omiten, la actualización se comporta como hasta ahora. social_networks reemplaza la lista completa si se envía (llama listar_catalogo_redes antes para obtener catalog_id válidos). No permite cambiar supplier_type.',
     {
       id: z.string().uuid().describe('UUID del proveedor a actualizar'),
       payload: z
         .object({})
         .passthrough()
         .describe(
-          'Campos parciales a actualizar. email, phone, country_code y document_number (o alias rut/rut_empresa) opcionales. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
+          'Campos parciales a actualizar. email, phone, country_code y document_number (o alias rut/rut_empresa) opcionales. Partes de nombre opcionales: first_names, last_name, maternal_last_name, rep_first_names, rep_last_name y rep_maternal_last_name. social_networks opcional: [{ catalog_id: UUID del catálogo (ver listar_catalogo_redes), account_name: handle ej. @miempresa }]'
         )
     },
     async ({ id, payload }) => {

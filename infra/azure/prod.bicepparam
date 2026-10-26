@@ -26,6 +26,13 @@ param wormFirmados = false
 // Prod sale sin Resend: no hay correo saliente.
 param usarResend = false
 
+// MCP en marcha blanca (opción 2, decisión de David 21-oct): sin login, solo en una ruta secreta
+// (MCP-RUTA-SECRETA en Key Vault; crearla antes con scripts/crear-secreto-mcp.sh) y solo desde la
+// red de salida de Anthropic. Después: MCP con login de Entra en mcp.incrementa.la (opción 1).
+param incluirMcp = true
+param mcpRutaSecreta = true
+param mcpIpPermitidas = ['160.79.104.0/21']
+
 // Primera aplicación: false (imagen de ejemplo, sin secretos). Después de cargar DATABASE-URL
 // en Key Vault y publicar la imagen, se vuelve a aplicar con true y la imagen que corresponda.
 param secretosCargados = false

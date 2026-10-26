@@ -1,0 +1,2088 @@
+{
+ "CONTRATO_0001": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0002": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0003": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.12 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.14 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) (Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0004": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0005": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0006": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de Dynamics.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.12 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.14 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) (Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0007": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0008": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".  Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0009": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".  Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de Dynamics.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.12 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.14 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) (Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0010": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0011": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0012": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.12 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.14 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) (Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0013": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0014": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0015": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de 30 días corridos contados desde la fecha de publicación de los Servicios por parte del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.12 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.14 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) (Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0016": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " declara que es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar los productos de la ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " la cual fue desarrollado por su (Nombre cliente) (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de (Número en letras) (Cantidad en números) días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.8 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "4.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes convienen que el presente Contrato tendrá una vigencia de (Cantidad en letras) (Cantidad en números) meses contados a partir de la fecha de su firma. No obstante lo anterior, las Partes acuerdan expresamente que el objeto del presente Contrato se tendrá por cumplido y el Contrato se entenderá concluido una vez que el Influencer haya prestado íntegramente los Servicios objeto del mismo, sin perjuicio de la subsistencia de aquellas obligaciones que, por su naturaleza o disposición expresa del Contrato, deban continuar vigentes con posterioridad, incluyendo, de manera enunciativa mas no limitativa, las relativas a propiedad intelectual, derechos de imagen y de voz, confidencialidad y no competencia.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "6.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Dicha autorización y cesión de derechos se concede por un plazo máximo y determinado de (Número en letras) (Cantidad en números) meses, contados a partir de la fecha de la primera publicación de cada Contenido. Una vez transcurrido dicho plazo, cesará la explotación comercial y publicitaria activa de los Contenidos, salvo que las Partes celebren un nuevo acuerdo por escrito que establezca los términos, condiciones y, en su caso, la remuneración correspondiente.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0017": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " declara que es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar los productos de la ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " la cual fue desarrollado por su (Nombre cliente) (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "El Influencer declara contar con el manejo de redes sociales y experiencia necesarias para realizar este tipo de Servicios, por lo que la producción del contenido de los Servicios quedará a criterio y creatividad del Influencer, teniendo como objetivo la publicidad del Producto, sin perjuicio de tener que ceñirse a las temáticas de publicaciones que será entregado por ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ". Por otro lado, ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " podrá realizar una amplificación pagada (boost) de los Contenidos publicados por el Influencer por un período máximo de 30 días corridos, contados desde la fecha de su publicación.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.7 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes acuerdan que el Influencer no podrá publicar ni promocionar contenido para marcas, productos o servicios que sean competencia de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " durante la vigencia del Contrato y por un plazo de (Cantidad en letras) (Cantidad en números) días naturales contados desde la fecha de publicación de los Servicios por parte del Influencer, salvo autorización previa y por escrito de ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.9 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Activaciones Presenciales comprenderán un máximo de (Cantidad de veces en palabras) (Cantidad de veces en número) participaciones presenciales durante la vigencia del presente Contrato. Cada participación presencial tendrá una duración máxima de (Cantidad de horas en letras) (Cantidad de horas en números) horas efectivas.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "2.11 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las fechas, lugares, horarios y características específicas de cada Activación Presencial deberán ser previamente coordinadas y confirmadas por escrito entre las Partes, con una antelación mínima de (Cantidad de veces en letras) Cantidad de veces en números) días naturales, atendiendo a las necesidades de la campaña publicitaria y a la disponibilidad del Influencer.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "4.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Las Partes convienen que el presente Contrato tendrá una vigencia de (Cantidad en letras) (Cantidad en números) meses contados a partir de la fecha de su firma. No obstante lo anterior, las Partes acuerdan expresamente que el objeto del presente Contrato se tendrá por cumplido y el Contrato se entenderá concluido una vez que el Influencer haya prestado íntegramente los Servicios objeto del mismo, sin perjuicio de la subsistencia de aquellas obligaciones que, por su naturaleza o disposición expresa del Contrato, deban continuar vigentes con posterioridad, incluyendo, de manera enunciativa mas no limitativa, las relativas a propiedad intelectual, derechos de imagen y de voz, confidencialidad y no competencia.",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "6.4 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": "Dicha autorización y cesión de derechos se concede por un plazo máximo y determinado de (Número en letras) (Cantidad en números) meses, contados a partir de la fecha de la primera publicación de cada Contenido. Una vez transcurrido dicho plazo, cesará la explotación comercial y publicitaria activa de los Contenidos, salvo que las Partes celebren un nuevo acuerdo por escrito que establezca los términos, condiciones y, en su caso, la remuneración correspondiente.",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

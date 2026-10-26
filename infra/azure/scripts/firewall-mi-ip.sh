@@ -7,7 +7,7 @@
 set -euo pipefail
 
 ENTORNO="${1:-preprod}"
-RG="rg-incrementa-${ENTORNO}"
+if [[ "$ENTORNO" == "prod" ]]; then RG="rg-incrementa-gestion-prod"; else RG="rg-incrementa-${ENTORNO}"; fi
 SERVIDOR="psql-incrementa-${ENTORNO}"
 REGLA="administrador"
 

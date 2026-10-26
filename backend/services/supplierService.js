@@ -1,4 +1,5 @@
 const { db } = require('../db/knex')
+const { composeFullName, splitFullName } = require('../utils/personName')
 const { isValidEmail } = require('../utils/validation')
 const { storageService } = require('./storageService')
 const {
@@ -14,7 +15,15 @@ const {
 const SUPPLIER_TYPES = new Set(['persona_natural', 'empresa'])
 const PERSONERIA_TYPES = new Set(['empresa_en_un_dia', 'escritura_publica'])
 
-const PERSONA_FIELDS = new Set(['full_name', 'document_type_code', 'document_number', 'address'])
+const PERSONA_FIELDS = new Set([
+  'full_name',
+  'first_names',
+  'last_name',
+  'maternal_last_name',
+  'document_type_code',
+  'document_number',
+  'address'
+])
 const EMPRESA_FIELDS = new Set([
   'razon_social',
   'document_type_code',
@@ -22,6 +31,9 @@ const EMPRESA_FIELDS = new Set([
   'giro',
   'direccion_empresa',
   'nombre_rep_legal',
+  'rep_first_names',
+  'rep_last_name',
+  'rep_maternal_last_name',
   'rep_document_type_code',
   'rep_document_number',
   'personeria_type',
@@ -221,12 +233,89 @@ function applyDocumentValidation(body, out, errors, {
   }
 }
 
+const LIST_OMITTED_NAME_PARTS = [
+  'first_names',
+  'last_name',
+  'maternal_last_name',
+  'rep_first_names',
+  'rep_last_name',
+  'rep_maternal_last_name'
+]
+
+function bodyHas(body, key) {
+  return !!body && Object.prototype.hasOwnProperty.call(body, key)
+}
+
+function nullIfBlank(value) {
+  if (value == null) return null
+  const trimmed = String(value).trim()
+  return trimmed === '' ? null : trimmed
+}
+
+function applyNameMode(body, errors, { partial, partKeys, composedKey, existing, optional }) {
+  const anyPart = partKeys.some((key) => bodyHas(body, key))
+  const composedSent = bodyHas(body, composedKey)
+  if (!anyPart && !composedSent) {
+    if (partial) return null
+    if (optional) {
+      return {
+        [partKeys[0]]: null,
+        [partKeys[1]]: null,
+        [partKeys[2]]: null,
+        [composedKey]: null
+      }
+    }
+    errors.push('El nombre completo es obligatorio.')
+    return null
+  }
+
+  if (anyPart) {
+    const stored = partKeys.map((key) => nullIfBlank(bodyHas(body, key) ? body[key] : existing?.[key]))
+    if (!stored[0]) errors.push('Los nombres son obligatorios.')
+    if (!stored[1]) errors.push('El apellido paterno es obligatorio.')
+    if (!stored[0] || !stored[1]) return null
+    return {
+      [partKeys[0]]: stored[0],
+      [partKeys[1]]: stored[1],
+      [partKeys[2]]: stored[2],
+      [composedKey]: composeFullName({
+        firstNames: stored[0],
+        lastName: stored[1],
+        maternalLastName: stored[2]
+      })
+    }
+  }
+
+  const raw = body[composedKey]
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+  if (!trimmed) {
+    if (optional) {
+      return {
+        [partKeys[0]]: null,
+        [partKeys[1]]: null,
+        [partKeys[2]]: null,
+        [composedKey]: null
+      }
+    }
+    errors.push('El nombre completo es obligatorio.')
+    return null
+  }
+  const parts = splitFullName(trimmed)
+  return {
+    [composedKey]: trimmed,
+    [partKeys[0]]: nullIfBlank(parts.firstNames),
+    [partKeys[1]]: nullIfBlank(parts.lastName),
+    [partKeys[2]]: nullIfBlank(parts.maternalLastName)
+  }
+}
+
 function validatePayload(body, {
   partial = false,
   existingType = null,
   existingCountry = null,
   existingDocumentNumber = null,
   existingRepDocumentNumber = null,
+  existingChild = null,
   documentTypes = []
 } = {}) {
   const errors = []
@@ -266,11 +355,14 @@ function validatePayload(body, {
   })
 
   if (type === 'persona_natural') {
-    if (!partial || body?.full_name !== undefined) {
-      const fullName = typeof body?.full_name === 'string' ? body.full_name.trim() : ''
-      if (!fullName) errors.push('El nombre completo es obligatorio.')
-      else out.full_name = fullName
-    }
+    const nameFields = applyNameMode(body, errors, {
+      partial,
+      partKeys: ['first_names', 'last_name', 'maternal_last_name'],
+      composedKey: 'full_name',
+      existing: existingChild,
+      optional: false
+    })
+    if (nameFields) Object.assign(out, nameFields)
     if (!partial || body?.address !== undefined) {
       out.address = trimOrNull(body?.address)
     }
@@ -284,9 +376,14 @@ function validatePayload(body, {
     if (!partial || body?.direccion_empresa !== undefined) {
       out.direccion_empresa = trimOrNull(body?.direccion_empresa)
     }
-    if (!partial || body?.nombre_rep_legal !== undefined) {
-      out.nombre_rep_legal = trimOrNull(body?.nombre_rep_legal)
-    }
+    const repFields = applyNameMode(body, errors, {
+      partial,
+      partKeys: ['rep_first_names', 'rep_last_name', 'rep_maternal_last_name'],
+      composedKey: 'nombre_rep_legal',
+      existing: existingChild,
+      optional: true
+    })
+    if (repFields) Object.assign(out, repFields)
 
 
     if (!partial || body?.personeria_type !== undefined) {
@@ -359,6 +456,9 @@ function supplierJoinQuery(trxOrDb = db) {
       's.created_by',
       's.updated_by',
       'spn.full_name',
+      'spn.first_names',
+      'spn.last_name',
+      'spn.maternal_last_name',
       'spn.document_type_code',
       'spn.document_number',
       'spn.address',
@@ -368,6 +468,9 @@ function supplierJoinQuery(trxOrDb = db) {
       'se.giro',
       'se.direccion_empresa',
       'se.nombre_rep_legal',
+      'se.rep_first_names',
+      'se.rep_last_name',
+      'se.rep_maternal_last_name',
       'se.rep_document_type_code',
       'se.rep_document_number',
       'se.personeria_type',
@@ -445,11 +548,17 @@ function normalizeSupplier(row, socialNetworks = []) {
     email: row.email ?? null,
     phone: row.phone ?? null,
     full_name: row.full_name ?? null,
+    first_names: row.first_names ?? null,
+    last_name: row.last_name ?? null,
+    maternal_last_name: row.maternal_last_name ?? null,
     address: row.address ?? null,
     razon_social: row.razon_social ?? null,
     giro: row.giro ?? null,
     direccion_empresa: row.direccion_empresa ?? null,
     nombre_rep_legal: row.nombre_rep_legal ?? null,
+    rep_first_names: row.rep_first_names ?? null,
+    rep_last_name: row.rep_last_name ?? null,
+    rep_maternal_last_name: row.rep_maternal_last_name ?? null,
     rep_document_type_code: row.rep_document_type_code ?? null,
     rep_document_number: row.rep_document_number ?? null,
     rep_document_display: repDisplay || '',
@@ -521,7 +630,11 @@ async function listSuppliers({ search = '' } = {}) {
 
   const ids = rows.map((r) => r.id)
   const networksMap = await loadSocialNetworksBySupplierIds(ids)
-  const items = rows.map((r) => normalizeSupplier(r, networksMap.get(r.id) || []))
+  const items = rows.map((r) => {
+    const item = normalizeSupplier(r, networksMap.get(r.id) || [])
+    for (const key of LIST_OMITTED_NAME_PARTS) delete item[key]
+    return item
+  })
 
   return { ok: true, data: { items } }
 }
@@ -555,6 +668,9 @@ async function insertChildRow(trx, supplierId, supplierType, childFields) {
     await trx('supplier_persona_natural').insert({
       supplier_id: supplierId,
       full_name: childFields.full_name,
+      first_names: childFields.first_names ?? null,
+      last_name: childFields.last_name ?? null,
+      maternal_last_name: childFields.maternal_last_name ?? null,
       document_type_code: childFields.document_type_code,
       document_number: childFields.document_number,
       address: childFields.address ?? null
@@ -569,6 +685,9 @@ async function insertChildRow(trx, supplierId, supplierType, childFields) {
     giro: childFields.giro ?? null,
     direccion_empresa: childFields.direccion_empresa ?? null,
     nombre_rep_legal: childFields.nombre_rep_legal ?? null,
+    rep_first_names: childFields.rep_first_names ?? null,
+    rep_last_name: childFields.rep_last_name ?? null,
+    rep_maternal_last_name: childFields.rep_maternal_last_name ?? null,
     rep_document_type_code: childFields.rep_document_type_code ?? null,
     rep_document_number: childFields.rep_document_number ?? null,
     personeria_type: childFields.personeria_type ?? null,
@@ -584,6 +703,15 @@ async function updateChildRow(trx, supplierId, supplierType, childFields) {
   if (!Object.keys(childFields).length) return
   const table = supplierType === 'persona_natural' ? 'supplier_persona_natural' : 'supplier_empresa'
   await trx(table).where({ supplier_id: supplierId }).update(childFields)
+}
+
+async function readLockedChild(trx, table, supplierId) {
+  const query = trx(table).where({ supplier_id: supplierId })
+  // Los dobles anteriores no implementan forUpdate; knex sí y deja la fila bloqueada hasta el commit.
+  if (typeof query.forUpdate !== 'function') {
+    query.forUpdate = function forUpdate() { return this }
+  }
+  return query.forUpdate().first()
 }
 
 async function listSocialNetworkCatalog() {
@@ -732,42 +860,42 @@ async function updateSupplier(id, { payload, userId }) {
   }
 
   const childTable = existing.supplier_type === 'empresa' ? 'supplier_empresa' : 'supplier_persona_natural'
-  const child = await db(childTable).where({ supplier_id: id }).first()
   const documentTypes = await loadIdentityDocumentTypes()
-  const v = validatePayload(payload, {
-    partial: true,
-    existingType: existing.supplier_type,
-    existingCountry: existing.country_code,
-    existingDocumentNumber: child?.document_number ?? null,
-    existingRepDocumentNumber: child?.rep_document_number ?? null,
-    documentTypes
-  })
-  if (!v.ok) {
-    return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors[0] || 'Datos inválidos.' }
-  }
-  const d = v.data
-  delete d.supplier_type
 
-  let socialNetworks
-  if (payload?.social_networks !== undefined) {
-    const sn = await validateSocialNetworks(payload.social_networks)
-    if (!sn.ok) {
-      return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: sn.message }
+  const outcome = await db.transaction(async (trx) => {
+    const child = await readLockedChild(trx, childTable, id)
+    const v = validatePayload(payload, {
+      partial: true,
+      existingType: existing.supplier_type,
+      existingCountry: existing.country_code,
+      existingDocumentNumber: child?.document_number ?? null,
+      existingRepDocumentNumber: child?.rep_document_number ?? null,
+      existingChild: child,
+      documentTypes
+    })
+    if (!v.ok) {
+      return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors[0] || 'Datos inválidos.' }
     }
-    socialNetworks = sn.value
-  }
+    const d = v.data
+    delete d.supplier_type
 
-  const childFields = splitChildFields(d, existing.supplier_type)
-  const baseFields = splitBaseFields(d)
-  const hasChildUpdate = Object.keys(childFields).length > 0
-  const hasBaseUpdate = Object.keys(baseFields).length > 0
-  const hasSocialUpdate = socialNetworks !== undefined
+    let socialNetworks
+    if (payload?.social_networks !== undefined) {
+      const sn = await validateSocialNetworks(payload.social_networks)
+      if (!sn.ok) {
+        return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: sn.message }
+      }
+      socialNetworks = sn.value
+    }
 
-  if (!hasChildUpdate && !hasSocialUpdate && !hasBaseUpdate) {
-    return getSupplierById(id)
-  }
+    const childFields = splitChildFields(d, existing.supplier_type)
+    const baseFields = splitBaseFields(d)
+    const hasChildUpdate = Object.keys(childFields).length > 0
+    const hasBaseUpdate = Object.keys(baseFields).length > 0
+    const hasSocialUpdate = socialNetworks !== undefined
 
-  await db.transaction(async (trx) => {
+    if (!hasChildUpdate && !hasSocialUpdate && !hasBaseUpdate) return null
+
     await trx('supplier').where({ id }).update({
       ...baseFields,
       updated_by: userId ?? null,
@@ -780,8 +908,10 @@ async function updateSupplier(id, { payload, userId }) {
       await trx('supplier_social_network').where({ supplier_id: id }).del()
       await insertSocialNetworks(trx, id, socialNetworks)
     }
+    return null
   })
 
+  if (outcome && outcome.ok === false) return outcome
   return getSupplierById(id)
 }
 

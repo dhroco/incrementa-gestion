@@ -209,6 +209,41 @@ export const VARIABLE_GROUPS = {
         description: 'Formato de la publicación (Reel, Video, Historia, Story, Post, Carrusel, Short). Se escribe en minúsculas y concuerda en número con "Cantidad de reels" (ej: "Video" con 3 → "videos").'
       },
       {
+        id: 'dias_no_competencia',
+        label: 'Días de no competencia',
+        description: 'Plazo de no competencia, en números y letras (ej: "30" → "treinta (30)"). Se escribe solo el número: la unidad ("días corridos" o "días naturales") va en el texto de la cláusula.'
+      },
+      {
+        id: 'activaciones_cantidad',
+        label: 'Cantidad máxima de activaciones',
+        description: 'Máximo de participaciones presenciales, en números y letras (ej: "2" → "dos (2)"). Solo el número.'
+      },
+      {
+        id: 'activaciones_horas',
+        label: 'Horas máximas por activación',
+        description: 'Duración máxima de cada activación presencial, en números y letras (ej: "4" → "cuatro (4)"). Solo el número.'
+      },
+      {
+        id: 'activaciones_antelacion_dias',
+        label: 'Días de antelación para las activaciones',
+        description: 'Días de antelación mínima para coordinar cada activación, en números y letras (ej: "10" → "diez (10)"). Solo el número.'
+      },
+      {
+        id: 'vigencia_meses',
+        label: 'Vigencia del contrato (meses)',
+        description: 'Vigencia del contrato en meses, en números y letras (ej: "6" → "seis (6)"). Solo el número.'
+      },
+      {
+        id: 'meses_cesion',
+        label: 'Plazo de cesión (meses)',
+        description: 'Plazo de la cesión de derechos en meses, en números y letras (ej: "12" → "doce (12)"). Solo el número.'
+      },
+      {
+        id: 'dias_boost',
+        label: 'Días de amplificación (boost)',
+        description: 'Días máximos de amplificación pagada de los contenidos, en números y letras (ej: "30" → "treinta (30)"). Solo el número.'
+      },
+      {
         id: 'precio_numero',
         label: 'Precio',
         description: 'Monto del contrato en cifras'
