@@ -2,7 +2,7 @@
 
 > Diseño de Ignacio (arquitecto). Versión inicial 28-sep-2026; **reescrito el 21-oct-2026 para el flujo A**
 > (decisión del gerente de Incrementa, 19-oct, vía David). Las decisiones de producto que David confirmó
-> el 21-oct están marcadas como tales.
+> el 21-oct están marcadas como tales. **Diseño del flujo A aprobado por David el 26-oct** (decisiones al final).
 
 ## Qué es
 
@@ -41,12 +41,18 @@ Probado el 28-sep en staging (`https://staging.api.documentos.firme.cl`) y leíd
 `.../signees/{privateCode}/emails/events`, `.../emails/{hub_email_id}/certificate`,
 `GET /documents/{code}/files/SIGNED_DOCUMENT` (URL firmada de ≈ 1 h).
 
-**Webhooks: existen.** `POST /webhooks/subscriptions` con `{ legalEntityId, url, eventTypes }`. Firme
-usa AWS SNS: tras crear la suscripción, SNS llama al endpoint con una solicitud de confirmación y el
-servidor debe hacer `GET` a la `SubscribeURL`. La URL tiene que ser HTTPS y pública. Eventos útiles:
-`document.signed`, `document.completed`, `document.status_changed`, `signature.signed`,
-`signature.rejected`, `signature.expired`. **No se documenta la forma del cuerpo de cada evento**:
-hay que capturarla en staging (ver «Recepción»).
+**Webhooks: existen** (Firme, 21-oct; precisado el 26-oct con la guía v2.1). `POST /webhooks/subscriptions`
+con `{ legalEntityId, url, eventTypes }`: **exige rol ADMIN en la empresa** (el token de producción lo genera
+el administrador de la cuenta de Firme). Si ya existe una suscripción con la misma URL y otra configuración
+responde **412**: hay que borrarla antes (`DELETE /webhooks/subscriptions/{id}`). Firme entrega por AWS SNS
+(`us-east-1`): tras crear la suscripción SNS llama al endpoint con una `SubscriptionConfirmation` y el
+servidor hace `GET` a la `SubscribeURL`; además hay que **validar la firma SNS de cada mensaje** y comprobar
+que `SigningCertURL` sea de `*.amazonaws.com`. La URL tiene que ser HTTPS y pública.
+**Payload:** `event_id` (UUID único: la clave de idempotencia), `event_type`, `resource_id` y
+`data.document_code` / `data.status`. **Eventos que sí se emiten:** `document.signed`,
+`document.status_changed`, `signature.signed` y `signature.rejected`. `signature.expired` existe pero
+**todavía no se emite**, así que se mantiene la consulta de respaldo cada 15 a 30 minutos. En SIMPLE
+`signature.signed` llega con `signature_method: "fea"` (firma por FirmeHub): **no se filtra por «simple»**.
 
 **Estados del documento** (`DocumentStatus`): `PENDING`, `UPLOADED`, `DRAFT`, `PENDING_SIGNATURE`,
 `SIGNED`, `PENDING_NOTARY_SIGNATURE`, `NOTARIZED`, `MISSING_ATTACHMENT`, `REPAIR`, `REJECTED`,
@@ -58,8 +64,37 @@ hay que capturarla en staging (ver «Recepción»).
   «no quedan créditos» **antes** de gastar el envío.
 - `DELETE /documents/{code}` borra un documento en `DRAFT` y devuelve los créditos consumidos: sirve
   para limpiar un envío que falló a medias.
-- Solo RUT chileno (para pruebas, `11.111.111-1`). Apellido materno obligatorio (si no hay, `.`).
-- La evidencia no trae la IP del firmante. El enlace de firma expira a los 10 días.
+- Solo RUT chileno (para pruebas, `11.111.111-1`); los extranjeros siguen fuera de la API. Apellido
+  materno obligatorio (si no hay, `.`); **pasa a opcional en la segunda quincena de noviembre**, y hasta
+  entonces se manda `.` (una constante, `MATERNAL_PLACEHOLDER`, para cambiarlo después).
+- **Cobro de créditos: dos fuentes que no coinciden.** El correo de Firme dice que se descuentan «al cargar el
+  documento»; la guía exige créditos suficientes al **completar** la transacción (paso 10, pago con
+  `CREDITS`). **Por confirmar en staging** (script `firme-resend-check.mjs`, que imprime el saldo antes de
+  cargar, después de cargar y después de completar). En los dos casos el envío es **idempotente: nunca se
+  crean dos transacciones ni se cargan dos documentos para el mismo contrato**. Un documento en `DRAFT` se
+  puede borrar y devuelve los créditos.
+- **Endpoints que el correo menciona y la guía no documenta** (`/sign-url`, `/documents/{code}/logs`,
+  `/legal-entities/{id}/quota`, `POST /tokens/{id}/refresh`): **comprobados el 26-oct** en los `openapi.json`
+  de producción (v0.0.147) y staging (v0.0.147-pre): existen los cuatro y los dos ambientes tienen las
+  mismas rutas. Falta probarlos con datos (el script de staging prueba `logs` y `quota`). Alternativa si
+  alguno fallara: `quota` solo sirve para avisar de saldo (el 422 de `complete` sigue siendo la red de
+  seguridad), `logs` solo es evidencia (el PDF firmado y los eventos de correo bastan), y para el enlace el
+  `resend` está documentado.
+- **Metadata obligatoria por documento:** `category` `CONTRATOS` y `subcategory` `Contrato de Prestación de
+  Servicios` (lista en `GET /categories`). Firme valida y normaliza el RUT (`documentNumber`): uno inválido
+  responde 422 «RUT ingresado no es válido» (nuestro `RUT_INVALIDO`).
+- El enlace de firma dura **10 días**. `POST /documents/{code}/signees/{privateCode}/resend` **renueva el
+  enlace** (no consume otro crédito) y **exige que el documento esté en `PENDING_SIGNATURE` y que el firmante
+  no haya firmado; si no, responde 422**. (En el `openapi.json` el parámetro se llama `{id}`; la guía
+  documenta `privateCode`: se confirma en staging.) `POST .../sign-url` entrega el enlace para mandarlo por
+  nuestro canal.
+- La evidencia no trae la IP del firmante. Firme no borra la evidencia ni el PDF firmado
+  (`GET /documents/{code}/files/SIGNED_DOCUMENT`, `GET /documents/{code}/logs`); igual guardamos copia.
+- Todas las llamadas llevan `User-Agent: Incrementa-Contratos/1.0`. Firme no exige IPs registradas.
+- Los correos al firmante salen con la marca de Firme e **incluyen el nombre del documento**: el nombre que
+  enviamos tiene que identificar el contrato de Incrementa.
+- Prod: `https://api.documentos.firme.cl`, mismos endpoints que staging. Staging sigue activo (18
+  créditos de prueba). La guía actualizada (`guide 1.pdf`) está por contrastar.
 - La firma es PAdES incremental (`adbe.pkcs7.detached`, SHA-256): el PDF original queda intacto como
   primera revisión (verificado sobre `FRM-15108.pdf`, 28-sep).
 
@@ -81,7 +116,7 @@ Hay firma por Firme cuando el proveedor tiene **RUT chileno** y Firme está conf
   con el `supplier.email` de contacto. *(Decidido por David, 21-oct.)*
 
 Si el proveedor no tiene RUT chileno (los mexicanos, que por ahora no se consideran) o Firme no está
-configurado, **sigue el camino interno actual sin cambios** (`signContract`: rúbrica + constancia +
+configurado, **sigue el camino interno actual sin cambios (salvo en producción, donde la firma queda bloqueada hasta cargar `FIRME_*`)** (`signContract`: rúbrica + constancia +
 correo). *(Decidido por David, 21-oct: no deberían existir proveedores sin RUT chileno salvo los mexicanos,
 y esos quedan fuera.)*
 
@@ -114,10 +149,10 @@ Detalle del envío en una tabla nueva, `firme_signing` (un registro por intento)
 | `sending` | Se está armando y enviando a Firme | «Enviando a firma…» |
 | `pending_signature` | En Firme esperando a la influencer | «En proceso de firma» |
 | `signed` | Firmado, huella verificada y guardado | «Firmado» |
-| `rejected` | La influencer rechazó | «Firma rechazada» + «Reenviar a firma» |
-| `expired` | El enlace venció sin firmar | «Firma vencida» + «Reenviar a firma» |
-| `cancelled` | Cancelado en Firme | «Firma cancelada» + «Reenviar a firma» |
-| `send_failed` | Falló el envío (créditos, RUT, red…) | mensaje del error + «Reenviar a firma» |
+| `rejected` | La influencer rechazó (con motivo, si Firme lo informa) | «Firma rechazada» + motivo + «Reenviar a firma» (**usa 1 crédito nuevo**) |
+| `expired` | El enlace venció sin firmar (≥ 10 días) | «Firma vencida» + **«Renovar enlace»** (mismo documento de Firme, sin crédito nuevo) |
+| `cancelled` | Cancelado en Firme | «Firma cancelada» + «Reenviar a firma» (**usa 1 crédito nuevo**) |
+| `send_failed` | Falló el envío (créditos, RUT, red…) | mensaje del error + «Reenviar a firma» (si el documento llegó a cargarse en Firme, se borra antes: devuelve los créditos) |
 | `hash_mismatch` | El firmado no parte del PDF aprobado | «Requiere revisión» (sin botón; avisar a Ignacio) |
 
 Un contrato tiene **a lo más un intento activo** (`sending` o `pending_signature`): índice único parcial
@@ -131,7 +166,7 @@ llamadas a Firme: unos segundos); no usa trabajos en segundo plano porque el bac
 y un proceso posterior a la respuesta podría cortarse.
 
 1. **Validar:** el borrador existe, está en `draft` o en `in_signature` sin intento activo, el proveedor
-   califica (RUT chileno), Firme está configurado, el RUT del firmante pasa módulo 11 (`backend/utils/rut.js`, `parseRut`), el correo es válido, nombres no vacíos (materno vacío → `.`).
+   califica (RUT chileno), Firme está configurado, el RUT del firmante pasa módulo 11 (`backend/utils/rut.js`, `parseRut`), el correo es válido, nombres no vacíos (materno vacío → `MATERNAL_PLACEHOLDER`, hoy `.`).
    Errores: `RUT_INVALIDO`, `FIRMANTE_INCOMPLETO`, `FIRME_NO_CONFIGURADO`, `INVALID_STATUS`.
 2. **Reservar el intento:** inserta `firme_signing` en `sending` con un `document_id` **reservado**
    (uuid del futuro registro `document`). El índice único corta el doble clic (409 `ENVIO_EN_CURSO`).
@@ -146,7 +181,13 @@ y un proceso posterior a la respuesta podría cortarse.
 5. **Huella:** calcula `sha256` y `byte_length` de **esos bytes exactos** y los guarda en el intento.
    Guarda el PDF estampado en `documentos` bajo `contratos-en-firma/{companyId}/{supplierId}/{templateCode}/{yyyy}/{mm}/{intentoId}_estampado.pdf`
    (prefijo distinto de `contratos-firmados/`: no es WORM ni definitivo).
-6. **Enviar a Firme:** `sendForSignature` con 1 firmante y la posición del timbre (abajo).
+6. **Enviar a Firme:** `sendForSignature` con 1 firmante y la posición del timbre (abajo). El nombre del
+   documento es lo que ve la influencer en el correo de Firme, así que identifica el contrato de Incrementa:
+   `Contrato Incrementa — {plantilla} — {proveedor}` («Incrementa» fijo, el nombre de fantasía; ≤ 120 caracteres). **Nunca se crean dos transacciones ni
+   se carga dos veces el mismo contrato** (el índice único del paso 2 impide dos intentos activos; un
+   intento que falla después de cargar se limpia con `DELETE` antes de poder reintentar). Si Firme responde
+   422 «RUT ingresado no es válido» al crear el firmante, el error es `RUT_INVALIDO` con mensaje en español y
+   el intento queda `send_failed` sin cargos.
    Guarda `firme_transaction_id`, `firme_document_code` y el `privateCode` del firmante en cuanto
    existan (también cuando el envío falla a medias: vienen en `error.progress`).
 7. **Resultado:** el intento pasa a `pending_signature` y el borrador a `in_signature`; responde
@@ -165,40 +206,68 @@ del `signatureBlock` al renderizar y sería otro recorte.)*
 
 ## Recepción: webhook, consulta y respaldo
 
-La verdad siempre se pregunta a Firme con la API autenticada; **el webhook solo avisa**.
+La verdad siempre se pregunta a Firme con la API autenticada; **el webhook solo avisa**. Hay tres vías
+que convergen en la misma función idempotente, `refresh(signingId)`: el webhook, la consulta al abrir la
+pantalla y un **barrido programado desde fuera del backend** (porque el backend escala a 0).
 
 1. **Webhook** `POST /api/webhooks/firme`, **público** (se declara antes de `requireAuth`, como `/health`)
-   porque lo llama AWS SNS.
-   - Tipo `SubscriptionConfirmation`: hace `GET` a `SubscribeURL` **solo si** el host es
-     `sns.<región>.amazonaws.com` (evita que alguien nos haga llamar URLs arbitrarias).
-   - Tipo `Notification`: extrae el código del documento del `Message` (JSON en texto; busca
-     `documentCode`, `document_code`, `code` o `document.code`, y como último recurso un uuid que
-     coincida con un `firme_document_code` nuestro). Si lo reconoce, **refresca ese intento** (punto 2).
-     No confía en el contenido del evento para nada más.
-   - Guarda cada mensaje recibido en `firme_webhook_event` (cuerpo crudo, tipo, fecha, `firme_signing_id`
-     si lo reconoció). Sirve de auditoría y para aprender la forma real de los eventos.
-   - Responde siempre `200` rápido (SNS reintenta en fallos; con escala a 0 y ≈ 40 s de arranque en
-     frío el primer intento puede perderse, por eso existen los puntos 2 y 3).
-2. **Consulta al abrir** (`firmeSigningService.refresh(signingId)`): al listar «En firma» y con el botón
-   «Actualizar estado» consulta `GET /documents/{code}`. Es lo que cubre un webhook perdido.
-3. **Barrido en el proceso** (`setInterval`, cada 10 minutos mientras la réplica esté viva) que refresca
-   los intentos `pending_signature` con más de 10 minutos sin revisar. **Riesgo residual:** si el
-   webhook se pierde y nadie abre la pantalla, la firma se recoge tarde, **no se pierde** (Firme conserva
-   el documento y las URL se piden frescas). Si David quiere un respaldo sin depender del tráfico, es
-   un Container Apps Job con un `POST` interno: infraestructura de ustedes, fuera de este recorte.
+   porque lo llama AWS SNS. Eventos a los que nos suscribimos: `signature.signed`, `document.signed` y
+   `signature.rejected` (esta trae el motivo).
+   - **Validación de la firma SNS de cada mensaje** (`backend/lib/snsVerify.js`, sin dependencias nuevas,
+     con `crypto`): `SigningCertURL` debe ser `https` de un host `sns.<región>.amazonaws.com` y terminar en
+     `.pem`; se descarga el certificado (con caché en memoria), se arma la cadena a firmar según el tipo
+     de mensaje (`Notification`, `SubscriptionConfirmation`, `UnsubscribeConfirmation`) y se verifica con
+     `SignatureVersion` 1 (RSA-SHA1) o 2 (RSA-SHA256). Un mensaje con firma inválida **no se procesa**
+     (se registra y se responde 200 para que SNS no reintente).
+   - Tipo `SubscriptionConfirmation`: con la firma válida y un host de SNS, hace `GET` a `SubscribeURL`.
+   - Tipo `Notification`: `Message` es un JSON en texto. Extrae el código del documento (busca
+     `documentCode`, `document_code`, `code`, `document.code` y, como último recurso, un uuid que coincida
+     con un `firme_document_code` nuestro) y **refresca ese intento**. Del evento solo se usa, además, el
+     motivo del rechazo (`reason`, `motivo`, `rejectionReason`) para mostrarlo; el estado real sale de Firme.
+   - **Idempotente:** un mismo evento puede llegar dos veces. Cada mensaje se guarda una sola vez en
+     `firme_webhook_event` (`event_id` único —el `event_id` del payload—, `INSERT … ON CONFLICT DO NOTHING`) y `refresh` ya es
+     idempotente (finalizar dos veces no duplica el `document` ni reescribe `firmados`).
+   - Responde siempre `200` rápido (SNS reintenta ante fallos; con el arranque en frío de ≈ 40 s el primer
+     intento puede perderse, por eso existen las otras dos vías).
+2. **Consulta al abrir** (`firmeSigningService.refresh`): al listar «En firma» y con «Actualizar estado»
+   consulta `GET /documents/{code}`.
+3. **Barrido programado:** Firme **no tiene evento de vencimiento**, así que un trabajo externo revisa los
+   pendientes cada 15 a 30 minutos (Firme no impone límites que nos afecten). Se hace con un **comando**,
+   no con un endpoint: `node scripts/firme-barrido.js`. El Container Apps Job lo crean David y la sesión de
+   la nube, con la misma imagen del backend, ese comando y las mismas variables que el backend para base
+   de datos, Firme y almacenamiento (ver «Variables»). Así no hay un endpoint nuevo ni un secreto
+   compartido que cuidar. El script llama a `sweepPending`, imprime un resumen en JSON (revisados,
+   finalizados, rechazados, vencidos, errores) y sale con código 0, o 1 si falla la base de datos o falta
+   la configuración. **No hay barrido dentro del proceso del backend** (un `setInterval` no sirve con
+   escala a 0).
 
 **Qué hace `refresh`** según el estado que informa Firme:
 
 | Firme | Acción |
 |---|---|
-| `PENDING_SIGNATURE` | solo actualiza `last_checked_at` |
+| `PENDING_SIGNATURE` | solo actualiza `last_checked_at`; si pasaron más de 10 días desde el envío (o `approvedUntil` del firmante, si Firme lo informa) → `expired` |
 | `SIGNED` o `COMPLETED` | **finaliza** (abajo) |
-| `REJECTED` | intento `rejected` |
+| `REJECTED` | intento `rejected` (guarda el motivo si se conoce) |
 | `CANCELLED` / `REFUNDED` | intento `cancelled` |
-| sigue pendiente y pasaron > 10 días del envío | intento `expired` |
 
-El vencimiento por tiempo es un respaldo: si Firme informa el vencimiento (`signature.expired` o un
-estado), se usa eso. Hay que confirmar en staging cómo se ve un vencimiento real.
+El vencimiento por tiempo es un respaldo mientras Firme no informe vencimientos. Dos procesos pueden
+coincidir (el barrido y alguien abriendo la pantalla): `refresh` toma el intento con
+`SELECT … FOR UPDATE SKIP LOCKED` y el que no lo consigue sigue con el siguiente.
+
+**Renovar enlace** (`POST /api/contracts/:id/resend-link`, desde `expired` (renovar) o `pending_signature`
+(recordatorio)): llama a `POST /documents/{code}/signees/{privateCode}/resend` con el `privateCode` que ya
+guardamos (el enlace vuelve a durar 10 días), pasa el **mismo** intento a `pending_signature` y no consume otro
+crédito. **Firme solo lo permite si el documento sigue en `PENDING_SIGNATURE` y el firmante no firmó; si
+responde 422** (por ejemplo, porque el documento ya pasó a otro estado al vencer), la pantalla dice «Firme no
+permite renovar este enlace; use "Reenviar a firma" (usa 1 crédito nuevo)». No se manda el enlace por nuestro
+canal: en producción no hay correo saliente.
+
+**Registro del webhook (script de operación, no al arrancar la app).** `backend/scripts/firme-webhook.js` con
+subcomandos `registrar <url>`, `listar`, `borrar <id>` y `estado <id>`, que usa `FIRME_*` del entorno.
+`registrar` lista las suscripciones, **borra la de la misma URL si existe con otra configuración** (evita el
+412) y crea la nueva con los eventos `document.signed`, `document.status_changed`, `signature.signed` y
+`signature.rejected`; después consulta `estado` hasta ver `isConfirmed: true`. Lo corre David (o yo, con su
+aviso) una vez por ambiente; el token debe ser de un ADMIN de la empresa en Firme.
 
 ## Finalizar (firmado)
 
@@ -236,9 +305,9 @@ Migración nueva (`202610220001_firme_signing.js`; la aplica Ignacio, no la corr
   `firme_transaction_id text`, `firme_document_code text`, `firme_signee_private_code text`,
   `firme_status text`, `signee_signed_on timestamptz`,
   `signed_gcs_path text`, `signed_sha256 text`, `verified_at timestamptz`, `evidence_gcs_path text`,
-  `last_error_code text`, `last_error_message text`, `last_checked_at timestamptz`,
+  `last_error_code text`, `last_error_message text`, `rejection_reason text`, `last_checked_at timestamptz`,
   `created_at`, `updated_at`. Índice único parcial `(draft_document_id) where status in ('sending','pending_signature')`.
-- `firme_webhook_event`: `id uuid pk`, `received_at timestamptz`, `message_type text`,
+- `firme_webhook_event`: `id uuid pk`, `event_id text` (único; el `event_id` del payload de Firme), `sns_message_id text`, `received_at timestamptz`, `message_type text`,
   `body jsonb`, `firme_signing_id uuid null`.
 - Tablas en inglés y singular; columnas `snake_case`. Las columnas `gcs_path` heredan el nombre del
   resto del sistema.
@@ -254,8 +323,11 @@ Migración nueva (`202610220001_firme_signing.js`; la aplica Ignacio, no la corr
   firma.» («Contrato firmado.» solo aparece cuando firmaron Yerko y la influencer) Para un contrato por el camino interno, el modal es el de hoy (con las correcciones
   del recorte `firma-mensajes`).
 - **En firma**: tabla con proveedor, firmante, enviado el, estado (chip) y acciones **Actualizar
-  estado**, **Reenviar a firma** (solo `rejected`, `expired`, `cancelled`, `send_failed`) y **Ver PDF**.
-  Los estados con detalle de error muestran el mensaje en español.
+  estado**, **Reenviar enlace** (solo `pending_signature`), **Renovar enlace** (solo `expired`),
+  **Reenviar a firma** (solo `rejected`, `cancelled`, `send_failed`; avisa que **usará 1 crédito nuevo**) y
+  **Ver PDF**. Los estados con detalle de error muestran el mensaje en español y, en `rejected`, el motivo.
+  Sobre la tabla se muestra el **saldo de créditos** de Firme (`getQuota`), con aviso cuando quedan 10 o
+  menos (constante `LOW_CREDITS_WARNING`).
 
 **Contratos** (`ContractsListPage.jsx`): el chip distingue «Firmado», «En proceso de firma», «Firma
 rechazada», «Firma vencida», «Requiere revisión» y «En proceso» (borrador sin enviar).
@@ -271,9 +343,9 @@ de **los dos ambientes antes de promover el código que las usa** (yo no toco in
 
 | Variable | ¿Secreto? | Pre-prod (staging de Firme) | Producción |
 |---|---|---|---|
-| `FIRME_API_URL` | no | `https://staging.api.documentos.firme.cl` | URL de la API de **producción** de Firme (hay que pedirla a Firme) |
+| `FIRME_API_URL` | no | `https://staging.api.documentos.firme.cl` | `https://api.documentos.firme.cl` |
 | `FIRME_API_TOKEN` | **sí** (Key Vault; nombre sugerido `FIRME-API-TOKEN`, inyectado como `FIRME_API_TOKEN`) | token de desarrollador de staging | token de la cuenta de producción de Incrementa (a nombre de Yerko Reckmann) |
-| `FIRME_LEGAL_ENTITY_ID` | no | `6aba57b936570f5e596a19af` | id de la entidad legal de producción (se pide a Firme) |
+| `FIRME_LEGAL_ENTITY_ID` | no | `6aba57b936570f5e596a19af` | id de la entidad legal de producción (lo cargan David y la sesión de la nube) |
 
 **Qué cambia entre staging y producción:** la URL, el token y la entidad legal; en staging el certificado
 de la firma es «TESTING» y los créditos son de prueba, y en producción son reales y prepagados
@@ -281,17 +353,28 @@ de la firma es «TESTING» y los créditos son de prueba, y en producción son r
 contra Firme se hacen en pre-prod (producción no tiene datos de prueba).
 
 **Puesta en marcha por ambiente** (David; no las hace la corrida):
-1. Cargar las tres variables y recién entonces promover el código que las usa.
+1. Cargar las tres variables **en el backend y también en el MCP** (`ca-incrementa-mcp`; si no, el MCP
+   firmaría por el camino interno y se saltaría la firma de la influencer) y recién entonces promover el
+   código que las usa.
 2. Registrar el webhook de ese ambiente: `POST {FIRME_API_URL}/webhooks/subscriptions` con
-   `{ legalEntityId, url: "https://<backend>/api/webhooks/firme", eventTypes: ["document.signed", "document.completed", "document.status_changed", "signature.signed", "signature.rejected", "signature.expired"] }`
+   `{ legalEntityId, url: "https://<backend>/api/webhooks/firme", eventTypes: ["document.signed", "document.status_changed", "signature.signed", "signature.rejected"] }`
+   (con el script `backend/scripts/firme-webhook.js registrar <url>`; requiere un token de ADMIN de la empresa)
    (`<backend>` de producción: `ca-incrementa-backend.proudfield-0bbf6137.brazilsouth.azurecontainerapps.io`)
    y comprobar `GET /webhooks/subscriptions/{id}/status` → `isConfirmed: true`.
-3. Pedir a Firme (Juan Puelpan): IPs de salida de SNS si hay lista de permitidos, y la forma de los
-   eventos.
+3. Crear el **Container Apps Job** del barrido: misma imagen del backend, comando
+   `node scripts/firme-barrido.js`, programación cada 15 a 30 minutos (por ejemplo `*/20 * * * *`), con las
+   mismas variables y secretos que el backend para la base de datos (`DATABASE_URL`), Firme (`FIRME_*`) y el
+   almacenamiento (`AZURE_STORAGE_ACCOUNT`, contenedores) y la misma identidad administrada (acceso al
+   Blob). No necesita ingress ni CORS ni el login. En prod, sin este trabajo el vencimiento y un webhook
+   perdido solo se detectan cuando alguien abre la pantalla.
+4. Pedir a Firme (Juan Puelpan): la forma de los eventos (cuerpo de `signature.signed`, `document.signed` y
+   `signature.rejected`, y dónde viene el motivo). No exigen IPs registradas.
 
-**Aviso para producción:** mientras las tres variables no estén cargadas allí, los contratos pasan por el
-camino interno y quedan marcados «Firmado» al aprobar Yerko, sin firma de la influencer. No usar
-producción para contratos reales hasta cargarlas.
+**Producción sin Firme (decisión de David, 26-oct): la firma queda bloqueada.** Con `ENVIRONMENT=prod` y sin
+las tres variables cargadas, `getSigningMode` devuelve `blocked`: ni «Aprobar y enviar a firma» ni el botón
+interno funcionan (409 `FIRMA_BLOQUEADA`, también por el MCP), y la pantalla muestra el botón deshabilitado.
+Así ningún contrato puede quedar «Firmado» sin la firma de la influencer. Se desbloquea solo al cargar
+`FIRME_*` en el backend (y en el MCP).
 
 ## Migraciones de este dominio
 
@@ -316,8 +399,17 @@ vencimiento no toca nada en `firmados`.
 ## Antes de lanzar (Ignacio y David)
 
 1. ~~**Base de `page`**~~: hecho el 21-oct (base 1; ver arriba).
-2. **Aprobación de David** de este diseño (y lo que quede por confirmar).
-3. Migración aplicada en pre-prod antes del deploy del código que la usa.
+2. **Aprobación de David** de este diseño (aprobado el 21-oct; los cambios del 22-oct por la respuesta de
+   Firme —webhooks con validación SNS, barrido por comando, renovar enlace, créditos al cargar— se le
+   presentan aparte).
+3. **Chequeo en staging** (gasta 1 crédito de prueba; script `firme-resend-check.mjs`): (a) cuándo se descuenta
+   el crédito (saldo antes de cargar, después de cargar y después de completar); (b) que `resend` acepta el
+   `privateCode` (y si solo acepta el `id`); (c) que `GET /documents/{code}/logs` y `GET .../quota` responden;
+   (d) que `GET /categories` lista `Contrato de Prestación de Servicios` bajo `CONTRATOS`. Lo corre David con
+   el token local.
+4. Guía v2.1 (12-oct): los cambios respecto de la v2.0 son solo de Finiquito (SEVERANCE); nada de SIMPLE
+   cambió. La contrastó David el 26-oct; no hace falta que yo la abra.
+5. Migraciones aplicadas por Ignacio en pre-prod antes del deploy del código que las usa.
 
 ## Aceptación en staging (después del merge; David e Ignacio)
 
@@ -331,13 +423,36 @@ Las pruebas de la corrida no llaman a Firme. Esto se comprueba a mano en pre-pro
 7. Con la réplica en 0, la confirmación del webhook se completa tras el arranque en frío.
 8. Un contrato de proveedor sin RUT chileno sigue por el camino interno.
 
+## Decisiones de David (26-oct, diseño aprobado)
+
+a. En producción se **bloquea la firma** mientras no estén cargadas las `FIRME_*`.
+b. «Reenviar a firma» después de un rechazo usa 1 crédito nuevo.
+c. Aviso de saldo bajo con 10 créditos o menos.
+d. Nombre del documento: «Contrato Incrementa — {plantilla} — {proveedor}» (nombre de fantasía).
+e. Cuándo se cobra el crédito (al cargar o al completar): lo confirma el chequeo en staging.
+f. El webhook de producción lo registra el administrador de la cuenta de Firme que designe Yerko, con David al
+   lado, usando el script de operación `backend/scripts/firme-webhook.js` (lo corre David).
+
+Antes: firmante de una empresa = su representante legal; proveedores sin RUT chileno por el camino interno;
+nombres y apellidos separados en el proveedor; timbre en la última página; «Contrato firmado» solo con las
+dos firmas.
+
+## Calendario comercial
+
+La cotización formal de Firme vale 30 días desde el 20-oct (hasta ≈ 19-nov). Lo lleva David.
+
 ## Qué queda fuera
 
 - Extranjeros sin RUT en Firme (decisión del 28-sep, hasta que Firme lo soporte).
 - Firma del representante en Firme (flujo B) y firma automática del representante.
 - Timbre junto al bloque de firma del cuerpo del contrato (requiere medir posiciones).
-- Recordatorios al firmante (el endpoint `resend` existe) y cancelación manual de un envío.
-- Respaldo por Container Apps Job.
+- Recordatorios **automáticos** al firmante y enviar el enlace por nuestro canal (`sign-url`): en producción
+  no hay correo saliente. Sí está el botón manual «Reenviar enlace» / «Renovar enlace».
+- Cancelación manual de un envío.
+- Apellido materno opcional (Firme lo habilita en la segunda quincena de noviembre): hasta entonces se manda
+  `.`; después se cambia una constante.
+- Crear el Container Apps Job del barrido (lo hacen David y la sesión de la nube; el recorte entrega el
+  comando).
 - Variables o infraestructura en Azure: no se tocan `infra/azure/**`, workflows ni Key Vault.
 
 ## Recortes
