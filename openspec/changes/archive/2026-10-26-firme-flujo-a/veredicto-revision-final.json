@@ -1,0 +1,36 @@
+{
+  "color": "amarillo",
+  "resumen": "Las tres pruebas del perfil pasaron con este código, `openspec validate firme-flujo-a` es válido y el último hallazgo de cierre quedó resuelto (el recuadro usa y = height - STAMP_Y*height - STAMP_HEIGHT*height y el webhook no persiste cuerpos que no son JSON). Queda amarillo porque cinco ablaciones salieron marcadas «!» y las debe mirar un humano.",
+  "hallazgos": [
+    {
+      "gravedad": "media",
+      "donde": "openspec/changes/firme-flujo-a/ablaciones-revisor.yaml",
+      "que": "Ablación «evidencia-idempotente» no se pudo aplicar: se suprime por ser «árida» (metodo-trivial, toString, equals, hashCode o toJSON triviales). El comportamiento de evidencia determinista (tarea 10.1) queda sin ablación comprobada.",
+      "como_arreglar": "Revisar si la ablación apunta a un método realmente trivial; reformular el `buscar` para que ataque la lógica (orden de claves, `verifiedAt` desde `signedOn`) o confirmar a mano que la prueba de reintento de `finalize` la caza."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "ablaciones-revisor/indice-intento-activo",
+      "que": "Marcada «!» (prueba mal elegida): la prueba elegida no la caza, pero la compuerta completa sí (firmeSigningMigration.test.js exige UNIQUE INDEX). No se manda a reparar.",
+      "como_arreglar": "Corregir el campo `prueba` de la ablación para que apunte a firmeSigningMigration.test.js, o aceptar tal cual."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "ablaciones-revisor/almacenamiento-idempotente",
+      "que": "Marcada «!» (prueba mal elegida): la compuerta completa la caza (storageService.once.test.js exige { created: false }).",
+      "como_arreglar": "Apuntar la `prueba` a storageService.once.test.js, o aceptar."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "ablaciones-revisor/bloqueo-transaccion-pending",
+      "que": "Marcada «!» (prueba mal elegida): la prueba elegida no la caza, pero la suite completa sí.",
+      "como_arreglar": "Elegir la prueba correcta (la de refresh/finalize que verifica forUpdate/skipLocked) o aceptar."
+    },
+    {
+      "gravedad": "baja",
+      "donde": "ablaciones-revisor/reconcile-check-draft",
+      "que": "Marcada «!» (prueba mal elegida): la prueba elegida no la caza, pero la suite completa sí.",
+      "como_arreglar": "Apuntar la `prueba` al archivo que verifica que solo se borra un documento DRAFT (firmeSigningService.send.test.js) o aceptar."
+    }
+  ]
+}

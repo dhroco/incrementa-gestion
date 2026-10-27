@@ -24,9 +24,13 @@ The backend SHALL expose `GET /api/contracts` protected by `authorize('read', 'C
 - `clientId` (optional UUID)
 - `templateId` (optional UUID)
 - `redSocialSearch` (optional string, the same ILIKE term on `contract_overrides->>'proveedor_red_social'` OR `contract_overrides->>'servicios_entregables'`, grouped so the OR does not release the other filters)
-- `status` (optional: `all`, `draft`, `signed`; default `all`)
+- `status` (optional: `all`, `draft`, `signed`, `in_signature`; default `all`)
 
-The service `contractsQueryService.listContracts` SHALL combine rows from `draft_document` (source `draft`, excluding status `rejected`) and `document` (source `signed`) via `UNION ALL`, apply filters to both subqueries before union, order by `created_at DESC`, and paginate with offset/limit. The response SHALL be HTTP 200 with shape:
+`normalizeStatus` SHALL return `draft`, `signed`, or `in_signature` when the query value is that string, and `all` otherwise.
+
+The service `contractsQueryService.listContracts` SHALL combine rows from `draft_document` (source `draft`, excluding status `rejected`) and `document` (source `signed`) via `UNION ALL`, apply filters to both subqueries before union, order by `created_at DESC`, and paginate with offset/limit. Status `draft` SHALL keep today's draft subquery (drafts that are not `rejected` and not `signed`), which includes rows whose status is `in_signature`. Status `signed` SHALL keep the signed subquery. Status `in_signature` SHALL return only `draft_document` rows whose `status` is `in_signature`. Status `all` SHALL keep the union of the draft subquery and the signed subquery.
+
+The response SHALL be HTTP 200 with shape:
 
 ```json
 {
@@ -38,7 +42,7 @@ The service `contractsQueryService.listContracts` SHALL combine rows from `draft
 }
 ```
 
-Each item SHALL include at minimum: `id`, `source` (`draft`|`signed`), `supplier_name`, `supplier_type`, `client_name` (nullable), `template_name` (nullable), `file_name`, `gcs_path`, `status`, `created_at`, and flattened override fields `fecha_contrato`, `mes_ejecucion`, `proveedor_red_social`, `proveedor_cuenta_social`, `precio_numero`, `servicios_entregables` derived from `contract_overrides ?? {}`. `servicios_entregables` SHALL be that override value, or `null` when the key is absent. The other flattened fields SHALL stay as they are today when `servicios_entregables` is absent.
+Each item SHALL include at minimum: `id`, `source` (`draft`|`signed`), `supplier_name`, `supplier_type`, `client_name` (nullable), `template_name` (nullable), `file_name`, `gcs_path`, `status`, `created_at`, and flattened override fields `fecha_contrato`, `mes_ejecucion`, `proveedor_red_social`, `proveedor_cuenta_social`, `precio_numero`, `servicios_entregables` derived from `contract_overrides ?? {}`. `servicios_entregables` SHALL be that override value, or `null` when the key is absent. The other flattened fields SHALL stay as they are today when `servicios_entregables` is absent. The list SHALL NOT add Firme signing-attempt fields.
 
 #### Scenario: List all contracts paginated
 
@@ -80,6 +84,12 @@ Each item SHALL include at minimum: `id`, `source` (`draft`|`signed`), `supplier
 - **THEN** the list predicate matches that contract
 - **AND** the same ILIKE term is applied to `proveedor_red_social` OR `servicios_entregables`
 
+#### Scenario: Filter by in-signature status
+
+- **WHEN** an authorized user requests `GET /api/contracts?status=in_signature`
+- **THEN** every returned item has `status` `in_signature`
+- **AND** signed `document` rows are not included
+
 ### Requirement: Contract PDF download API
 
 The backend SHALL expose `GET /api/contracts/:id/pdf?source=draft|signed` protected by `authorize('read', 'Contract')`. Parameter `source` MUST be exactly `draft` or `signed`. For `source=draft`, the controller SHALL load the row from `draft_document` by `id`. For `source=signed`, it SHALL load from `document` by `id`. If the row does not exist, the server SHALL respond HTTP 404 with a Spanish message. On success, the server SHALL download bytes via `gcsService.downloadBuffer`, set `Content-Type: application/pdf`, `Content-Disposition: inline; filename="<sanitized file_name>"`, and return the PDF buffer.
@@ -113,9 +123,11 @@ The frontend SHALL provide `ContractsListPage` at route `/app/gestion-contratos/
 2. Client select with option "Todos los clientes"
 3. Template select with option "Todas las plantillas"
 4. Social network text input with 300ms debounce
-5. Status select: "Todos", "En proceso de firma" (`draft`), "Firmados" (`signed`)
+5. Status select: "Todos", "En proceso de firma" (`draft`), "Firmados" (`signed`), and an added option "En proceso de firma" (`in_signature`)
 
-Changing any filter SHALL reset to page 1. Results table SHALL display columns: Proveedor (with supplier type chip), Cliente, Plantilla, Red Social (a non-empty `servicios_entregables` string when that value is present; otherwise `proveedor_red_social — proveedor_cuenta_social` or "—"), Fecha contrato, Mes ejecución, Precio, Estado (badge "En proceso" grey for drafts, "Firmado" green for signed), Ver PDF (document icon). Pagination SHALL show 18 records per page with controls « Anterior | Página X de Y | Siguiente » and total count. PDF view SHALL use `fetchContractPdfBlob` with Authorization header, then `URL.createObjectURL` and `window.open` (not direct href). The column title SHALL stay `Red Social`. No new visual style SHALL be added for this cell.
+The existing `draft` option label SHALL stay «En proceso de firma». The added option SHALL use the value `in_signature` and the label «En proceso de firma».
+
+Changing any filter SHALL reset to page 1. Results table SHALL display columns: Proveedor (with supplier type chip), Cliente, Plantilla, Red Social (a non-empty `servicios_entregables` string when that value is present; otherwise `proveedor_red_social — proveedor_cuenta_social` or "—"), Fecha contrato, Mes ejecución, Precio, Estado, Ver PDF (document icon). The Estado chip SHALL use only `status` and `source`: «Firmado» when `source` is `signed` or `status` is `signed`; «En proceso de firma» when `status` is `in_signature`; «En proceso» for every other row. The page SHALL NOT read signing-attempt detail. Pagination SHALL show 18 records per page with controls « Anterior | Página X de Y | Siguiente » and total count. PDF view SHALL use `fetchContractPdfBlob` with Authorization header, then `URL.createObjectURL` and `window.open` (not direct href). The column title SHALL stay `Red Social`. No new visual style SHALL be added for this cell.
 
 #### Scenario: User with permission opens consulta page
 
@@ -143,6 +155,17 @@ Changing any filter SHALL reset to page 1. Results table SHALL display columns: 
 
 - **WHEN** a list row has `proveedor_red_social` `Instagram`, `proveedor_cuenta_social` `@acme`, and no `servicios_entregables`
 - **THEN** the Red Social cell shows `Instagram — @acme`
+
+#### Scenario: In-signature chip and filter
+
+- **WHEN** a list row has `status` `in_signature`
+- **THEN** the Estado chip reads «En proceso de firma»
+- **AND** the status select offers the value `in_signature` with that same label
+
+#### Scenario: Other draft statuses stay En proceso
+
+- **WHEN** a list row has `status` `draft`
+- **THEN** the Estado chip reads «En proceso»
 
 ### Requirement: Contracts navigation menu entry
 

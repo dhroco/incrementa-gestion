@@ -76,7 +76,8 @@ export function registerMcpTools(server, deps) {
     contractSigningService,
     storageService,
     getUserProfileIdByUserId,
-    tipTapDocToPlainTextAsync
+    tipTapDocToPlainTextAsync,
+    firmeSigningService = null
   } = deps
 
   server.tool(
@@ -329,6 +330,24 @@ export function registerMcpTools(server, deps) {
       const actor = await resolveActorProfileId(getUserProfileIdByUserId)
       if (!actor.ok) {
         return jsonToolResult(actor)
+      }
+
+      if (firmeSigningService) {
+        const mode = await firmeSigningService.getSigningMode(draftDocumentId)
+        if (mode === 'firme') {
+          return jsonToolResult({
+            ok: false,
+            code: 'USE_FIRME_FLOW',
+            message: 'Este contrato se firma con Firme: use «Aprobar y enviar a firma».'
+          })
+        }
+        if (mode === 'blocked') {
+          return jsonToolResult({
+            ok: false,
+            code: 'FIRMA_BLOQUEADA',
+            message: 'La firma está deshabilitada en producción hasta que se configure Firme.'
+          })
+        }
       }
 
       const result = await contractSigningService.signContract({

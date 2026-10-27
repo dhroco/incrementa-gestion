@@ -207,8 +207,13 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
     return res.text()
   }
 
+  const USER_AGENT = 'Incrementa-Contratos/1.0'
+
   async function apiRequest(step, method, path, progress, body) {
-    const headers = { Authorization: `Bearer ${resolvedToken}` }
+    const headers = {
+      Authorization: `Bearer ${resolvedToken}`,
+      'User-Agent': USER_AGENT
+    }
     const init = { method, headers }
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json'
@@ -227,6 +232,37 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
       })
     }
     return { status, data: asObject(parseSuccessJson(text, step, status, progress)) }
+  }
+
+  async function apiRequestValue(step, method, path, body) {
+    const headers = {
+      Authorization: `Bearer ${resolvedToken}`,
+      'User-Agent': USER_AGENT
+    }
+    const init = { method, headers }
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json'
+      init.body = JSON.stringify(body)
+    }
+    const progress = { signees: [] }
+    const res = await callFetch(step, apiUrlFor(path), init, progress)
+    const status = responseStatus(res)
+    const text = await readText(res)
+    if (!responseOk(res)) {
+      throw mapHttpError({
+        step,
+        status,
+        detail: parseDetail(text),
+        sentAuth: true,
+        progress
+      })
+    }
+    if (!text || !String(text).trim()) return null
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw apiError(step, status, progress)
+    }
   }
 
   async function absoluteRequest(step, url, progress, { method, headers, body, binary }) {
@@ -255,9 +291,19 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
     return value
   }
 
-  async function sendForSignature(input) {
+  async function notifyProgress(onProgress, progress) {
+    if (typeof onProgress !== 'function') return
+    try {
+      await onProgress(copyProgress(progress))
+    } catch {
+      // Un error del aviso no corta el envío.
+    }
+  }
+
+  async function sendForSignature(input, options) {
     ensureConfigured()
     validateSendInput(input)
+    const onProgress = options && typeof options.onProgress === 'function' ? options.onProgress : null
     const progress = { signees: [] }
     const { pdf, name, signees } = input
 
@@ -265,12 +311,14 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
       legalEntityId: resolvedEntity
     })
     progress.transactionId = requireField(transaction.data, 'id', 'transactions', transaction.status, progress)
+    await notifyProgress(onProgress, progress)
 
     const document = await apiRequest('documents', 'POST', '/documents', progress, {
       name,
       transactionId: progress.transactionId
     })
     progress.documentCode = requireField(document.data, 'code', 'documents', document.status, progress)
+    await notifyProgress(onProgress, progress)
     const uploadUrl = requireField(document.data, 'uploadUrl', 'documents', document.status, progress)
 
     await absoluteRequest('upload-pdf', uploadUrl, progress, {
@@ -309,8 +357,10 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
         x: signee.signature.x,
         y: signee.signature.y
       })
+      await notifyProgress(onProgress, progress)
     }
 
+    await notifyProgress(onProgress, progress)
     await apiRequest(
       'complete',
       'POST',
@@ -335,10 +385,15 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
     const res = await apiRequest('document', 'GET', `/documents/${documentCode}`, progress)
     const data = res.data
     const signees = Array.isArray(data.signees)
-      ? data.signees.map((signee) => ({
-          email: signee?.email,
-          signedOn: signee?.signedOn == null ? null : signee.signedOn
-        }))
+      ? data.signees.map((signee) => {
+          const mapped = {
+            email: signee?.email,
+            signedOn: signee?.signedOn == null ? null : signee.signedOn
+          }
+          if (signee?.approvedUntil != null) mapped.approvedUntil = signee.approvedUntil
+          if (signee?.rejectionDetail != null) mapped.rejectionDetail = signee.rejectionDetail
+          return mapped
+        })
       : []
     return {
       status: data.status,
@@ -409,11 +464,80 @@ function createFirmeClient({ apiUrl, token, legalEntityId, fetchImpl } = {}) {
     return { logs, signees }
   }
 
+  async function getQuota() {
+    ensureConfigured()
+    const res = await apiRequest('quota', 'GET', `/legal-entities/${resolvedEntity}/quota`, { signees: [] })
+    const simple = Number(res.data.simple)
+    return { simple: Number.isFinite(simple) ? simple : 0 }
+  }
+
+  async function deleteDocument(documentCode) {
+    ensureConfigured()
+    await apiRequest('delete-document', 'DELETE', `/documents/${documentCode}`, { signees: [] })
+    return { deleted: true }
+  }
+
+  async function resendInvitation(documentCode, privateCode) {
+    ensureConfigured()
+    await apiRequest(
+      'resend-invitation',
+      'POST',
+      `/documents/${documentCode}/signees/${privateCode}/resend`,
+      { signees: [] }
+    )
+    return { resent: true }
+  }
+
+  async function createWebhook({ url, eventTypes }) {
+    ensureConfigured()
+    const res = await apiRequest('create-webhook', 'POST', '/webhooks/subscriptions', { signees: [] }, {
+      legalEntityId: resolvedEntity,
+      url,
+      eventTypes
+    })
+    return res.data
+  }
+
+  function asList(value) {
+    if (Array.isArray(value)) return value
+    if (value && Array.isArray(value.items)) return value.items
+    return []
+  }
+
+  async function listWebhooks() {
+    ensureConfigured()
+    const value = await apiRequestValue(
+      'list-webhooks',
+      'GET',
+      `/webhooks/subscriptions?legalEntityId=${encodeURIComponent(resolvedEntity)}`
+    )
+    return asList(value)
+  }
+
+  async function deleteWebhook(id) {
+    ensureConfigured()
+    await apiRequest('delete-webhook', 'DELETE', `/webhooks/subscriptions/${id}`, { signees: [] })
+    return { deleted: true }
+  }
+
+  async function getWebhook(id) {
+    ensureConfigured()
+    const res = await apiRequest('webhook-status', 'GET', `/webhooks/subscriptions/${id}/status`, { signees: [] })
+    return res.data
+  }
+
   return {
     sendForSignature,
     getDocument,
     downloadSignedPdf,
-    collectEvidence
+    collectEvidence,
+    getQuota,
+    deleteDocument,
+    resendInvitation,
+    createWebhook,
+    listWebhooks,
+    deleteWebhook,
+    getWebhook
   }
 }
 

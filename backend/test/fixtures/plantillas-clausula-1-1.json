@@ -1,0 +1,1509 @@
+{
+ "CONTRATO_0001": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0002": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0003": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0004": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0005": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0006": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0007": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0008": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0009": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      },
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0010": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0011": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0012": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0013": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0014": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0015": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar el producto o cuenta de redes sociales “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Producto/Campaña",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_product_campaign"
+      }
+     },
+     {
+      "text": "”, la cual fue desarrollada por su cliente ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0016": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " declara que es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar los productos de la ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " la cual fue desarrollado por su ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Nombre Cliente",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_name"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ },
+ "CONTRATO_0017": {
+  "type": "doc",
+  "content": [
+   {
+    "type": "paragraph",
+    "attrs": {
+     "textAlign": "justify"
+    },
+    "content": [
+     {
+      "text": "1.1 ",
+      "type": "text",
+      "marks": [
+       {
+        "type": "bold"
+       }
+      ]
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "empresa",
+       "label": "Nombre Comercial",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "company_nombre_comercial"
+      }
+     },
+     {
+      "text": " declara que es una empresa intermediadora de avisos publicitarios en medios masivos, que requiere contratar a personas que tengan manejo de redes sociales y un cierto número de seguidores, y que se desempeñen como “Influencers”, con el fin de promocionar los productos de la ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": " la cual fue desarrollado por su ",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Nombre Cliente",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_name"
+      }
+     },
+     {
+      "text": " (en adelante el “Producto” y “",
+      "type": "text"
+     },
+     {
+      "type": "variable",
+      "attrs": {
+       "bold": false,
+       "group": "client",
+       "label": "Marca",
+       "italic": false,
+       "underline": false,
+       "uppercase": false,
+       "variableId": "client_brand"
+      }
+     },
+     {
+      "text": "” respectivamente).",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

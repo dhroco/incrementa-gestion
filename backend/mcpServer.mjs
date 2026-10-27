@@ -13,12 +13,19 @@ const { createDocumentBuilderService } = require('./services/documentBuilderServ
 const { storageService } = require('./services/storageService')
 const { createContractsQueryService } = require('./services/contractsQueryService')
 const { createContractSigningService } = require('./services/contractSigningService')
+const { createFirmeSigningService } = require('./services/firmeSigningService')
 const emailService = require('./services/emailService')
 const { tipTapDocToPlainTextAsync } = require('./utils/tipTapPlainText')
 
 const standardTemplatesService = createStandardTemplatesService({ db })
 const contractsQueryService = createContractsQueryService({ db, storageService })
 const contractSigningService = createContractSigningService({ db, storageService, emailService })
+const firmeSigningService = createFirmeSigningService({
+  db,
+  storageService,
+  emailService,
+  snsTopicArn: process.env.FIRME_SNS_TOPIC_ARN || null
+})
 const documentBuilderService = createDocumentBuilderService({
   db,
   storageService,
@@ -34,6 +41,7 @@ const mcpDeps = {
   documentBuilderService,
   contractsQueryService,
   contractSigningService,
+  firmeSigningService,
   storageService,
   getUserProfileIdByUserId,
   tipTapDocToPlainTextAsync

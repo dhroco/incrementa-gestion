@@ -31,7 +31,9 @@ function formatRedSocial(row) {
 }
 
 function contractStatusLabel(row) {
-  return row.source === 'signed' || row.status === 'signed' ? 'Firmado' : 'En proceso'
+  if (row.source === 'signed' || row.status === 'signed') return 'Firmado'
+  if (row.status === 'in_signature') return 'En proceso de firma'
+  return 'En proceso'
 }
 
 function contractStatusClass(row) {
@@ -266,6 +268,7 @@ export function ContractsListPage() {
             >
               <option value="all">Todos</option>
               <option value="draft">En proceso de firma</option>
+              <option value="in_signature">En proceso de firma</option>
               <option value="signed">Firmados</option>
             </select>
           </label>

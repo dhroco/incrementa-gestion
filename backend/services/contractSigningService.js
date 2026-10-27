@@ -59,7 +59,31 @@ function mapPendingRow(row) {
     fecha_contrato: overrides.fecha_contrato ?? null,
     created_at: row.created_at ?? null,
     file_name: row.file_name,
-    gcs_path: row.gcs_path
+    gcs_path: row.gcs_path,
+    signee_suggestion: signeeSuggestion(row)
+  }
+}
+
+function textOrEmpty(value) {
+  return value == null ? '' : String(value)
+}
+
+function signeeSuggestion(row) {
+  if (row?.supplier_type === 'empresa') {
+    return {
+      first_names: textOrEmpty(row.rep_first_names),
+      last_name: textOrEmpty(row.rep_last_name),
+      maternal_last_name: textOrEmpty(row.rep_maternal_last_name),
+      document_number: textOrEmpty(row.rep_document_number),
+      email: textOrEmpty(row.supplier_email)
+    }
+  }
+  return {
+    first_names: textOrEmpty(row?.first_names),
+    last_name: textOrEmpty(row?.last_name),
+    maternal_last_name: textOrEmpty(row?.maternal_last_name),
+    document_number: textOrEmpty(row?.document_number),
+    email: textOrEmpty(row?.supplier_email)
   }
 }
 
@@ -166,7 +190,7 @@ function createContractSigningService({
       .leftJoin('client as c', 'c.id', 'dd.client_id')
       .leftJoin('template as t', 't.id', 'dd.template_id')
       .join('company as co', 'co.id', 'dd.company_id')
-      .whereNotIn('dd.status', ['signed', 'rejected'])
+      .whereNotIn('dd.status', ['signed', 'rejected', 'in_signature'])
       .select(
         'dd.id',
         'dd.file_name',
@@ -175,6 +199,15 @@ function createContractSigningService({
         'dd.contract_overrides',
         db.raw('COALESCE(se.razon_social, spn.full_name) as supplier_name'),
         's.supplier_type',
+        's.email as supplier_email',
+        'spn.first_names',
+        'spn.last_name',
+        'spn.maternal_last_name',
+        'spn.document_number',
+        'se.rep_first_names',
+        'se.rep_last_name',
+        'se.rep_maternal_last_name',
+        'se.rep_document_number',
         'c.name as client_name',
         't.name as template_name',
         'co.business_name as company_name',
@@ -428,5 +461,8 @@ module.exports = {
   formatCompanyRut,
   formatTimestampSantiago,
   buildSignedGcsPath,
-  appendSignaturePage
+  appendSignaturePage,
+  sha256Hex,
+  sanitizeFilePart,
+  collectCompanyRepIndexesFromSnapshot
 }
