@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const {
   BlobServiceClient,
   BlobSASPermissions,
@@ -85,6 +86,33 @@ function createStorageService({
     return gcsPath
   }
 
+  function isExistingBlobConflict(err) {
+    const status = err?.statusCode ?? err?.status
+    if (status === 409 || status === 412) return true
+    const code = err?.code || err?.details?.errorCode
+    return code === 'BlobAlreadyExists' || code === 'ConditionNotMet'
+  }
+
+  async function uploadBufferOnce({ buffer, gcsPath, contentType = 'application/pdf' }) {
+    const blob = blobClient(gcsPath)
+    try {
+      await blob.uploadData(buffer, {
+        blobHTTPHeaders: { blobContentType: contentType },
+        conditions: { ifNoneMatch: '*' }
+      })
+      return { created: true }
+    } catch (err) {
+      if (!isExistingBlobConflict(err)) throw err
+      const existing = await blob.downloadToBuffer()
+      const incoming = crypto.createHash('sha256').update(buffer).digest('hex')
+      const stored = crypto.createHash('sha256').update(existing).digest('hex')
+      if (incoming === stored) return { created: false }
+      const conflict = new Error('Ya existe un archivo distinto en esa ruta.')
+      conflict.code = 'STORAGE_CONFLICT'
+      throw conflict
+    }
+  }
+
   async function downloadBuffer({ gcsPath }) {
     return blobClient(gcsPath).downloadToBuffer()
   }
@@ -114,7 +142,7 @@ function createStorageService({
     return `${blob.url}?${sas}`
   }
 
-  return { uploadBuffer, downloadBuffer, deleteFile, getSignedUrl, containerFor }
+  return { uploadBuffer, uploadBufferOnce, downloadBuffer, deleteFile, getSignedUrl, containerFor }
 }
 
 const defaultStorageService = createStorageService()
