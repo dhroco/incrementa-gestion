@@ -189,6 +189,24 @@ function validateCantidadOverrides(overrides) {
   return { ok: true }
 }
 
+const PRECIO_TEXTO_MESSAGE =
+  'El precio en letras se calcula automáticamente a partir del precio en número; no se puede ingresar un texto distinto. Envía solo el precio en número.'
+
+function normalizePriceWords(text) {
+  return String(text).trim().toLowerCase().replace(/\s+pesos$/, '').replace(/\s+/g, ' ')
+}
+
+// `precio_texto` es el par de `precio_numero` y siempre se recalcula: un texto manual distinto del
+// calculado no se puede respetar (número y letras no coincidirían) y tampoco se ignora en silencio.
+function validatePriceTextOverride(overrides) {
+  const raw = overrides && typeof overrides === 'object' ? overrides : {}
+  if (!isNonEmptyOverride(raw.precio_texto) || !isNonEmptyOverride(raw.precio_numero)) return { ok: true }
+  const parsed = parsePriceInput(raw.precio_numero)
+  if (!parsed.ok) return { ok: true }
+  if (normalizePriceWords(raw.precio_texto) === normalizePriceWords(numberToWords(parsed.value))) return { ok: true }
+  return { ok: false, status: 400, code: 'PAIR_FIELD_OVERRIDE_NOT_ALLOWED', message: PRECIO_TEXTO_MESSAGE }
+}
+
 // Variables de tipo fecha: el override llega en ISO (YYYY-MM-DD) desde el
 // formulario o el MCP y debe escribirse como "15 de marzo de 2024" en el contrato.
 // Sin esto el override pisa el valor ya formateado por `buildSubstitutionMap`.
@@ -715,6 +733,9 @@ function createDocumentBuilderService({
     const cantidadCheck = validateCantidadOverrides(overridesRaw)
     if (!cantidadCheck.ok) return cantidadCheck
 
+    const priceTextCheck = validatePriceTextOverride(overridesRaw)
+    if (!priceTextCheck.ok) return priceTextCheck
+
     const dynamicTextCheck = normalizeDynamicTextOverrides(overridesRaw)
     if (!dynamicTextCheck.ok) return dynamicTextCheck
 
@@ -925,6 +946,7 @@ module.exports = {
   preprocessMissingFieldOverrides,
   parsePriceInput,
   validateCantidadOverrides,
+  validatePriceTextOverride,
   CANTIDAD_VARIABLES,
   SECONDARY_FIELDS
 }

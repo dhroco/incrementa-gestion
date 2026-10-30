@@ -46,6 +46,7 @@ function under100(n, useUn = false) {
   if (n === 0) return ''
   if (n < 10) return useUn && n === 1 ? 'un' : UNITS[n]
   if (n < 20) return TEENS[n - 10]
+  if (n === 20) return 'veinte'
   if (n < 30) return useUn && n === 21 ? 'veintiún' : VEINTI[n - 20]
   const ten = Math.floor(n / 10)
   const unit = n % 10
@@ -70,7 +71,7 @@ function under1000(n, useUn = false) {
     else if (hundred === 1) parts.push('ciento')
     else parts.push(HUNDREDS[hundred])
   }
-  const restWords = under100(rest, useUn && rest === 1)
+  const restWords = under100(rest, useUn)
   if (restWords) parts.push(restWords)
   return parts.join(' ')
 }
@@ -94,7 +95,7 @@ function numberToWords(n) {
 
   if (millions > 0) {
     if (millions === 1) parts.push('un millón')
-    else parts.push(`${under1000(millions)} millones`)
+    else parts.push(`${under1000(millions, true)} millones`)
   }
   if (thousands > 0) {
     if (thousands === 1) parts.push('mil')
