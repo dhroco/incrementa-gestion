@@ -3,7 +3,8 @@
  * contemplaban el canje. Pasan a tener el canje y el pago en dinero (variables pago_dinero_numero y
  * pago_dinero_texto), la regla del saldo no canjeado solo para el canje y el pago contra boleta de honorarios.
  * Función pura sobre el `content_json`: verifica el texto exacto de las tres cláusulas antes de reemplazarlas,
- * es idempotente y lanza un error si algo no coincide.
+ * es idempotente y lanza un error si algo no coincide. Acepta las dos redacciones de partida que existen
+ * (la de producción, editada a mano, «canje», y la original de pre-prod, «fijo»): el resultado es el mismo.
  */
 
 const TEMPLATE_CODES = ['CONTRATO_0013', 'CONTRATO_0014', 'CONTRATO_0015']
@@ -26,7 +27,6 @@ const OLD_TEXTS = {
     CLAUSE_3_3_OLD
   ]
 }
-const OLD_BY_CODE = { CONTRATO_0013: 'canje', CONTRATO_0014: 'canje', CONTRATO_0015: 'fijo' }
 
 const VARIABLES = {
   client_brand: { group: 'client', label: 'Marca' },
@@ -110,10 +110,8 @@ function rewriteCanjeMasPago(contentJson, code) {
   const current = indexes.map((i) => paragraphText(blocks[i]))
   if (current.every((t, i) => t === NEW_TEXTS[i])) return { content, replaced: 0 }
 
-  const expected = OLD_TEXTS[OLD_BY_CODE[code]]
-  expected.forEach((t, i) => {
-    if (current[i] !== t) throw new Error(`${code}: la cláusula 3.${i + 1} no tiene el texto esperado.`)
-  })
+  const known = Object.values(OLD_TEXTS).some((expected) => expected.every((t, i) => current[i] === t))
+  if (!known) throw new Error(`${code}: las cláusulas 3.1 a 3.3 no tienen el texto esperado.`)
 
   indexes.forEach((blockIndex, i) => {
     blocks[blockIndex] = { ...blocks[blockIndex], content: structuredClone(NEW_CONTENT[i]) }
