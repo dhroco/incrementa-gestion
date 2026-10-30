@@ -23,7 +23,8 @@ const { DYNAMIC_TEXT_CATALOG, getDynamicTextDefinition } = require('./dynamicTex
 
 const SECONDARY_FIELDS = {
   proveedor_cuenta_social: 'proveedor_red_social',
-  precio_texto: 'precio_numero'
+  precio_texto: 'precio_numero',
+  pago_dinero_texto: 'pago_dinero_numero'
 }
 
 const VARIABLE_META = {
@@ -79,6 +80,8 @@ const VARIABLE_META = {
   formato_reel:    { label: 'Formato de reel',     type: 'select', source: 'contract' },
   precio_numero:   { label: 'Precio',              type: 'number', source: 'contract' },
   precio_texto:    { label: 'Precio en texto',     type: 'text',   source: 'contract' },
+  pago_dinero_numero: { label: 'Pago en dinero',  type: 'number', source: 'contract' },
+  pago_dinero_texto:  { label: 'Pago en dinero en texto', type: 'text', source: 'contract' },
   servicios_entregables: {
     label: DYNAMIC_TEXT_CATALOG.servicios_entregables.label,
     type: 'dynamic_text',
@@ -135,6 +138,9 @@ function parsePriceInput(value) {
   return { ok: true, value: parseInt(digits, 10) }
 }
 
+const PAGO_DINERO_INPUT_MESSAGE =
+  'El pago en dinero debe ser un número entero, sin decimales ni símbolos. Por ejemplo: 40000, 40.000 o 40,000.'
+
 function formatThousands(n) {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 0 })
 }
@@ -189,22 +195,33 @@ function validateCantidadOverrides(overrides) {
   return { ok: true }
 }
 
-const PRECIO_TEXTO_MESSAGE =
-  'El precio en letras se calcula automáticamente a partir del precio en número; no se puede ingresar un texto distinto. Envía solo el precio en número.'
+const PRICE_WORDS_PAIRS = [
+  { number: 'precio_numero', words: 'precio_texto', label: 'precio' },
+  { number: 'pago_dinero_numero', words: 'pago_dinero_texto', label: 'pago en dinero' }
+]
 
 function normalizePriceWords(text) {
   return String(text).trim().toLowerCase().replace(/\s+pesos$/, '').replace(/\s+/g, ' ')
 }
 
-// `precio_texto` es el par de `precio_numero` y siempre se recalcula: un texto manual distinto del
-// calculado no se puede respetar (número y letras no coincidirían) y tampoco se ignora en silencio.
+// El texto en letras (`precio_texto`, `pago_dinero_texto`) es el par del número y siempre se
+// recalcula: un texto manual distinto del calculado no se puede respetar (número y letras no
+// coincidirían) y tampoco se ignora en silencio.
 function validatePriceTextOverride(overrides) {
   const raw = overrides && typeof overrides === 'object' ? overrides : {}
-  if (!isNonEmptyOverride(raw.precio_texto) || !isNonEmptyOverride(raw.precio_numero)) return { ok: true }
-  const parsed = parsePriceInput(raw.precio_numero)
-  if (!parsed.ok) return { ok: true }
-  if (normalizePriceWords(raw.precio_texto) === normalizePriceWords(numberToWords(parsed.value))) return { ok: true }
-  return { ok: false, status: 400, code: 'PAIR_FIELD_OVERRIDE_NOT_ALLOWED', message: PRECIO_TEXTO_MESSAGE }
+  for (const { number, words, label } of PRICE_WORDS_PAIRS) {
+    if (!isNonEmptyOverride(raw[words]) || !isNonEmptyOverride(raw[number])) continue
+    const parsed = parsePriceInput(raw[number])
+    if (!parsed.ok) continue
+    if (normalizePriceWords(raw[words]) === normalizePriceWords(numberToWords(parsed.value))) continue
+    return {
+      ok: false,
+      status: 400,
+      code: 'PAIR_FIELD_OVERRIDE_NOT_ALLOWED',
+      message: `El ${label} en letras se calcula automáticamente a partir del número; no se puede ingresar un texto distinto. Envía solo el número.`
+    }
+  }
+  return { ok: true }
 }
 
 // Variables de tipo fecha: el override llega en ISO (YYYY-MM-DD) desde el
@@ -261,6 +278,15 @@ function preprocessMissingFieldOverrides(overrides, { currencyCode } = {}) {
 
   if (priceParsed != null) {
     out.precio_texto = numberToWords(priceParsed)
+  }
+
+  // Pago en dinero de las plantillas «Canje más Pago»: mismo formato que el precio.
+  if (out.pago_dinero_numero != null && String(out.pago_dinero_numero).trim() !== '') {
+    const cashCheck = parsePriceInput(out.pago_dinero_numero)
+    if (cashCheck.ok) {
+      out.pago_dinero_numero = formatPriceNumber(cashCheck.value, resolvedCurrency)
+      out.pago_dinero_texto = numberToWords(cashCheck.value)
+    }
   }
 
   return out
@@ -726,6 +752,21 @@ function createDocumentBuilderService({
           status: 400,
           code: 'VALIDATION_ERROR',
           message: priceCheck.message
+        }
+      }
+    }
+
+    if (
+      overridesRaw.pago_dinero_numero != null &&
+      String(overridesRaw.pago_dinero_numero).trim() !== ''
+    ) {
+      const cashCheck = parsePriceInput(overridesRaw.pago_dinero_numero)
+      if (!cashCheck.ok) {
+        return {
+          ok: false,
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: PAGO_DINERO_INPUT_MESSAGE
         }
       }
     }
