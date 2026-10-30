@@ -174,16 +174,23 @@ async function createClient({ payload, userId }) {
 }
 
 async function updateClient(id, { payload, userId }) {
-  const existing = await db('client').select('id').where({ id }).first()
+  const existing = await db('client').select('id', 'name', 'brand', 'brand_account').where({ id }).first()
   if (!existing) {
     return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Cliente no encontrado.' }
   }
 
-  const v = validatePayload(payload)
+  // Un campo que no viene (undefined) se conserva; solo `null` o un texto vacío lo borran.
+  const merged = {
+    name: payload?.name !== undefined ? payload.name : existing.name,
+    brand: payload?.brand !== undefined ? payload.brand : existing.brand,
+    brand_account: payload?.brand_account !== undefined ? payload.brand_account : existing.brand_account
+  }
+  const v = validatePayload(merged)
   if (!v.ok) {
     return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: v.errors[0] || 'Datos inválidos.' }
   }
 
+  const replaceCampaigns = payload?.product_campaigns !== undefined
   const pc = validateProductCampaigns(payload?.product_campaigns)
   if (!pc.ok) {
     return { ok: false, status: 400, code: 'VALIDATION_ERROR', message: pc.message }
@@ -199,8 +206,10 @@ async function updateClient(id, { payload, userId }) {
         updated_by: userId ?? null,
         updated_at: trx.fn.now()
       })
-    await trx('client_product_campaign').where({ client_id: id }).delete()
-    await insertProductCampaigns(trx, id, pc.value)
+    if (replaceCampaigns) {
+      await trx('client_product_campaign').where({ client_id: id }).delete()
+      await insertProductCampaigns(trx, id, pc.value)
+    }
   })
 
   return getClientById(id)
