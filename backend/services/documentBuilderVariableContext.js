@@ -76,6 +76,8 @@ function buildSubstitutionMap(supplier, company, client = null, overrides = {}) 
     formato_reel: '',
     precio_numero: '',
     precio_texto: '',
+    pago_dinero_numero: '',
+    pago_dinero_texto: '',
     client_name: client ? String(client.name || '').trim() : '',
     client_brand: client ? String(client.brand || '').trim() : '',
     client_brand_account: client ? String(client.brand_account || '').trim() : '',

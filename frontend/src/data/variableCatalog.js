@@ -254,6 +254,16 @@ export const VARIABLE_GROUPS = {
         description: 'Monto del contrato escrito en palabras'
       },
       {
+        id: 'pago_dinero_numero',
+        label: 'Pago en dinero',
+        description: 'Monto del pago en dinero (plantillas Canje más Pago) en cifras; el canje va en Precio'
+      },
+      {
+        id: 'pago_dinero_texto',
+        label: 'Pago en dinero en texto',
+        description: 'Monto del pago en dinero escrito en palabras'
+      },
+      {
         id: 'servicios_entregables',
         label: 'Entregables (cláusula 2.3)',
         type: 'dynamic_text',
