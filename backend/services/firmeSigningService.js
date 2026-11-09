@@ -628,7 +628,8 @@ function createFirmeSigningService({
       companyId: draft.company_id,
       supplierId: draft.supplier_id,
       templateCode: template?.code,
-      docId: attempt.document_id
+      docId: attempt.document_id,
+      date: clock()
     })
     await putImmutable(signed, gcsPath, 'application/pdf')
     const verifiedAt = verificationInstant(remote, clock())

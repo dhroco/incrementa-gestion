@@ -87,8 +87,9 @@ function signeeSuggestion(row) {
   }
 }
 
-function buildSignedGcsPath({ companyId, supplierId, templateCode, docId }) {
-  const { year, month } = yearMonthInSantiago()
+function buildSignedGcsPath({ companyId, supplierId, templateCode, docId, date = new Date() }) {
+  // `date` permite inyectar el reloj (Firme usa el del servicio); por defecto, la fecha real.
+  const { year, month } = yearMonthInSantiago(date)
   const codePart = sanitizeFilePart(templateCode || 'template')
   return `contratos-firmados/${companyId}/${supplierId}/${codePart}/${year}/${month}/${docId}_firmado.pdf`
 }
