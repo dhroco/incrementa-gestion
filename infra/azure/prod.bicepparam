@@ -10,7 +10,7 @@ param environmentApp = 'prod'
 param tenantLogin = '9127c9cd-62bb-4118-8374-87e9b7fc8acc'
 param clientIdLogin = '9976f99a-975a-4f33-8dd8-746a2411adad'
 
-// David (david.roco@incrementa.cl) en el tenant de Incrementa.
+// David (david.roco@incrementa.la) en el tenant de Incrementa.
 param objectIdAdministrador = '899f3854-d9fb-41ba-8749-66743f7270d8'
 
 // La clave de PostgreSQL de prod no va aquí: se pasa al aplicar, desde una variable de entorno
