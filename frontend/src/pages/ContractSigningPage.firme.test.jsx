@@ -188,7 +188,11 @@ describe('ContractSigningPage Firme', () => {
     await clickButton(view.el, 'Firmar y enviar email')
 
     expect(signContract).toHaveBeenCalledWith('draft-1', {})
-    expect(view.el.textContent).toContain('Contrato firmado. Email enviado a empresa@incrementa.cl')
+    // El proveedor firma fuera del sistema: tras firmar solo se puede decir «en proceso de firma» (y sin
+    // «Email enviado», porque la respuesta no trae `emailSent`).
+    expect(view.el.textContent).toContain('Contrato en proceso de firma.')
+    expect(view.el.textContent).not.toContain('Contrato firmado')
+    expect(view.el.textContent).not.toContain('Email enviado')
     expect(view.el.textContent).toContain('No hay contratos pendientes de firma.')
     expect(rowBySupplier(view.el, 'Ana Pérez')).toBeUndefined()
     view.unmount()
