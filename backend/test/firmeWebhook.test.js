@@ -59,6 +59,9 @@ function serviceWith(attempts = []) {
     fetchImpl,
     firmeConfigured: true,
     environment: 'dev',
+    // Reloj fijo: los intentos de prueba se aprobaron el 26-oct y el enlace dura 10 días; con el reloj real la
+    // prueba envejecía y el intento pasaba a «vencido».
+    now: () => new Date('2026-10-26T15:00:00.000Z'),
     logger: {
       error(message) {
         errors.push(String(message))
