@@ -133,6 +133,8 @@ export function ContractSigningPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  // Producción sale sin Resend: si el backend dice que no hay correo (email_enabled false), la pantalla no lo promete.
+  const [emailEnabled, setEmailEnabled] = useState(true)
   const [loadingPdfId, setLoadingPdfId] = useState(null)
   const [signingId, setSigningId] = useState(null)
   const [actionKey, setActionKey] = useState(null)
@@ -173,6 +175,7 @@ export function ContractSigningPage() {
       return
     }
     setItems(Array.isArray(res.data?.items) ? res.data.items : [])
+    setEmailEnabled(res.meta?.email_enabled !== false)
   }, [canSign])
 
   const loadInSignature = useCallback(async ({ quiet } = {}) => {
@@ -193,11 +196,15 @@ export function ContractSigningPage() {
       if (!quiet) setInSignatureItems([])
       return
     }
-    setInSignatureItems(Array.isArray(res.data?.items) ? res.data.items : [])
+    const loaded = Array.isArray(res.data?.items) ? res.data.items : []
+    // «Contrato firmado.» solo cuando Firme completó la firma: un intento que ya pasó a `signed` sale de la tabla.
+    const justSigned = loaded.some((item) => item?.status === 'signed')
+    setInSignatureItems(loaded.filter((item) => item?.status !== 'signed'))
+    if (justSigned) showSuccess('Contrato firmado.')
     const rawCredits = res.meta?.credits
     setCredits(rawCredits == null || !Number.isFinite(Number(rawCredits)) ? null : Number(rawCredits))
     setRowErrors({})
-  }, [canSign])
+  }, [canSign, showSuccess])
 
   useEffect(() => {
     if (tab === 'approve') void loadPending()
@@ -263,11 +270,12 @@ export function ContractSigningPage() {
       return
     }
     const email = res.data?.companyEmail || confirmRow.company_email || 'la empresa'
+    const emailSent = res.data?.emailSent === true
     setItems((prev) => prev.filter((item) => item.id !== confirmRow.id))
     setConfirmRow(null)
     setConfirmKind(null)
     setAuthorized(false)
-    showSuccess(`Contrato firmado. Email enviado a ${email}`)
+    showSuccess(emailSent ? `Contrato en proceso de firma. Email enviado a ${email}.` : 'Contrato en proceso de firma.')
   }, [confirmRow, authorized, confirmKind, showSuccess])
 
   const handleSendToFirme = useCallback(async () => {
@@ -616,9 +624,14 @@ export function ContractSigningPage() {
               </dl>
               <p className="contract-sign-confirm-note">
                 Al confirmar, usted firma este documento en representación de{' '}
-                <strong>{confirmRow.company_name || confirmRow.company_short_name || 'la empresa'}</strong>{' '}
-                y se enviará al correo{' '}
-                <strong>{confirmRow.company_email || 'registrado de la empresa'}</strong>.
+                <strong>{confirmRow.company_name || confirmRow.company_short_name || 'la empresa'}</strong>
+                {emailEnabled ? (
+                  <>
+                    {' '}y se enviará al correo{' '}
+                    <strong>{confirmRow.company_email || 'registrado de la empresa'}</strong>
+                  </>
+                ) : null}
+                .
               </p>
               <label className="contract-sign-confirm-check">
                 <input
@@ -641,7 +654,7 @@ export function ContractSigningPage() {
                 disabled={!authorized || modalBusy}
                 onClick={() => void handleSign()}
               >
-                {modalBusy ? 'Firmando…' : 'Firmar y enviar email'}
+                {modalBusy ? 'Firmando…' : emailEnabled ? 'Firmar y enviar email' : 'Firmar'}
               </button>
             </div>
           </div>
