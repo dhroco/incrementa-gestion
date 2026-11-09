@@ -34,6 +34,20 @@ param mcpRutaSecreta bool
 @description('Rangos de IP que pueden llegar al MCP (vacío: sin restricción). En prod, solo Anthropic.')
 param mcpIpPermitidas array
 
+@description('true: lee FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID de Key Vault (tienen que existir antes de aplicar), los pasa al backend, al MCP y al job del barrido, y crea el job. false: sin Firme (la firma queda bloqueada).')
+param usarFirme bool
+
+@description('URL base de la API de Firme (prod: https://api.documentos.firme.cl; pre-prod: staging).')
+param firmeApiUrl string
+
+@description('ARN del topic SNS de Firme (opcional: si viene, el webhook solo acepta mensajes de ese topic). Vacío: se omite.')
+param firmeSnsTopicArn string
+
+@description('Cron (UTC) del barrido de firmas pendientes en Firme.')
+param firmeBarridoCron string
+
+param nombreBarrido string
+
 // Imagen de ejemplo de Microsoft para la primera aplicación, antes de que exista la propia.
 var imagenEjemplo = 'mcr.microsoft.com/k8se/quickstart:latest'
 var imagenEfectiva = secretosCargados && !empty(imagen) ? imagen : imagenEjemplo
@@ -73,7 +87,10 @@ func secretosDe(kvUri string, identidad string, nombres array) array =>
     identity: identidad
   })
 
-var nombresSecretos = usarResend ? ['DATABASE-URL', 'RESEND-API-KEY'] : ['DATABASE-URL']
+var nombresSecretos = concat(
+  usarResend ? ['DATABASE-URL', 'RESEND-API-KEY'] : ['DATABASE-URL'],
+  usarFirme ? ['FIRME-API-TOKEN', 'FIRME-LEGAL-ENTITY-ID'] : []
+)
 var secretosBackend = secretosCargados ? secretosDe(keyVaultUri, idBackendId, nombresSecretos) : []
 var secretosMcp = secretosCargados ? secretosDe(keyVaultUri, idMcpId, concat(nombresSecretos, mcpRutaSecreta ? ['MCP-RUTA-SECRETA'] : [])) : []
 var envRutaMcp = mcpRutaSecreta ? [
@@ -87,6 +104,13 @@ var restriccionesMcp = map(range(0, length(mcpIpPermitidas)), i => {
 var envResend = usarResend ? [
   { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
 ] : []
+var envFirme = usarFirme ? concat([
+  { name: 'FIRME_API_URL', value: firmeApiUrl }
+  { name: 'FIRME_API_TOKEN', secretRef: 'firme-api-token' }
+  { name: 'FIRME_LEGAL_ENTITY_ID', secretRef: 'firme-legal-entity-id' }
+], empty(firmeSnsTopicArn) ? [] : [
+  { name: 'FIRME_SNS_TOPIC_ARN', value: firmeSnsTopicArn }
+]) : []
 
 var envComun = [
   { name: 'ENVIRONMENT', value: environmentApp }
@@ -104,13 +128,13 @@ var envBackend = secretosCargados ? concat(envComun, [
   { name: 'OIDC_AUDIENCE', value: oidcAudience }
   { name: 'CORS_ORIGIN', value: corsOrigin }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-], envResend) : []
+], envResend, envFirme) : []
 
 var envMcp = secretosCargados ? concat(envComun, [
   { name: 'AZURE_CLIENT_ID', value: idMcpClientId }
   { name: 'GRAPH_ENABLED', value: 'false' }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-], envResend, envRutaMcp) : []
+], envResend, envFirme, envRutaMcp) : []
 
 var sonda = secretosCargados ? [
   {
@@ -191,6 +215,45 @@ resource mcp 'Microsoft.App/containerApps@2024-03-01' = if (incluirMcp) {
         }
       ]
       scale: { minReplicas: 0, maxReplicas: 1 }
+    }
+  }
+}
+
+// Barrido de firmas pendientes en Firme (respaldo del webhook: Firme aún no avisa los vencimientos).
+// Misma imagen y mismas variables que el backend; solo cambia el comando. Sin Firme no se crea.
+resource barrido 'Microsoft.App/jobs@2024-03-01' = if (usarFirme && secretosCargados) {
+  name: nombreBarrido
+  location: location
+  tags: tags
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${idBackendId}': {} }
+  }
+  properties: {
+    environmentId: entorno.id
+    workloadProfileName: 'Consumption'
+    configuration: {
+      triggerType: 'Schedule'
+      replicaTimeout: 300
+      replicaRetryLimit: 0
+      scheduleTriggerConfig: {
+        cronExpression: firmeBarridoCron
+        parallelism: 1
+        replicaCompletionCount: 1
+      }
+      registries: [{ server: acrLoginServer, identity: idBackendId }]
+      secrets: secretosBackend
+    }
+    template: {
+      containers: [
+        {
+          name: 'barrido'
+          image: imagenEfectiva
+          command: ['node', 'scripts/firme-barrido.js']
+          env: envBackend
+          resources: { cpu: json('0.25'), memory: '0.5Gi' }
+        }
+      ]
     }
   }
 }

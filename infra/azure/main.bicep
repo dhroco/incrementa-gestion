@@ -58,6 +58,18 @@ param resendFromEmail string = 'onboarding@resend.dev'
 @description('false: sin Resend (prod sale sin correo saliente).')
 param usarResend bool = true
 
+@description('Firma con Firme: lee FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID de Key Vault (tienen que existir antes de aplicar; scripts/cargar-secreto-firme.sh) y crea el job del barrido. false: sin Firme, la firma queda bloqueada.')
+param usarFirme bool = false
+
+@description('URL base de la API de Firme. Prod: https://api.documentos.firme.cl. Pre-prod: staging.')
+param firmeApiUrl string = 'https://api.documentos.firme.cl'
+
+@description('ARN del topic SNS de Firme (opcional). Sale de la SubscriptionConfirmation del webhook; con él, el webhook solo acepta mensajes de ese topic.')
+param firmeSnsTopicArn string = ''
+
+@description('Cron (UTC) del barrido de firmas pendientes en Firme.')
+param firmeBarridoCron string = '*/20 * * * *'
+
 @description('MCP HTTP sin login. En pre-prod, abierto en /mcp. En prod (marcha blanca, 21-oct) solo con mcpRutaSecreta=true y mcpIpPermitidas: con ENVIRONMENT=prod no arranca sin la ruta secreta.')
 param incluirMcp bool = entorno == 'preprod'
 
@@ -86,6 +98,7 @@ var nombres = {
   caEnv: 'cae-${sufijo}'
   backend: 'ca-incrementa-backend'
   mcp: 'ca-incrementa-mcp'
+  barrido: 'caj-incrementa-barrido'
   swa: 'swa-${sufijo}'
 }
 
@@ -189,6 +202,11 @@ module apps 'modulos/containerapps.bicep' = {
     incluirMcp: incluirMcp
     mcpRutaSecreta: mcpRutaSecreta
     mcpIpPermitidas: mcpIpPermitidas
+    usarFirme: usarFirme
+    firmeApiUrl: firmeApiUrl
+    firmeSnsTopicArn: firmeSnsTopicArn
+    firmeBarridoCron: firmeBarridoCron
+    nombreBarrido: nombres.barrido
   }
   // storage no se usa por salida: se espera explícitamente a que existan los roles de datos.
   dependsOn: [storage]

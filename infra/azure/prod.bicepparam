@@ -37,3 +37,7 @@ param mcpIpPermitidas = ['160.79.104.0/21']
 // en Key Vault y publicar la imagen, se vuelve a aplicar con true y la imagen que corresponda.
 param secretosCargados = false
 param imagenBackend = ''
+
+// Firma con Firme. false hasta cargar FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID en Key Vault
+// (scripts/cargar-secreto-firme.sh); con true crea además el job del barrido (caj-incrementa-barrido).
+param usarFirme = false
