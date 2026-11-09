@@ -26,3 +26,8 @@ param postgresTier = 'Burstable'
 // si se aplica a mano, pasar: --parameters imagenBackend=<imagen actual>.
 param secretosCargados = true
 param imagenBackend = ''
+
+// Firma con Firme. false hasta cargar FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID en Key Vault
+// (scripts/cargar-secreto-firme.sh); con true crea además el job del barrido (caj-incrementa-barrido).
+param usarFirme = false
+param firmeApiUrl = 'https://staging.api.documentos.firme.cl'

@@ -30,6 +30,14 @@ Infraestructura de **incrementa-gestion** en **Microsoft Azure**, definida con B
   `rg-incrementa-gestion-prod` (suscripción de Incrementa) y su MCP está en marcha blanca (ruta secreta y restricción de IP). Los parámetros están en
   `azure/prod.bicepparam`.
 
+## Firma con Firme (`usarFirme`)
+
+Apagada por defecto (`usarFirme = false` en los `.bicepparam`: la firma queda bloqueada). Para encenderla:
+
+1. Cargar los secretos en Key Vault del entorno con `scripts/cargar-secreto-firme.sh <prod|preprod>`: pide el token sin mostrarlo, te deja elegir la empresa (Dynamics Corp SPA) y guarda `FIRME-API-TOKEN` y `FIRME-LEGAL-ENTITY-ID`.
+2. Poner `usarFirme = true` en el `.bicepparam` (y `firmeApiUrl`: prod `https://api.documentos.firme.cl`, pre-prod staging) y aplicar con what-if previo. Pasa `FIRME_*` al backend y al MCP y crea el job `caj-incrementa-barrido` (`node scripts/firme-barrido.js`, cron `firmeBarridoCron`, por defecto cada 20 minutos).
+3. Registrar el webhook (`node scripts/firme-webhook.js registrar <url del backend>/api/webhooks/firme`) con un token de administrador de la empresa. Con el ARN del topic SNS que llega en la `SubscriptionConfirmation` se puede fijar `firmeSnsTopicArn`.
+
 ## Documentación
 
 - **Plan de la migración a Azure:** [`../docs/plan-migracion-azure.html`](../docs/plan-migracion-azure.html)

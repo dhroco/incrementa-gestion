@@ -10,7 +10,7 @@ param environmentApp = 'prod'
 param tenantLogin = '9127c9cd-62bb-4118-8374-87e9b7fc8acc'
 param clientIdLogin = '9976f99a-975a-4f33-8dd8-746a2411adad'
 
-// David (david.roco@incrementa.cl) en el tenant de Incrementa.
+// David (david.roco@incrementa.la) en el tenant de Incrementa.
 param objectIdAdministrador = '899f3854-d9fb-41ba-8749-66743f7270d8'
 
 // La clave de PostgreSQL de prod no va aquí: se pasa al aplicar, desde una variable de entorno
@@ -37,3 +37,7 @@ param mcpIpPermitidas = ['160.79.104.0/21']
 // en Key Vault y publicar la imagen, se vuelve a aplicar con true y la imagen que corresponda.
 param secretosCargados = false
 param imagenBackend = ''
+
+// Firma con Firme. false hasta cargar FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID en Key Vault
+// (scripts/cargar-secreto-firme.sh); con true crea además el job del barrido (caj-incrementa-barrido).
+param usarFirme = false
