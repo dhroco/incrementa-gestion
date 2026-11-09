@@ -426,15 +426,19 @@ function createContractSigningService({
       }
     }
 
+    // `emailSent` solo es true si el correo se envió de verdad: sin Resend (skipped), con error o sin
+    // correo de la empresa, la pantalla no debe decir «Email enviado».
+    let emailSent = false
     if (company.email) {
       try {
-        await emailService.sendSignedContractEmail({
+        const sent = await emailService.sendSignedContractEmail({
           to: company.email,
           proveedorNombre,
           templateName: template.name,
           pdfBuffer: signedBuffer,
           fileName: newFileName
         })
+        emailSent = Boolean(sent && sent.ok === true && !sent.skipped)
       } catch (err) {
         console.error('[contractSigningService] Email send failed:', err)
       }
@@ -445,7 +449,8 @@ function createContractSigningService({
       data: {
         documentId,
         fileName: newFileName,
-        companyEmail: company.email ?? null
+        companyEmail: company.email ?? null,
+        emailSent
       }
     }
   }
