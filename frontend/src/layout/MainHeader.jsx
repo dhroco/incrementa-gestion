@@ -13,6 +13,8 @@ export function MainHeader() {
   const navigate = useNavigate()
   const avatarUrl = useSelector(selectAvatarUrl)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Si la foto no carga (p. ej. la ruta existe en el perfil pero el archivo no está en este ambiente), se usa el avatar por defecto.
+  const [brokenAvatarUrl, setBrokenAvatarUrl] = useState(null)
   const wrapRef = useRef(null)
   useEffect(() => {
     function onDocClick(e) {
@@ -39,8 +41,8 @@ export function MainHeader() {
     navigate('/app/mi-perfil')
   }
 
-  const avatarSrc = avatarUrl ?? defaultAvatarUrl
-  const hasCustomAvatar = Boolean(avatarUrl)
+  const hasCustomAvatar = Boolean(avatarUrl) && avatarUrl !== brokenAvatarUrl
+  const avatarSrc = hasCustomAvatar ? avatarUrl : defaultAvatarUrl
   return (
     <header className="main-header" role="banner">
       <Link to={DEFAULT_PRIVATE_PATH} className="main-header__identity main-header__identity-link">
@@ -65,6 +67,7 @@ export function MainHeader() {
                 src={avatarSrc}
                 alt=""
                 decoding="async"
+                onError={hasCustomAvatar ? () => setBrokenAvatarUrl(avatarUrl) : undefined}
               />
             </span>
           </button>
