@@ -41,6 +41,8 @@ export function MyProfilePage() {
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
   const [widgetPrefs, setWidgetPrefs] = useState(() => resolveWidgetPrefs(widgetPreferences))
   const [previewUrl, setPreviewUrl] = useState(null)
+  // Si la foto guardada no carga (el archivo no está en este ambiente), se muestra el avatar por defecto.
+  const [brokenAvatarUrl, setBrokenAvatarUrl] = useState(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarError, setAvatarError] = useState(null)
   const [contactSaving, setContactSaving] = useState(false)
@@ -72,8 +74,9 @@ export function MyProfilePage() {
     }
   }, [previewUrl])
 
-  const displayAvatar = previewUrl ?? avatarUrl ?? defaultAvatarUrl
-  const isPlaceholderAvatar = !previewUrl && !avatarUrl
+  const savedPhotoUrl = avatarUrl && avatarUrl !== brokenAvatarUrl ? avatarUrl : null
+  const displayAvatar = previewUrl ?? savedPhotoUrl ?? defaultAvatarUrl
+  const isPlaceholderAvatar = !previewUrl && !savedPhotoUrl
 
   const saveWidgetPreferences = useCallback(
     async (prefs) => {
@@ -183,6 +186,7 @@ export function MyProfilePage() {
                   alt=""
                   width={80}
                   height={80}
+                  onError={savedPhotoUrl && !previewUrl ? () => setBrokenAvatarUrl(savedPhotoUrl) : undefined}
                 />
                 {avatarUploading ? <span className="my-profile-avatar__spinner">…</span> : null}
               </span>
