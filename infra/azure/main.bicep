@@ -66,6 +66,11 @@ param usarFirme bool = false
 @maxValue(1)
 param minReplicasBackend int = 0
 
+@description('Réplicas mínimas del MCP (0: se apaga sin uso; 1: siempre encendido).')
+@minValue(0)
+@maxValue(1)
+param minReplicasMcp int = 0
+
 @description('URL base de la API de Firme. Prod: https://api.documentos.firme.cl. Pre-prod: staging.')
 param firmeApiUrl string = 'https://api.documentos.firme.cl'
 
@@ -209,6 +214,7 @@ module apps 'modulos/containerapps.bicep' = {
     mcpIpPermitidas: mcpIpPermitidas
     usarFirme: usarFirme
     minReplicasBackend: minReplicasBackend
+    minReplicasMcp: minReplicasMcp
     firmeApiUrl: firmeApiUrl
     firmeSnsTopicArn: firmeSnsTopicArn
     firmeBarridoCron: firmeBarridoCron
