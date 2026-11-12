@@ -123,7 +123,9 @@ async function appendSignaturePage(
   { signerName, company, signedAtFormatted, draftHash, signedHash, stampInjected = false, reRendered = false, hash }
 ) {
   const pdfDoc = await PDFDocument.load(originalBuffer)
-  const page = pdfDoc.addPage()
+  // La constancia tiene el mismo tamaño de hoja que el contrato (carta en los nuevos; en un borrador antiguo, A4).
+  const lastPage = pdfDoc.getPages().at(-1)
+  const page = lastPage ? pdfDoc.addPage([lastPage.getWidth(), lastPage.getHeight()]) : pdfDoc.addPage([612, 792])
   const { width, height } = page.getSize()
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)

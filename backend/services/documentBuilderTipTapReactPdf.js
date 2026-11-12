@@ -3,17 +3,27 @@ const React = require('react')
 const { Document, Page, View, Text, StyleSheet, Font, Image, renderToBuffer } = require('@react-pdf/renderer')
 const { sanitizeTextForWinAnsi, normalizeTextForPdfTokenization } = require('./documentBuilderPdfTextUtils')
 
-const PAGE = { W: 595.28, H: 841.89 }
+/** Formato carta (Letter): 8,5 x 11 pulgadas. */
+const PAGE = { W: 612, H: 792 }
 const MARGIN = 48
 const BODY = 11
 /** En @react-pdf, `lineHeight` es un factor (1 = 100%), NO puntos. Nunca usar fontSize * ratio aquí. */
 const LINE_HEIGHT_RATIO = 1.35
+
+const { BRAND_INSET, BRAND_LOGO, BRAND_ICON, brandImageSize } = require('../lib/pdfBrand')
 /**
  * "Keep-with-next" de títulos: espacio mínimo (pt) que debe quedar bajo un título
  * para renderizarlo en la página actual; si no cabe, el título salta a la página
  * siguiente junto con su contenido. ≈ 3 líneas de cuerpo, para evitar títulos huérfanos.
  */
 const HEADING_KEEP_AHEAD = Math.round(3 * BODY * LINE_HEIGHT_RATIO)
+
+// Sin guionado automático: una palabra nunca se parte al final de la línea (el corte de @react-pdf partía, por
+// ejemplo, «SPA-» / «, Rol», o «de-» / «spublicación»). Una palabra más larga que la línea sí se parte, sin guion.
+Font.registerHyphenationCallback((word) => [word])
+
+/** Penalización de corte con guion que lo prohíbe (en el cortador de líneas, 10000 equivale a infinito). */
+const NO_HYPHEN_PENALTY = 10000
 
 let fontFamily = 'Helvetica'
 let fontRegistered = false
@@ -259,7 +269,14 @@ function TextFlow({ parts, fontSize, align = 'left', inList = false }) {
   // un handle de cuenta (noBreak), desactivamos el hifenado en TODO el párrafo para que
   // el handle no se parta (los handles no llevan guión; el resto del texto rara vez se hifena).
   const hasNoBreak = parts.some((p) => p && p.noBreak)
-  const textProps = hasNoBreak ? { style: baseStyle, hyphenationCallback: NO_HYPHEN } : { style: baseStyle }
+  // hyphenationPenalty muy alta (≥ 10000 = «infinito» en el cortador de líneas): @react-pdf considera «sílaba» el
+  // punto donde un fragmento pegado a otro sin espacio (negrita + coma: «SPA» + «,») y ahí insertaría un guion
+  // («SPA-» / «, Rol»); con esta penalización ese corte queda prohibido y la palabra pasa entera a la línea siguiente.
+  const textProps = {
+    style: baseStyle,
+    hyphenationPenalty: NO_HYPHEN_PENALTY,
+    ...(hasNoBreak ? { hyphenationCallback: NO_HYPHEN } : {})
+  }
   return React.createElement(Text, textProps, ch)
 }
 
@@ -467,6 +484,16 @@ function TipTapPdfDocument({ doc, signatureImages }) {
     React.createElement(
       Page,
       { size: [PAGE.W, PAGE.H], style: pageStyle },
+      React.createElement(
+        View,
+        { key: 'brand-logo', fixed: true, style: { position: 'absolute', top: BRAND_LOGO.top, left: BRAND_LOGO.left } },
+        React.createElement(Image, { src: BRAND_LOGO.file, style: brandImageSize(BRAND_LOGO) })
+      ),
+      React.createElement(
+        View,
+        { key: 'brand-icon', fixed: true, style: { position: 'absolute', bottom: BRAND_ICON.bottom, right: BRAND_ICON.right } },
+        React.createElement(Image, { src: BRAND_ICON.file, style: brandImageSize(BRAND_ICON) })
+      ),
       ...content
     )
   )
@@ -488,6 +515,11 @@ module.exports = {
   buildPdfBytesFromTipTapWithReactPdf,
   TipTapPdfDocument,
   tryRegisterFont,
+  BRAND_INSET,
+  BRAND_LOGO,
+  BRAND_ICON,
+  MARGIN,
+  PAGE,
   flattenInline,
   flatToCoalescedParts,
 }
