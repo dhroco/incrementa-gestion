@@ -47,7 +47,7 @@ read -rp "¿Cuál es la empresa de Incrementa (Dynamics Corp SPA)? Número: " N
 ID="$(awk -F'\t' -v n="$N" '$1==n {print $2}' "$TMP/lista.txt")"
 NOMBRE="$(awk -F'\t' -v n="$N" '$1==n {print $3}' "$TMP/lista.txt")"
 [ -n "$ID" ] || { echo "Número inválido." >&2; exit 1; }
-read -rp "Se guardará la empresa «$NOMBRE» en $KV. ¿Confirmas? (s/N): " OK
+read -rp "Se guardará la empresa «${NOMBRE}» en $KV. ¿Confirmas? (s/N): " OK
 [ "$OK" = "s" ] || { echo "Cancelado, no se guardó nada."; exit 1; }
 
 printf '%s' "$TOKEN" > "$TMP/token"; printf '%s' "$ID" > "$TMP/entidad"
