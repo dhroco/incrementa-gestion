@@ -18,24 +18,26 @@ const HEADING_KEEP_AHEAD = Math.round(3 * BODY * LINE_HEIGHT_RATIO)
 let fontFamily = 'Helvetica'
 let fontRegistered = false
 
-function tryRegisterLora() {
+// Tipografía de los contratos: Open Sans (licencia abierta OFL, empaquetada con el sistema). Si no se pudiera
+// cargar, se usa Helvetica y se avisa en el registro.
+function tryRegisterFont() {
   if (fontRegistered) return
   fontRegistered = true
-  const loraDir = path.join(__dirname, '..', 'node_modules', '@fontsource', 'lora', 'files')
+  const fontDir = path.join(__dirname, '..', 'node_modules', '@fontsource', 'open-sans', 'files')
   try {
     Font.register({
-      family: 'Lora',
+      family: 'OpenSans',
       fonts: [
-        { src: path.join(loraDir, 'lora-latin-400-normal.woff'), fontWeight: 400 },
-        { src: path.join(loraDir, 'lora-latin-700-normal.woff'), fontWeight: 700 },
-        { src: path.join(loraDir, 'lora-latin-400-italic.woff'), fontWeight: 400, fontStyle: 'italic' },
-        { src: path.join(loraDir, 'lora-latin-700-italic.woff'), fontWeight: 700, fontStyle: 'italic' },
+        { src: path.join(fontDir, 'open-sans-latin-400-normal.woff'), fontWeight: 400 },
+        { src: path.join(fontDir, 'open-sans-latin-700-normal.woff'), fontWeight: 700 },
+        { src: path.join(fontDir, 'open-sans-latin-400-italic.woff'), fontWeight: 400, fontStyle: 'italic' },
+        { src: path.join(fontDir, 'open-sans-latin-700-italic.woff'), fontWeight: 700, fontStyle: 'italic' },
       ],
     })
-    fontFamily = 'Lora'
+    fontFamily = 'OpenSans'
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.warn('[documentBuilderTipTapReactPdf] Lora register failed, using Helvetica:', e?.message || e)
+    console.warn('[documentBuilderTipTapReactPdf] Open Sans register failed, using Helvetica:', e?.message || e)
   }
 }
 
@@ -475,7 +477,7 @@ function TipTapPdfDocument({ doc, signatureImages }) {
  * @returns {Promise<Buffer>}
  */
 async function buildPdfBytesFromTipTapWithReactPdf(doc, { signatureImages } = {}) {
-  tryRegisterLora()
+  tryRegisterFont()
   warnedTypes.clear()
   const el = React.createElement(TipTapPdfDocument, { doc, signatureImages })
   const buffer = await renderToBuffer(el)
@@ -485,7 +487,7 @@ async function buildPdfBytesFromTipTapWithReactPdf(doc, { signatureImages } = {}
 module.exports = {
   buildPdfBytesFromTipTapWithReactPdf,
   TipTapPdfDocument,
-  tryRegisterLora,
+  tryRegisterFont,
   flattenInline,
   flatToCoalescedParts,
 }
