@@ -397,6 +397,15 @@ The tool description MUST require explicit user confirmation before invocation. 
 - **WHEN** `firmar_contrato_electronico` is invoked without `deps.firmeSigningService`
 - **THEN** the handler calls `signContract`
 
+### Requirement: MCP tool estado_firma
+
+The server SHALL expose read-only tool `estado_firma` with required parameter `draftDocumentId` (UUID). It SHALL call `firmeSigningService.refreshForDraft` and return the latest signing `status` (`pending_signature`, `signed`, `rejected`, `expired`, `failed`) with the signee data, or the service error (for example `NOT_FOUND` when the contract was never sent). Without the Firme service it SHALL return `FIRME_NO_DISPONIBLE`.
+
+#### Scenario: Signee has not signed yet
+
+- **WHEN** `estado_firma` is invoked for a contract sent to Firme and not yet signed
+- **THEN** the tool returns `status: pending_signature` and the signee email
+
 ### Requirement: MCP tools receive contractSigningService dependency
 
 `registerMcpTools` SHALL accept `contractSigningService` and `emailService` in its dependencies object. `createMcpServer()` in `backend/mcpServer.mjs` SHALL instantiate both and pass them to `registerMcpTools`.

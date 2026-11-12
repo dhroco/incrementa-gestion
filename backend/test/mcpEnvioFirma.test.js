@@ -179,3 +179,60 @@ test('generar_contrato agrega signature_flow a cada documento', async () => {
   assert.equal(out.data.documents[0].signature_flow, 'firme')
   assert.equal(out.data.documents[0].id, DRAFT_ID)
 })
+
+test('estado_firma devuelve el estado del envío y el del firmante', async () => {
+  const server = await setup({
+    firme: {
+      refreshForDraft: async () => ({ ok: true, data: { status: 'pending_signature' } }),
+      listInSignature: async () => [
+        {
+          id: DRAFT_ID,
+          status: 'pending_signature',
+          supplier_name: 'DAVID ROCO PEREZ',
+          signee_first_name: 'DAVID',
+          signee_last_name: 'ROCO',
+          signee_maternal_last_name: 'PEREZ',
+          signee_rut: '11832526-5',
+          signee_email: 'firmante@example.com',
+          approved_at: '2026-11-12T12:00:00Z',
+          rejection_reason: null,
+          last_error_code: null,
+          last_error_message: null
+        }
+      ]
+    }
+  })
+  const out = await call(server, 'estado_firma', { draftDocumentId: DRAFT_ID })
+  assert.equal(out.ok, true)
+  assert.equal(out.data.status, 'pending_signature')
+  assert.equal(out.data.signee_email, 'firmante@example.com')
+})
+
+test('estado_firma de un contrato ya firmado devuelve signed', async () => {
+  const server = await setup({
+    firme: {
+      refreshForDraft: async () => ({ ok: true, data: { status: 'signed' } }),
+      listInSignature: async () => []
+    }
+  })
+  const out = await call(server, 'estado_firma', { draftDocumentId: DRAFT_ID })
+  assert.equal(out.data.status, 'signed')
+})
+
+test('estado_firma sin envío previo devuelve el error del servicio', async () => {
+  const server = await setup({
+    firme: {
+      refreshForDraft: async () => ({ ok: false, status: 404, code: 'NOT_FOUND', message: 'No hay un envío a firma para este contrato.' }),
+      listInSignature: async () => []
+    }
+  })
+  const out = await call(server, 'estado_firma', { draftDocumentId: DRAFT_ID })
+  assert.equal(out.ok, false)
+  assert.equal(out.code, 'NOT_FOUND')
+})
+
+test('estado_firma sin servicio de Firme responde FIRME_NO_DISPONIBLE', async () => {
+  const server = await setup({ firme: undefined })
+  const out = await call(server, 'estado_firma', { draftDocumentId: DRAFT_ID })
+  assert.equal(out.code, 'FIRME_NO_DISPONIBLE')
+})

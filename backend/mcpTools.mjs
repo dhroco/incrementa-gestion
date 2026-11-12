@@ -393,7 +393,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'firmar_contrato_electronico',
-    'Inicia el proceso de firma de un contrato pendiente; la herramienta elige sola el camino según signature_flow. FIRME (proveedor con RUT chileno): equivale a «Aprobar y enviar a firma»: estampa la rúbrica de la empresa, aprueba el contrato y Firme envía un CORREO al firmante con el enlace para firmar; el contrato queda «en firma» (status pending_signature) hasta que el firmante firme, y se descuenta un crédito de Firme al completarse. INTERNA (proveedor sin RUT chileno): agrega la página de firma al PDF, lo guarda, crea el registro de documento firmado y lo envía por email a la Empresa. REQUISITO PREVIO: antes de llamar, muestra al usuario el contrato y, si el flujo es firme, los datos del firmante (nombres, apellidos, RUT y correo; por defecto los de signee_suggestion de listar_documentos_pendientes_firma) y espera su confirmación explícita, porque se envía un correo a un tercero. Si el usuario corrige algún dato del firmante, pásalo en firmante (los campos que no envíes se toman de signee_suggestion). Retorna confirmación de éxito; en flujo firme incluye signingId, status y el correo al que se envió.',
+    'Inicia el proceso de firma de un contrato pendiente; la herramienta elige sola el camino según signature_flow. FIRME (proveedor con RUT chileno): equivale a «Aprobar y enviar a firma»: estampa la rúbrica de la empresa, aprueba el contrato y Firme envía un CORREO al firmante con el enlace para firmar; el contrato queda «en firma» (status pending_signature) hasta que el firmante firme, y se descuenta un crédito de Firme al completarse. INTERNA (proveedor sin RUT chileno): agrega la página de firma al PDF, lo guarda, crea el registro de documento firmado y lo envía por email a la Empresa. REQUISITO PREVIO: antes de llamar, muestra al usuario el contrato y, si el flujo es firme, los datos del firmante (nombres, apellidos, RUT y correo; por defecto los de signee_suggestion de listar_documentos_pendientes_firma) y espera su confirmación explícita, porque se envía un correo a un tercero. Si el usuario corrige algún dato del firmante, pásalo en firmante (los campos que no envíes se toman de signee_suggestion). Retorna confirmación de éxito; en flujo firme incluye signingId, status y el correo al que se envió. Para saber después si el firmante ya firmó, usa estado_firma.',
     {
       draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) pendiente de firma'),
       firmante: z
@@ -432,6 +432,56 @@ export function registerMcpTools(server, deps) {
         signerUserProfileId: actor.profileId
       })
       return jsonToolResult(mapServiceResult(result))
+    }
+  )
+
+  server.tool(
+    'estado_firma',
+    'Consulta si el firmante ya firmó un contrato enviado a firma con Firme. Consulta a Firme en el momento y, si el firmante ya firmó, deja el contrato firmado. Retorna status: «pending_signature» (enviado, el firmante aún no firma), «signed» (firmado), «rejected» (rechazado, con rejection_reason), «expired» (venció el plazo; se puede reenviar el enlace desde la web) o «failed» (el envío falló, con last_error_message). Incluye datos del firmante (signee_*). Solo lectura: no envía correos. Úsala después de firmar_contrato_electronico en un contrato con signature_flow «firme».',
+    {
+      draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) enviado a firma')
+    },
+    async ({ draftDocumentId }) => {
+      if (
+        !firmeSigningService ||
+        typeof firmeSigningService.refreshForDraft !== 'function' ||
+        typeof firmeSigningService.listInSignature !== 'function'
+      ) {
+        return jsonToolResult({
+          ok: false,
+          code: 'FIRME_NO_DISPONIBLE',
+          message: 'Firme no está disponible.'
+        })
+      }
+      const refreshed = await firmeSigningService.refreshForDraft(draftDocumentId)
+      if (refreshed?.ok !== true) {
+        return jsonToolResult(mapServiceResult(refreshed))
+      }
+      const inSignature = await firmeSigningService.listInSignature()
+      const item = inSignature.find((row) => row.id === draftDocumentId)
+      if (item) {
+        return jsonToolResult({
+          ok: true,
+          data: {
+            draftDocumentId,
+            status: item.status,
+            supplier_name: item.supplier_name,
+            signee_first_name: item.signee_first_name,
+            signee_last_name: item.signee_last_name,
+            signee_maternal_last_name: item.signee_maternal_last_name,
+            signee_rut: item.signee_rut,
+            signee_email: item.signee_email,
+            approved_at: item.approved_at,
+            rejection_reason: item.rejection_reason,
+            last_error_code: item.last_error_code,
+            last_error_message: item.last_error_message
+          }
+        })
+      }
+      return jsonToolResult({
+        ok: true,
+        data: { draftDocumentId, status: refreshed.data?.status ?? 'unknown' }
+      })
     }
   )
 
