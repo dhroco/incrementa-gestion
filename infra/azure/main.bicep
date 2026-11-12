@@ -61,6 +61,11 @@ param usarResend bool = true
 @description('Firma con Firme: lee FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID de Key Vault (tienen que existir antes de aplicar; scripts/cargar-secreto-firme.sh) y crea el job del barrido. false: sin Firme, la firma queda bloqueada.')
 param usarFirme bool = false
 
+@description('Réplicas mínimas del backend. 0: se apaga tras unos minutos sin uso y la primera consulta espera ~30 s (arranque en frío). 1: siempre encendido (prod).')
+@minValue(0)
+@maxValue(1)
+param minReplicasBackend int = 0
+
 @description('URL base de la API de Firme. Prod: https://api.documentos.firme.cl. Pre-prod: staging.')
 param firmeApiUrl string = 'https://api.documentos.firme.cl'
 
@@ -203,6 +208,7 @@ module apps 'modulos/containerapps.bicep' = {
     mcpRutaSecreta: mcpRutaSecreta
     mcpIpPermitidas: mcpIpPermitidas
     usarFirme: usarFirme
+    minReplicasBackend: minReplicasBackend
     firmeApiUrl: firmeApiUrl
     firmeSnsTopicArn: firmeSnsTopicArn
     firmeBarridoCron: firmeBarridoCron
