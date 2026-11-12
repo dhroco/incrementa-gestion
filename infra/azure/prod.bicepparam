@@ -38,6 +38,6 @@ param mcpIpPermitidas = ['160.79.104.0/21']
 param secretosCargados = false
 param imagenBackend = ''
 
-// Firma con Firme. false hasta cargar FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID en Key Vault
+// Firma con Firme. ENCENDIDA en producción el 12-nov-2026 (secretos FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID cargados en Key Vault)
 // (scripts/cargar-secreto-firme.sh); con true crea además el job del barrido (caj-incrementa-barrido).
-param usarFirme = false
+param usarFirme = true
