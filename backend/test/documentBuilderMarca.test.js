@@ -4,7 +4,9 @@ const fs = require('node:fs')
 const zlib = require('node:zlib')
 const { PDFDocument, PDFName, PDFDict } = require('pdf-lib')
 
-const { buildPdfBytesFromTipTapWithReactPdf, BRAND_LOGO, BRAND_ICON, MARGIN } = require('../services/documentBuilderTipTapReactPdf')
+const { buildPdfBytesFromTipTapWithReactPdf, BRAND_LOGO, BRAND_ICON, BRAND_INSET, MARGIN, PAGE } = require('../services/documentBuilderTipTapReactPdf')
+const { appendSignaturePage } = require('../services/contractSigningService')
+const { brandImageSize } = require('../lib/pdfBrand')
 
 function longDoc(paragraphs) {
   const content = []
@@ -106,11 +108,49 @@ test('las dos imágenes de marca existen, son PNG RGB aplanados sobre blanco (si
   assert.ok(dims(BRAND_LOGO).w < 1000 && dims(BRAND_ICON).h < 1000, 'sin el margen blanco original de 1080 px')
 })
 
-test('el logo y el ícono caben en el margen: no pisan el texto', () => {
-  assert.ok(BRAND_LOGO.top + BRAND_LOGO.height <= MARGIN, 'el logo termina dentro del margen superior')
-  assert.ok(BRAND_ICON.bottom + BRAND_ICON.height <= MARGIN, 'el ícono termina dentro del margen inferior')
-  assert.equal(BRAND_LOGO.left, MARGIN)
-  assert.equal(BRAND_ICON.right, MARGIN)
+test('el tamaño de las imágenes es el 60% del anterior (logo 24 pt → 14,4 pt; ícono 32 pt → 19,2 pt)', () => {
+  assert.equal(BRAND_LOGO.height, 14.4)
+  assert.equal(BRAND_ICON.height, 19.2)
+})
+
+test('el logo está a la misma distancia del borde superior y del izquierdo; el ícono, del inferior y del derecho', () => {
+  assert.equal(BRAND_LOGO.top, BRAND_LOGO.left)
+  assert.equal(BRAND_ICON.bottom, BRAND_ICON.right)
+  assert.equal(BRAND_LOGO.top, BRAND_INSET)
+  assert.equal(BRAND_ICON.bottom, BRAND_INSET)
+  assert.ok(BRAND_INSET > 0 && BRAND_INSET < MARGIN, 'dentro de la hoja y más cerca del borde que el texto')
+})
+
+test('el logo y el ícono quedan FUERA del bloque de texto: en la esquina, sobre la primera línea y bajo la última', () => {
+  // Logo: parte desde fuera del margen izquierdo del texto y termina antes de que empiece el texto (margen superior).
+  assert.ok(BRAND_LOGO.left < MARGIN, 'el logo empieza fuera de la columna de texto')
+  assert.ok(BRAND_LOGO.top + BRAND_LOGO.height < MARGIN, 'el logo termina antes de la primera línea de texto')
+  // Ícono: empieza fuera del margen derecho y termina antes de la última línea posible (margen inferior).
+  assert.ok(BRAND_ICON.right < MARGIN, 'el ícono empieza fuera de la columna de texto')
+  assert.ok(BRAND_ICON.bottom + BRAND_ICON.height < MARGIN, 'el ícono queda bajo la última línea de texto')
+})
+
+test('las hojas del contrato son tamaño carta (Letter, 612 x 792 pt = 8,5 x 11 pulgadas)', async () => {
+  assert.deepEqual(PAGE, { W: 612, H: 792 })
+  const bytes = await buildPdfBytesFromTipTapWithReactPdf(longDoc(60))
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  assert.ok(doc.getPageCount() >= 3)
+  for (const page of doc.getPages()) assert.deepEqual([page.getWidth(), page.getHeight()], [612, 792])
+})
+
+test('la hoja de constancia de firma tiene el mismo tamaño que el contrato (carta; y A4 en un borrador antiguo)', async () => {
+  const company = { business_name: 'Empresa SpA', short_name: 'Empresa', rut_body: '76123456', rut_dv: '7' }
+  const opts = { signerName: 'Ana Usuario', company, signedAtFormatted: '1 de junio de 2026, 10:00', hash: 'abc123' }
+  const letter = await buildPdfBytesFromTipTapWithReactPdf(longDoc(2))
+  const withLetter = await PDFDocument.load(await appendSignaturePage(letter, opts))
+  const sizesLetter = withLetter.getPages().map((p) => [p.getWidth(), p.getHeight()])
+  assert.ok(sizesLetter.length >= 2)
+  sizesLetter.forEach((size) => assert.deepEqual(size, [612, 792]))
+
+  const a4 = await PDFDocument.create()
+  a4.addPage([595.28, 841.89])
+  const withA4 = await PDFDocument.load(await appendSignaturePage(Buffer.from(await a4.save()), opts))
+  withA4.getPages().forEach((p) => assert.deepEqual([p.getWidth(), p.getHeight()], [595.28, 841.89]))
 })
 
 test('en un contrato de varias hojas, CADA hoja lleva las dos imágenes', async () => {
@@ -143,4 +183,18 @@ test('los colores de las imágenes son los de la marca (no están desteñidos ni
   assert.ok(share(icon.list, (r, g, b) => b > 180 && r < 160 && g < 190) > 0.1, 'el ícono tiene azul y violeta')
   assert.ok(share(icon.list, (r, g, b) => r > 170 && b > 130 && g < 120) > 0.1, 'el ícono termina en magenta')
   assert.ok(share(icon.list, (r, g, b) => r > 245 && g > 245 && b > 245) < 0.5, 'y no es una imagen casi toda blanca')
+})
+
+test('el recuadro del timbre de Firme no queda cubierto por el logo ni el ícono', () => {
+  const { STAMP_X, STAMP_Y, STAMP_WIDTH, STAMP_HEIGHT } = require('../lib/firmeStamp')
+  const W = 612
+  const H = 792
+  const box = { left: STAMP_X * W, right: (STAMP_X + STAMP_WIDTH) * W, top: STAMP_Y * H, bottom: (STAMP_Y + STAMP_HEIGHT) * H }
+  const logoSize = brandImageSize(BRAND_LOGO)
+  const iconSize = brandImageSize(BRAND_ICON)
+  const logo = { left: BRAND_LOGO.left, right: BRAND_LOGO.left + logoSize.width, top: BRAND_LOGO.top, bottom: BRAND_LOGO.top + logoSize.height }
+  const icon = { left: W - BRAND_ICON.right - iconSize.width, right: W - BRAND_ICON.right, top: H - BRAND_ICON.bottom - iconSize.height, bottom: H - BRAND_ICON.bottom }
+  const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+  assert.equal(overlaps(logo, box), false)
+  assert.equal(overlaps(icon, box), false)
 })

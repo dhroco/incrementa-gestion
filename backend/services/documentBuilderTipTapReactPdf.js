@@ -1,42 +1,16 @@
 const path = require('path')
-const fs = require('fs')
 const React = require('react')
 const { Document, Page, View, Text, StyleSheet, Font, Image, renderToBuffer } = require('@react-pdf/renderer')
 const { sanitizeTextForWinAnsi, normalizeTextForPdfTokenization } = require('./documentBuilderPdfTextUtils')
 
-const PAGE = { W: 595.28, H: 841.89 }
+/** Formato carta (Letter): 8,5 x 11 pulgadas. */
+const PAGE = { W: 612, H: 792 }
 const MARGIN = 48
 const BODY = 11
 /** En @react-pdf, `lineHeight` es un factor (1 = 100%), NO puntos. Nunca usar fontSize * ratio aquí. */
 const LINE_HEIGHT_RATIO = 1.35
 
-/**
- * Marca en todas las hojas del contrato: logo arriba a la izquierda e ícono abajo a la derecha, dentro del margen
- * (no pisan el texto). Las imágenes están recortadas al contenido, aplanadas sobre blanco (PNG RGB sin
- * transparencia: los lectores de PDF antiguos no leen la máscara suave) y a resolución de impresión. El alto fija
- * el tamaño y el ancho sale de la proporción real del archivo. Se dibujan como elementos `fixed`, que @react-pdf
- * repite en cada hoja.
- */
-const BRAND_DIR = path.join(__dirname, '..', 'assets', 'pdf')
-const BRAND_LOGO = { file: path.join(BRAND_DIR, 'logo-incrementa.png'), height: 24, top: 13, left: 48 }
-const BRAND_ICON = { file: path.join(BRAND_DIR, 'icono-incrementa.png'), height: 32, bottom: 12, right: 48 }
-
-/** Ancho y alto de un PNG (cabecera IHDR: bytes 16 a 24). */
-function pngSize(file) {
-  const header = Buffer.alloc(24)
-  const fd = fs.openSync(file, 'r')
-  try {
-    fs.readSync(fd, header, 0, 24, 0)
-  } finally {
-    fs.closeSync(fd)
-  }
-  return { width: header.readUInt32BE(16), height: header.readUInt32BE(20) }
-}
-
-function brandImageStyle(spec) {
-  const { width, height } = pngSize(spec.file)
-  return { width: Math.round((spec.height * width * 10) / height) / 10, height: spec.height }
-}
+const { BRAND_INSET, BRAND_LOGO, BRAND_ICON, brandImageSize } = require('../lib/pdfBrand')
 /**
  * "Keep-with-next" de títulos: espacio mínimo (pt) que debe quedar bajo un título
  * para renderizarlo en la página actual; si no cabe, el título salta a la página
@@ -499,12 +473,12 @@ function TipTapPdfDocument({ doc, signatureImages }) {
       React.createElement(
         View,
         { key: 'brand-logo', fixed: true, style: { position: 'absolute', top: BRAND_LOGO.top, left: BRAND_LOGO.left } },
-        React.createElement(Image, { src: BRAND_LOGO.file, style: brandImageStyle(BRAND_LOGO) })
+        React.createElement(Image, { src: BRAND_LOGO.file, style: brandImageSize(BRAND_LOGO) })
       ),
       React.createElement(
         View,
         { key: 'brand-icon', fixed: true, style: { position: 'absolute', bottom: BRAND_ICON.bottom, right: BRAND_ICON.right } },
-        React.createElement(Image, { src: BRAND_ICON.file, style: brandImageStyle(BRAND_ICON) })
+        React.createElement(Image, { src: BRAND_ICON.file, style: brandImageSize(BRAND_ICON) })
       ),
       ...content
     )
@@ -527,6 +501,7 @@ module.exports = {
   buildPdfBytesFromTipTapWithReactPdf,
   TipTapPdfDocument,
   tryRegisterFont,
+  BRAND_INSET,
   BRAND_LOGO,
   BRAND_ICON,
   MARGIN,
