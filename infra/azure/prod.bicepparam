@@ -41,3 +41,6 @@ param imagenBackend = ''
 // Firma con Firme. ENCENDIDA en producción el 12-nov-2026 (secretos FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID cargados en Key Vault)
 // (scripts/cargar-secreto-firme.sh); con true crea además el job del barrido (caj-incrementa-barrido).
 param usarFirme = true
+
+// Backend siempre encendido: sin arranque en frío (~30 s la primera consulta tras estar sin uso).
+param minReplicasBackend = 1

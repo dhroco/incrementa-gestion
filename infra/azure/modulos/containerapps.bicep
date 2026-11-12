@@ -37,6 +37,9 @@ param mcpIpPermitidas array
 @description('true: lee FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID de Key Vault (tienen que existir antes de aplicar), los pasa al backend, al MCP y al job del barrido, y crea el job. false: sin Firme (la firma queda bloqueada).')
 param usarFirme bool
 
+@description('Réplicas mínimas del backend (0: se apaga sin uso; 1: siempre encendido).')
+param minReplicasBackend int
+
 @description('URL base de la API de Firme (prod: https://api.documentos.firme.cl; pre-prod: staging).')
 param firmeApiUrl string
 
@@ -176,7 +179,7 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
           resources: { cpu: json('0.5'), memory: '1Gi' }
         }
       ]
-      scale: { minReplicas: 0, maxReplicas: 2 }
+      scale: { minReplicas: minReplicasBackend, maxReplicas: 2 }
     }
   }
 }
