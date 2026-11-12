@@ -40,6 +40,9 @@ param usarFirme bool
 @description('Réplicas mínimas del backend (0: se apaga sin uso; 1: siempre encendido).')
 param minReplicasBackend int
 
+@description('Réplicas mínimas del MCP (0: se apaga sin uso; 1: siempre encendido).')
+param minReplicasMcp int
+
 @description('URL base de la API de Firme (prod: https://api.documentos.firme.cl; pre-prod: staging).')
 param firmeApiUrl string
 
@@ -217,7 +220,7 @@ resource mcp 'Microsoft.App/containerApps@2024-03-01' = if (incluirMcp) {
           resources: { cpu: json('0.5'), memory: '1Gi' }
         }
       ]
-      scale: { minReplicas: 0, maxReplicas: 1 }
+      scale: { minReplicas: minReplicasMcp, maxReplicas: 1 }
     }
   }
 }

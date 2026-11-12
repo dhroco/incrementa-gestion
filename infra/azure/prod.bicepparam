@@ -44,3 +44,4 @@ param usarFirme = true
 
 // Backend siempre encendido: sin arranque en frío (~30 s la primera consulta tras estar sin uso).
 param minReplicasBackend = 1
+param minReplicasMcp = 1
