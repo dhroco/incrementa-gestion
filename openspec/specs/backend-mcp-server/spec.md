@@ -366,7 +366,7 @@ The server SHALL expose tool `listar_documentos_pendientes_firma` with no parame
 
 The server SHALL expose tool `firmar_contrato_electronico` with required parameter `draftDocumentId` (UUID). The handler SHALL resolve `signerUserProfileId` via `getUserProfileIdByUserId(MCP_USER_ID)`.
 
-When `deps.firmeSigningService` is present and `getSigningMode(draftDocumentId)` is `firme`, the handler SHALL return the error code `USE_FIRME_FLOW` with message «Este contrato se firma con Firme: use «Aprobar y enviar a firma».» and SHALL NOT call `signContract`. When the mode is `blocked`, the handler SHALL return the error code `FIRMA_BLOQUEADA` with message «La firma está deshabilitada en producción hasta que se configure Firme.» and SHALL NOT call `signContract`. When `deps.firmeSigningService` is absent, or the mode is `internal`, the handler SHALL call `contractSigningService.signContract` as it does today.
+The tool SHALL accept an optional `firmante` object (`first_names`, `last_name`, `maternal_last_name`, `document_number`, `email`); missing fields SHALL be taken from the draft's `signee_suggestion`. When `deps.firmeSigningService` is present and `getSigningMode(draftDocumentId)` is `firme`, the handler SHALL call `firmeSigningService.sendToFirme` (same flow as «Aprobar y enviar a firma») with the MCP profile as approver and SHALL NOT call `signContract`. When the mode is `blocked`, the handler SHALL return the error code `FIRMA_BLOQUEADA` with message «La firma está deshabilitada en producción hasta que se configure Firme.» and SHALL NOT call `signContract`. When `deps.firmeSigningService` is absent, or the mode is `internal`, the handler SHALL call `contractSigningService.signContract` as it does today. `generar_contrato` and `listar_documentos_pendientes_firma` SHALL report `signature_flow` (`firme`, `interna` or `bloqueada`) per document when the Firme service is present.
 
 The tool description MUST require explicit user confirmation before invocation. It MUST explain that signing appends a signature page, uploads to GCS, creates the signed document record, and emails the company.
 
@@ -380,10 +380,10 @@ The tool description MUST require explicit user confirmation before invocation. 
 - **WHEN** `firmar_contrato_electronico` completes successfully
 - **THEN** `signed_by` on the document reflects the MCP service user profile name
 
-#### Scenario: Firme mode blocks the MCP tool
+#### Scenario: Firme mode sends to Firme
 
 - **WHEN** `firmar_contrato_electronico` is invoked with `deps.firmeSigningService` and the mode is `firme`
-- **THEN** the tool returns code `USE_FIRME_FLOW`
+- **THEN** `sendToFirme` is called with the signee (suggestion plus overrides) and the tool returns `signingId`, `status` and the email sent to
 - **AND** `signContract` is not called
 
 #### Scenario: Blocked mode blocks the MCP tool
