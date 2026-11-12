@@ -364,7 +364,7 @@ export function registerMcpTools(server, deps) {
           return jsonToolResult({
             ok: false,
             code: 'USE_FIRME_FLOW',
-            message: 'Este contrato se firma con Firme: use «Aprobar y enviar a firma».'
+            message: 'Este contrato se firma con Firme: use la herramienta enviar_a_firma_firme (equivale a «Aprobar y enviar a firma»).'
           })
         }
         if (mode === 'blocked') {
