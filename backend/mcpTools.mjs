@@ -30,6 +30,22 @@ export function mapServiceResult(result) {
   }
 }
 
+/** Modo de firma del servicio de Firme → valor que ve Claude en `signature_flow`. */
+function signatureFlowOf(mode) {
+  if (mode === 'firme') return 'firme'
+  if (mode === 'blocked') return 'bloqueada'
+  return 'interna'
+}
+
+async function resolveSignatureFlow(firmeSigningService, draftDocumentId) {
+  if (!firmeSigningService || typeof firmeSigningService.getSigningMode !== 'function') return null
+  try {
+    return signatureFlowOf(await firmeSigningService.getSigningMode(draftDocumentId))
+  } catch (err) {
+    return null
+  }
+}
+
 async function resolveActorProfileId(getUserProfileIdByUserId) {
   const profileId = await getUserProfileIdByUserId(MCP_USER_ID)
   if (!profileId) {
@@ -312,17 +328,27 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'listar_documentos_pendientes_firma',
-    'Lista los contratos que están pendientes de firma electrónica (borradores activos no firmados ni rechazados). Úsala para que el usuario pueda ver qué contratos necesitan ser firmados. Retorna id, proveedor, cliente, plantilla, empresa y fecha del contrato.',
+    'Lista los contratos que están pendientes de firma electrónica (borradores activos no firmados ni rechazados). Úsala para que el usuario pueda ver qué contratos necesitan ser firmados. Retorna id, proveedor, cliente, plantilla, empresa, fecha del contrato, signee_suggestion (datos sugeridos del firmante) y signature_flow: «firme» (se envía al firmante con enviar_a_firma_firme), «interna» (firmar_contrato_electronico) o «bloqueada» (la firma está deshabilitada).',
     {},
     async () => {
       const result = await contractSigningService.listPendingSignature()
+      const items = result?.data?.items
+      if (result?.ok === true && Array.isArray(items)) {
+        const withFlow = await Promise.all(
+          items.map(async (item) => {
+            const flow = await resolveSignatureFlow(firmeSigningService, item?.id)
+            return flow ? { ...item, signature_flow: flow } : item
+          })
+        )
+        return jsonToolResult(mapServiceResult({ ...result, data: { ...result.data, items: withFlow } }))
+      }
       return jsonToolResult(mapServiceResult(result))
     }
   )
 
   server.tool(
     'firmar_contrato_electronico',
-    'Firma electrónicamente un contrato pendiente. Agrega la página de firma al PDF, lo guarda en el almacenamiento de documentos, crea el registro de documento firmado y envía el PDF firmado por email al correo de la Empresa. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
+    'Firma INTERNA (solo signature_flow = «interna»): agrega la página de firma al PDF, lo guarda, crea el registro de documento firmado y lo envía por email a la Empresa. NO envía el contrato a la contraparte y NO sirve para contratos con signature_flow = «firme» (proveedor con RUT chileno): esos se envían con enviar_a_firma_firme y esta herramienta los rechaza con USE_FIRME_FLOW. Revisa signature_flow en listar_documentos_pendientes_firma o generar_contrato antes de elegir. Requiere confirmación explícita del usuario antes de llamar esta herramienta. Retorna confirmación de éxito e información del email enviado.',
     {
       draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) pendiente de firma')
     },
@@ -355,6 +381,130 @@ export function registerMcpTools(server, deps) {
         signerUserProfileId: actor.profileId
       })
       return jsonToolResult(mapServiceResult(result))
+    }
+  )
+
+  server.tool(
+    'enviar_a_firma_firme',
+    'Aprueba el contrato y lo envía a firma con Firme: es lo mismo que el botón «Aprobar y enviar a firma» de Incrementa Gestión. Úsala cuando el contrato tenga signature_flow = «firme» (proveedor con RUT chileno). Firme envía un CORREO al firmante con el enlace para firmar y se descuenta un crédito al completarse la firma. REQUISITO PREVIO: antes de llamar, muestra al usuario el contrato y los datos del firmante (nombres, apellidos, RUT y correo; por defecto los de signee_suggestion de listar_documentos_pendientes_firma) y espera su confirmación explícita, porque se envía un correo a un tercero. Si el usuario corrige algún dato, pásalo en firmante (los campos que no envíes se toman de signee_suggestion). Retorna signingId y status («pending_signature»: enviado, a la espera de la firma) y el correo al que se envió. Para saber si ya firmó usa estado_firma.',
+    {
+      draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) a enviar a firma'),
+      firmante: z
+        .object({
+          first_names: z.string().optional().describe('Nombres del firmante'),
+          last_name: z.string().optional().describe('Apellido paterno'),
+          maternal_last_name: z.string().optional().describe('Apellido materno (opcional)'),
+          document_number: z.string().optional().describe('RUT del firmante, ej. 11.111.111-1'),
+          email: z.string().optional().describe('Correo del firmante, donde Firme envía el enlace')
+        })
+        .optional()
+        .describe('Datos del firmante; los que falten se toman de signee_suggestion del borrador')
+    },
+    async ({ draftDocumentId, firmante }) => {
+      if (!firmeSigningService || typeof firmeSigningService.sendToFirme !== 'function') {
+        return jsonToolResult({
+          ok: false,
+          code: 'FIRME_NO_DISPONIBLE',
+          message: 'Firme no está disponible.'
+        })
+      }
+      const actor = await resolveActorProfileId(getUserProfileIdByUserId)
+      if (!actor.ok) {
+        return jsonToolResult(actor)
+      }
+
+      let suggestion = {}
+      try {
+        const pending = await contractSigningService.listPendingSignature()
+        const found = (pending?.data?.items ?? []).find((item) => item?.id === draftDocumentId)
+        suggestion = found?.signee_suggestion ?? {}
+      } catch (err) {
+        suggestion = {}
+      }
+      const pick = (key) => {
+        const given = firmante?.[key]
+        return typeof given === 'string' && given.trim() !== '' ? given.trim() : (suggestion[key] ?? '')
+      }
+      const signee = {
+        firstName: pick('first_names'),
+        lastName: pick('last_name'),
+        maternalLastName: pick('maternal_last_name'),
+        documentNumber: pick('document_number'),
+        email: pick('email')
+      }
+
+      const result = await firmeSigningService.sendToFirme({
+        draftDocumentId,
+        signee,
+        approvedByUserProfileId: actor.profileId
+      })
+      if (result?.ok === true) {
+        return jsonToolResult({
+          ok: true,
+          data: {
+            ...(result.data ?? {}),
+            sentTo: signee.email,
+            signee: {
+              first_names: signee.firstName,
+              last_name: signee.lastName,
+              maternal_last_name: signee.maternalLastName,
+              document_number: signee.documentNumber,
+              email: signee.email
+            }
+          }
+        })
+      }
+      return jsonToolResult(mapServiceResult(result))
+    }
+  )
+
+  server.tool(
+    'estado_firma',
+    'Consulta el estado de la firma con Firme de un contrato ya enviado (por ejemplo, para saber si el influencer ya firmó). Consulta a Firme en el momento y, si el firmante ya firmó, deja el contrato firmado. Retorna status: «pending_signature» (enviado, esperando la firma), «signed» (firmado), «rejected» (rechazado, con rejection_reason), «expired» (venció el plazo; se puede reenviar desde la web) o «failed» (el envío falló, con last_error_message). Incluye datos del firmante (signee_*). Solo lectura: no envía correos.',
+    {
+      draftDocumentId: z.string().uuid().describe('UUID del borrador (draft_document) enviado a firma')
+    },
+    async ({ draftDocumentId }) => {
+      if (
+        !firmeSigningService ||
+        typeof firmeSigningService.refreshForDraft !== 'function' ||
+        typeof firmeSigningService.listInSignature !== 'function'
+      ) {
+        return jsonToolResult({
+          ok: false,
+          code: 'FIRME_NO_DISPONIBLE',
+          message: 'Firme no está disponible.'
+        })
+      }
+      const refreshed = await firmeSigningService.refreshForDraft(draftDocumentId)
+      if (refreshed?.ok !== true) {
+        return jsonToolResult(mapServiceResult(refreshed))
+      }
+      const inSignature = await firmeSigningService.listInSignature()
+      const item = inSignature.find((row) => row.id === draftDocumentId)
+      if (item) {
+        return jsonToolResult({
+          ok: true,
+          data: {
+            draftDocumentId,
+            status: item.status,
+            supplier_name: item.supplier_name,
+            signee_first_name: item.signee_first_name,
+            signee_last_name: item.signee_last_name,
+            signee_maternal_last_name: item.signee_maternal_last_name,
+            signee_rut: item.signee_rut,
+            signee_email: item.signee_email,
+            approved_at: item.approved_at,
+            rejection_reason: item.rejection_reason,
+            last_error_code: item.last_error_code,
+            last_error_message: item.last_error_message
+          }
+        })
+      }
+      return jsonToolResult({
+        ok: true,
+        data: { draftDocumentId, status: refreshed.data?.status ?? 'unknown' }
+      })
     }
   )
 
@@ -429,7 +579,7 @@ export function registerMcpTools(server, deps) {
 
   server.tool(
     'generar_contrato',
-    'Genera el PDF del contrato y lo persiste como borrador en el almacenamiento de documentos y en la base de datos. Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
+    'Genera el PDF del contrato y lo persiste como borrador en el almacenamiento de documentos y en la base de datos. La respuesta trae signature_flow por documento: «firme» (se envía con enviar_a_firma_firme), «interna» (firmar_contrato_electronico) o «bloqueada». Requiere companyId, supplierId y templateId. Usa validar_contrato antes si no estás seguro de que los datos están completos. REQUISITO PREVIO: antes de llamar a esta tool, lista al usuario TODOS los valores que se van a usar (los de missingFieldOverrides) y espera confirmación explícita. Es la última oportunidad de detectar un valor equivocado antes de que quede impreso en un PDF con efectos legales. Prohibido elegir por cuenta propia un type=\'select\' con más de una opción: el valor debe coincidir EXACTAMENTE con una option.',
     contractParams,
     async ({ companyId, supplierId, templateId, missingFieldOverrides, overwrite, clientId }) => {
       const result = await documentBuilderService.generateAndPersist({
@@ -443,6 +593,16 @@ export function registerMcpTools(server, deps) {
           clientId
         }
       })
+      const documents = result?.data?.documents
+      if (result?.ok === true && Array.isArray(documents)) {
+        const withFlow = await Promise.all(
+          documents.map(async (doc) => {
+            const flow = await resolveSignatureFlow(firmeSigningService, doc?.id)
+            return flow ? { ...doc, signature_flow: flow } : doc
+          })
+        )
+        return jsonToolResult(mapServiceResult({ ...result, data: { ...result.data, documents: withFlow } }))
+      }
       return jsonToolResult(mapServiceResult(result))
     }
   )
