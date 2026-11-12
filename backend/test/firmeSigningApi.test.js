@@ -208,8 +208,17 @@ test('MCP sign follows firme, blocked, and absent modes', async () => {
     return JSON.parse(raw.content[0].text)
   }
 
-  const firme = await run({ getSigningMode: async () => 'firme' })
-  assert.equal(firme.code, 'USE_FIRME_FLOW')
+  let sentToFirme = 0
+  const firme = await run({
+    getSigningMode: async () => 'firme',
+    sendToFirme: async () => {
+      sentToFirme += 1
+      return { ok: true, status: 202, data: { signingId: 's1', status: 'pending_signature' } }
+    }
+  })
+  assert.equal(firme.ok, true)
+  assert.equal(firme.data.status, 'pending_signature')
+  assert.equal(sentToFirme, 1)
   assert.equal(signed, 0)
 
   const blocked = await run({ getSigningMode: async () => 'blocked' })
