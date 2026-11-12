@@ -54,6 +54,9 @@ set-env-local.sh
 # Local credentials (never commit)
 backend/secrets/
 
+# Tokens y claves locales (p. ej. el token de Firme de producción): nunca se suben
+_credentials/
+
 # Build outputs
 dist/
 build/
