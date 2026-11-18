@@ -1,4 +1,5 @@
 import { parseOptionalRut, parseRut } from './rut'
+import { emailListToStored } from './emailList'
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
@@ -69,7 +70,7 @@ export function buildCompanyMutationPayload(p) {
     commune: p.commune.trim() || null,
     city: p.city.trim() || null,
     region: p.region.trim() || null,
-    email: p.email.trim() || null,
+    email: emailListToStored(p.email) || null,
     phone: p.phone.trim() || null,
     name_legal_representative_1: p.nameLegal1.trim() || null,
     rut_legal_representative_1: p.rutLegal1.trim() || null,

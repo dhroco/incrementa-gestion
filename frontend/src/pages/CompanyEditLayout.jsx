@@ -1,3 +1,4 @@
+import { emailListToLines } from '../utils/emailList'
 import { useEffect, useMemo, useState } from 'react'
 import { useAbility } from '@casl/react'
 import { Outlet, useParams } from 'react-router-dom'
@@ -60,7 +61,7 @@ export function CompanyEditLayout() {
       setCommune(e?.commune ?? '')
       setCity(e?.city ?? '')
       setRegion(e?.region ?? '')
-      setEmail(e?.email ?? '')
+      setEmail(emailListToLines(e?.email ?? ''))
       setPhone(e?.phone ?? '')
       setNameLegal1(e?.name_legal_representative_1 ?? '')
       setRutLegal1(
