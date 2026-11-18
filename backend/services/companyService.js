@@ -1,6 +1,6 @@
 const { db } = require('../db/knex')
 const { parseRut } = require('../utils/rut')
-const { isValidEmail } = require('../utils/validation')
+const { isValidEmailList } = require('../utils/emailList')
 const { resolveCompanyScopeByUserId } = require('./companyScopeService')
 const { storageService: storageServiceDefault } = require('./storageService')
 
@@ -89,7 +89,7 @@ function validateCompanyPayload(payload, { requireAll = false } = {}) {
     errors.push(rutParsed.message)
   }
 
-  if (email != null && String(email).trim().length > 0 && !isValidEmail(email)) {
+  if (email != null && String(email).trim().length > 0 && !isValidEmailList(email)) {
     errors.push('El correo ingresado no tiene un formato válido.')
   }
 

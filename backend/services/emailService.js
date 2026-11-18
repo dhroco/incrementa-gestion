@@ -1,5 +1,6 @@
 const { Resend } = require('resend')
 const config = require('../config')
+const { parseEmailList } = require('../utils/emailList')
 
 async function sendSignedContractEmail({ to, proveedorNombre, templateName, pdfBuffer, fileName }) {
   const apiKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY || ''
@@ -13,6 +14,12 @@ async function sendSignedContractEmail({ to, proveedorNombre, templateName, pdfB
     <p>Atentamente,<br/>Incrementa</p>
   `.trim()
 
+  const recipients = parseEmailList(to)
+  if (recipients.length === 0) {
+    console.error('[emailService] sin destinatarios: se omite el envío de correo (skipped).')
+    return { ok: true, skipped: true }
+  }
+
   if (!apiKey) {
     console.error('[emailService] RESEND_API_KEY ausente: se omite el envío de correo (skipped).')
     return { ok: true, skipped: true }
@@ -21,7 +28,7 @@ async function sendSignedContractEmail({ to, proveedorNombre, templateName, pdfB
   const resend = new Resend(apiKey)
   await resend.emails.send({
     from,
-    to,
+    to: recipients,
     subject,
     html,
     attachments: [{ filename: fileName, content: pdfBuffer.toString('base64') }]
