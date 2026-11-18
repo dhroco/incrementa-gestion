@@ -53,10 +53,8 @@ param secretosCargados bool = false
 @description('Imagen del backend y del MCP. Con secretosCargados=false se ignora. Al volver a aplicar, pasar la imagen que esté corriendo, para no pisar el último despliegue.')
 param imagenBackend string = ''
 
-param resendFromEmail string = 'onboarding@resend.dev'
-
-@description('false: sin Resend (prod sale sin correo saliente).')
-param usarResend bool = true
+@description('Ubicación de los datos de Azure Communication Services (correo saliente).')
+param correoDataLocation string = 'Brazil'
 
 @description('Firma con Firme: lee FIRME-API-TOKEN y FIRME-LEGAL-ENTITY-ID de Key Vault (tienen que existir antes de aplicar; scripts/cargar-secreto-firme.sh) y crea el job del barrido. false: sin Firme, la firma queda bloqueada.')
 param usarFirme bool = false
@@ -65,6 +63,11 @@ param usarFirme bool = false
 @minValue(0)
 @maxValue(1)
 param minReplicasBackend int = 0
+
+@description('Réplicas mínimas del MCP (0: se apaga sin uso; 1: siempre encendido).')
+@minValue(0)
+@maxValue(1)
+param minReplicasMcp int = 0
 
 @description('URL base de la API de Firme. Prod: https://api.documentos.firme.cl. Pre-prod: staging.')
 param firmeApiUrl string = 'https://api.documentos.firme.cl'
@@ -105,6 +108,7 @@ var nombres = {
   mcp: 'ca-incrementa-mcp'
   barrido: 'caj-incrementa-barrido'
   swa: 'swa-${sufijo}'
+  correo: 'acs-${sufijo}'
 }
 
 module red 'modulos/red.bicep' = {
@@ -156,6 +160,16 @@ module storage 'modulos/storage.bicep' = {
   }
 }
 
+module correo 'modulos/correo.bicep' = {
+  name: 'correo'
+  params: {
+    nombre: nombres.correo
+    tags: tags
+    dataLocation: correoDataLocation
+    principalesEnvio: [identidades.outputs.backendPrincipalId, identidades.outputs.mcpPrincipalId]
+  }
+}
+
 module postgres 'modulos/postgres.bicep' = {
   name: 'postgres'
   params: {
@@ -202,13 +216,14 @@ module apps 'modulos/containerapps.bicep' = {
     oidcAudience: clientIdLogin
     storageAccount: nombres.storage
     corsOrigin: 'https://${staticWebApp.outputs.hostname}'
-    resendFromEmail: resendFromEmail
-    usarResend: usarResend
+    correoEndpoint: correo.outputs.endpoint
+    correoRemitente: correo.outputs.remitente
     incluirMcp: incluirMcp
     mcpRutaSecreta: mcpRutaSecreta
     mcpIpPermitidas: mcpIpPermitidas
     usarFirme: usarFirme
     minReplicasBackend: minReplicasBackend
+    minReplicasMcp: minReplicasMcp
     firmeApiUrl: firmeApiUrl
     firmeSnsTopicArn: firmeSnsTopicArn
     firmeBarridoCron: firmeBarridoCron

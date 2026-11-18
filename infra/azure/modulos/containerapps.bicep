@@ -20,10 +20,10 @@ param oidcIssuer string
 param oidcAudience string
 param storageAccount string
 param corsOrigin string
-param resendFromEmail string
-
-@description('false: sin Resend. No se lee RESEND-API-KEY de Key Vault y el backend omite el envío de correos.')
-param usarResend bool
+@description('Endpoint de Azure Communication Services (correo saliente); el backend entra con su identidad administrada.')
+param correoEndpoint string
+@description('Remitente del correo (dominio administrado de ACS: DoNotReply@<guid>.azurecomm.net).')
+param correoRemitente string
 
 @description('Despliega el MCP HTTP (sin login). En prod solo con mcpRutaSecreta=true: mcp-http.mjs no arranca con ENVIRONMENT=prod sin MCP_RUTA_SECRETA.')
 param incluirMcp bool
@@ -39,6 +39,9 @@ param usarFirme bool
 
 @description('Réplicas mínimas del backend (0: se apaga sin uso; 1: siempre encendido).')
 param minReplicasBackend int
+
+@description('Réplicas mínimas del MCP (0: se apaga sin uso; 1: siempre encendido).')
+param minReplicasMcp int
 
 @description('URL base de la API de Firme (prod: https://api.documentos.firme.cl; pre-prod: staging).')
 param firmeApiUrl string
@@ -91,7 +94,7 @@ func secretosDe(kvUri string, identidad string, nombres array) array =>
   })
 
 var nombresSecretos = concat(
-  usarResend ? ['DATABASE-URL', 'RESEND-API-KEY'] : ['DATABASE-URL'],
+  ['DATABASE-URL'],
   usarFirme ? ['FIRME-API-TOKEN', 'FIRME-LEGAL-ENTITY-ID'] : []
 )
 var secretosBackend = secretosCargados ? secretosDe(keyVaultUri, idBackendId, nombresSecretos) : []
@@ -104,9 +107,6 @@ var restriccionesMcp = map(range(0, length(mcpIpPermitidas)), i => {
   ipAddressRange: mcpIpPermitidas[i]
   action: 'Allow'
 })
-var envResend = usarResend ? [
-  { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
-] : []
 var envFirme = usarFirme ? concat([
   { name: 'FIRME_API_URL', value: firmeApiUrl }
   { name: 'FIRME_API_TOKEN', secretRef: 'firme-api-token' }
@@ -122,7 +122,8 @@ var envComun = [
   { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccount }
   { name: 'AZURE_STORAGE_CONTAINER_DOCUMENTOS', value: 'documentos' }
   { name: 'AZURE_STORAGE_CONTAINER_FIRMADOS', value: 'firmados' }
-  { name: 'RESEND_FROM_EMAIL', value: resendFromEmail }
+  { name: 'ACS_EMAIL_ENDPOINT', value: correoEndpoint }
+  { name: 'ACS_EMAIL_FROM', value: correoRemitente }
 ]
 
 var envBackend = secretosCargados ? concat(envComun, [
@@ -131,13 +132,13 @@ var envBackend = secretosCargados ? concat(envComun, [
   { name: 'OIDC_AUDIENCE', value: oidcAudience }
   { name: 'CORS_ORIGIN', value: corsOrigin }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-], envResend, envFirme) : []
+], envFirme) : []
 
 var envMcp = secretosCargados ? concat(envComun, [
   { name: 'AZURE_CLIENT_ID', value: idMcpClientId }
   { name: 'GRAPH_ENABLED', value: 'false' }
   { name: 'DATABASE_URL', secretRef: 'database-url' }
-], envResend, envFirme, envRutaMcp) : []
+], envFirme, envRutaMcp) : []
 
 var sonda = secretosCargados ? [
   {
@@ -217,7 +218,7 @@ resource mcp 'Microsoft.App/containerApps@2024-03-01' = if (incluirMcp) {
           resources: { cpu: json('0.5'), memory: '1Gi' }
         }
       ]
-      scale: { minReplicas: 0, maxReplicas: 1 }
+      scale: { minReplicas: minReplicasMcp, maxReplicas: 1 }
     }
   }
 }

@@ -17,6 +17,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@azure/communication-email": "^1.1.0",
     "@azure/identity": "^4.10.0",
     "@azure/storage-blob": "^12.27.0",
     "@casl/ability": "^6.8.1",

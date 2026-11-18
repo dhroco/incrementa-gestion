@@ -4,10 +4,11 @@ function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0
 }
 
-/** Headquarters email: empty is valid. */
+/** Headquarters email: empty is valid. Several addresses separated by comma or semicolon are valid (each one must be). */
 export function isValidEmailField(v) {
   if (!isNonEmptyString(v)) return true
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+  const parts = v.split(/[,;\s]+/).filter((part) => part.trim().length > 0)
+  return parts.every((part) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(part.trim()))
 }
 
 /**

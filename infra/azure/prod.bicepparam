@@ -23,8 +23,7 @@ param postgresTier = 'Burstable'
 // Sin WORM al nacer: se prueba, se borran los datos de prueba y recién entonces se pasa a true.
 param wormFirmados = false
 
-// Prod sale sin Resend: no hay correo saliente.
-param usarResend = false
+// Correo saliente: Azure Communication Services (se crea en el módulo `correo`, sin parámetros aquí).
 
 // MCP en marcha blanca (opción 2, decisión de David 21-oct): sin login, solo en una ruta secreta
 // (MCP-RUTA-SECRETA en Key Vault; crearla antes con scripts/crear-secreto-mcp.sh) y solo desde la
@@ -44,3 +43,4 @@ param usarFirme = true
 
 // Backend siempre encendido: sin arranque en frío (~30 s la primera consulta tras estar sin uso).
 param minReplicasBackend = 1
+param minReplicasMcp = 1
