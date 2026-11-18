@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **incrementa-gestion** — ERP para gestión de contratos (proveedores, clientes, plantillas, documentos) de una empresa chilena. Monorepo:
 
 - `frontend/` — React 19 + Vite + Redux Toolkit + React Router 7. UI con CSS propio (`src/styles/`); MUI se usa exclusivamente como librería de íconos (`@mui/icons-material`, variante Outlined), nunca como componentes. Auth con MSAL (`@azure/msal-*`).
-- `backend/` — Node + Express + Knex.js + PostgreSQL. Valida JWT OIDC. Genera PDFs (`@react-pdf/renderer`), envía email (Resend), expone un **MCP Server** (`backend/mcp.mjs`).
+- `backend/` — Node + Express + Knex.js + PostgreSQL. Valida JWT OIDC. Genera PDFs (`@react-pdf/renderer`), envía email (Azure Communication Services Email), expone un **MCP Server** (`backend/mcp.mjs`).
 - `infra/` — IaC (Bicep) y scripts de Azure. `docs/` — documentación (arquitectura, manuales de producción).
 - `openspec/` — gestión de cambios spec-driven (ver más abajo).
 
@@ -57,7 +57,7 @@ cd backend && source ./set-env-local.sh && npm run dev
 
 `config.js` en back y front exporta configuración según `ENVIRONMENT` (única variable de selección), válido solo en `{local, dev, prod}`. **Pre-producción usa `ENVIRONMENT=dev`** (no existe un valor "preprod"). Los defaults son solo respaldo; en la nube las variables las inyecta la Container App (los secretos, desde Key Vault).
 
-- Backend usa: `DATABASE_URL`, `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_CONTAINER_DOCUMENTOS/FIRMADOS`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `FIRME_API_URL/TOKEN`, `FIRME_LEGAL_ENTITY_ID`, `CORS_ORIGIN`, `PORT`. Blob Storage y Microsoft Graph no usan secretos: autentican con `DefaultAzureCredential` (managed identity en Azure, `az login` en local).
+- Backend usa: `DATABASE_URL`, `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_CONTAINER_DOCUMENTOS/FIRMADOS`, `ACS_EMAIL_ENDPOINT`, `ACS_EMAIL_FROM`, `FIRME_API_URL/TOKEN`, `FIRME_LEGAL_ENTITY_ID`, `CORS_ORIGIN`, `PORT`. Blob Storage y Microsoft Graph no usan secretos: autentican con `DefaultAzureCredential` (managed identity en Azure, `az login` en local).
 - Frontend hornea en build-time (Vite): `VITE_API_BASE_URL`, `VITE_AZURE_CLIENT_ID`, `VITE_AZURE_AUTHORITY`, `VITE_AZURE_API_SCOPE`, y `ENVIRONMENT` (vía `vite.config.js` define). Cambiar la URL del API en la nube requiere **rebuild** del frontend.
 
 ## Arquitectura
@@ -103,7 +103,7 @@ Azure (Brazil South): Container Apps (backend `ca-incrementa-backend` y MCP `ca-
 - Rama **`main`** = integración (sin deploy). Rama **`preprod`** → despliega a Pre-Prod (`.github/workflows/deploy-azure-preprod.yml`, grupo `rg-incrementa-preprod`): imagen del backend al ACR → MCP → backend → frontend a Static Web Apps. Rama **`prod`** → Producción (`.github/workflows/deploy-azure-prod.yml`, grupo `rg-incrementa-gestion-prod`, suscripción de Incrementa): espera la aprobación de David en el environment `produccion`, solo acepta la rama `prod` y construye el backend desde ese commit y publica el frontend con `ENVIRONMENT=prod`.
 - La infraestructura la cambia `.github/workflows/infra.yml`, solo a mano y con aprobación de David (what-if y luego aplicar). El workflow de deploy solo actualiza imágenes y contenido.
 - **Cómo se promueve un cambio (obligatorio): pre-prod → prod, nunca al revés ni por fuera.** (1) Todo cambio entra por PR a `preprod` (también las corridas de AOD) y se prueba en pre-prod. (2) David adelanta `prod` en fast-forward desde `preprod` (`git push origin preprod:prod`): nadie le hace commits, PRs ni hotfixes directos, y un hotfix sigue el mismo camino. (3) El push a `prod` dispara el deploy de producción, que espera la aprobación de David. Ni Claude ni AOD empujan a `prod` ni lanzan su workflow.
-- **Producción** (21-oct-2026): en producción el MCP está en «marcha blanca»: sin login, solo atiende en `/mcp/<secreto>` (`MCP_RUTA_SECRETA`, en Key Vault) y solo desde la red de Anthropic (el destino es un MCP con login de Entra), no hay Resend (el backend omite el correo si falta `RESEND_API_KEY`) y el contenedor `firmados` aún no tiene WORM (se activa, 5 años, al terminar las pruebas: desde entonces nada firmado se borra ni se reemplaza). Variables y secretos nuevos van al Bicep y a Key Vault de los dos ambientes **antes** de promover el código que los usa.
+- **Producción** (21-oct-2026): en producción el MCP está en «marcha blanca»: sin login, solo atiende en `/mcp/<secreto>` (`MCP_RUTA_SECRETA`, en Key Vault) y solo desde la red de Anthropic (el destino es un MCP con login de Entra), el correo del contrato firmado sale por Azure Communication Services Email (dominio administrado de Azure; el backend lo omite si faltan `ACS_EMAIL_ENDPOINT`/`ACS_EMAIL_FROM`; los destinatarios están en el campo Correo de la empresa, separados por coma) y el contenedor `firmados` aún no tiene WORM (se activa, 5 años, al terminar las pruebas: desde entonces nada firmado se borra ni se reemplaza). Variables y secretos nuevos van al Bicep y a Key Vault de los dos ambientes **antes** de promover el código que los usa.
 - Ver `docs/plan-migracion-azure.html`, `docs/arquitectura-entornos.html` y el manual de producción en `docs/`.
 
 ### Gotchas conocidos (ya resueltos, no re-romper)
