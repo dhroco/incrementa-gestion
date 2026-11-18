@@ -7,6 +7,7 @@ import { LegalRepSignatureField } from '../components/LegalRepSignatureField'
 import { fetchCompanyDetail } from '../api/companiesApi'
 import { AbilityContext } from '../lib/ability'
 import { formatRut } from '../utils/rut'
+import { emailListToLines } from '../utils/emailList'
 import '../styles/shared-form.css'
 
 export function CompaniesViewPage() {
@@ -101,7 +102,14 @@ export function CompaniesViewPage() {
                 </div>
                 <div className="clause-form-col">
                   <div className="clause-label">Correo</div>
-                  <input className="clause-input clause-input--readonly" readOnly tabIndex={-1} value={entity.email ?? ''} />
+                  <textarea
+                    className="clause-textarea clause-textarea--readonly"
+                    rows={3}
+                    readOnly
+                    tabIndex={-1}
+                    value={emailListToLines(entity.email ?? '')}
+                    style={{ maxHeight: '96px', overflowY: 'auto', resize: 'none' }}
+                  />
                 </div>
                 <div className="clause-form-col">
                   <div className="clause-label">Teléfono</div>
