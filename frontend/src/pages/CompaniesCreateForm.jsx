@@ -1,3 +1,4 @@
+import CompanyEmailField from '../components/CompanyEmailField'
 import { useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
@@ -185,11 +186,7 @@ export function CompaniesCreateForm() {
               <input className="clause-input" value={businessActivity} onChange={(e) => setBusinessActivity(e.target.value)} />
             </div>
             <div className="clause-form-col">
-              <div className="clause-label">Correo (puede ser más de uno, separados por coma)</div>
-              <input className="clause-input" value={email} onChange={(e) => setEmail(e.target.value)} />
-              {!emailOk && email.trim().length ? (
-                <div style={{ fontSize: '12px', color: '#000', opacity: 0.8 }}>Correo inválido.</div>
-              ) : null}
+              <CompanyEmailField value={email} onChange={setEmail} valid={emailOk} />
             </div>
             <div className="clause-form-col">
               <div className="clause-label">Teléfono</div>
