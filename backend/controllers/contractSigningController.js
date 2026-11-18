@@ -28,7 +28,7 @@ function createContractSigningController({
           : 'internal'
         items.push({ ...item, signing_mode: signingMode })
       }
-      return sendOk(res, { items }, { meta: { email_enabled: Boolean(config.RESEND_API_KEY) } })
+      return sendOk(res, { items }, { meta: { email_enabled: Boolean(config.ACS_EMAIL_ENDPOINT && config.ACS_EMAIL_FROM) } })
     },
 
     postSign: async (req, res) => {

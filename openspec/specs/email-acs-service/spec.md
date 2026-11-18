@@ -1,40 +1,40 @@
-# email-resend-service Specification
+# email-acs-service Specification
 
 ## Purpose
-TBD - created by archiving change firma-documento. Update Purpose after archive.
+Correo saliente del contrato firmado con Azure Communication Services Email (reemplaza a Resend desde el 18-nov-2026).
+
 ## Requirements
-### Requirement: Resend environment configuration
+### Requirement: ACS environment configuration
 
-`backend/config.js` SHALL expose `RESEND_API_KEY` and `RESEND_FROM_EMAIL` from environment variables for all environments. `backend/SET_VARS_AMBIENTE_LOCAL.cmd` SHALL define both variables in CMD and PowerShell blocks.
+`backend/config.js` SHALL expose `ACS_EMAIL_ENDPOINT` and `ACS_EMAIL_FROM` from environment variables for all environments. In Azure they are injected by the Container Apps (module `infra/azure/modulos/correo.bicep`): the endpoint of the Communication Service and the sender `DoNotReply@<guid>.azurecomm.net` of the Azure-managed domain. With a custom domain only `ACS_EMAIL_FROM` changes.
 
-In development, when domain `incrementa.la` is not verified in Resend, operators MAY use `onboarding@resend.dev` as `RESEND_FROM_EMAIL`. In production, `RESEND_FROM_EMAIL` SHALL use a verified domain address (e.g. `contratos@incrementa.la`).
-
-#### Scenario: Config exposes Resend variables
+#### Scenario: Config exposes ACS variables
 
 - **WHEN** the backend loads configuration with env vars set
-- **THEN** `config.RESEND_API_KEY` and `config.RESEND_FROM_EMAIL` are available to services
+- **THEN** `config.ACS_EMAIL_ENDPOINT` and `config.ACS_EMAIL_FROM` are available to services
 
 ### Requirement: sendSignedContractEmail function
 
-Module `backend/services/emailService.js` SHALL export `sendSignedContractEmail({ to, proveedorNombre, templateName, pdfBuffer, fileName })`.
+Module `backend/services/emailService.js` SHALL export `sendSignedContractEmail({ to, proveedorNombre, templateName, pdfBuffer, fileName })`. `to` MAY hold several addresses separated by comma, semicolon or spaces; duplicates SHALL be removed.
 
-When `RESEND_API_KEY` is configured, the function SHALL use `new Resend(process.env.RESEND_API_KEY)` to send email with:
+When `ACS_EMAIL_ENDPOINT` and `ACS_EMAIL_FROM` are configured, the function SHALL send through `@azure/communication-email` (`EmailClient.beginSend`) authenticating with `DefaultAzureCredential` (managed identity in Azure, `az login` locally; no keys), with:
 
-- `from`: `process.env.RESEND_FROM_EMAIL`
-- `to`: the provided recipient
-- `subject`: `Contrato firmado — ${proveedorNombre} — ${templateName}`
-- `html`: professional Spanish message explaining the contract was electronically signed
-- `attachments`: `[{ filename: fileName, content: pdfBuffer.toString('base64') }]`
+- `senderAddress`: `ACS_EMAIL_FROM`
+- `recipients.to`: every parsed address
+- `content.subject`: `Contrato firmado — ${proveedorNombre} — ${templateName}`
+- `content.html`: Spanish message explaining the contract was electronically signed
+- `attachments`: the signed PDF (`contentType: application/pdf`, base64)
 
-When `RESEND_API_KEY` is NOT configured, the function SHALL log the email details (to, subject, attachment filename) to console instead of throwing an error.
+The function SHALL NOT wait for final delivery: it returns once ACS accepts the message and logs a later failure.
 
-#### Scenario: Email sent with valid API key
+When there are no recipients or ACS is not configured, the function SHALL log and return `{ ok: true, skipped: true }` without throwing. If ACS rejects the request, the error SHALL propagate to the caller.
 
-- **WHEN** `sendSignedContractEmail` is called with valid config and parameters
-- **THEN** Resend API is invoked with the signed PDF attachment
+#### Scenario: Email sent to every recipient
 
-#### Scenario: Dev fallback without API key
+- **WHEN** `sendSignedContractEmail` is called with `to: 'a@x.cl, b@x.cl'` and ACS configured
+- **THEN** ACS is invoked once with both recipients and the signed PDF attached
 
-- **WHEN** `RESEND_API_KEY` is empty or undefined
-- **THEN** the function logs email payload to console
-- **AND** does not throw an error
+#### Scenario: Not configured
+
+- **WHEN** `ACS_EMAIL_ENDPOINT` or `ACS_EMAIL_FROM` is empty
+- **THEN** the function returns `skipped: true` and does not throw

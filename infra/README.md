@@ -54,5 +54,5 @@ Apagada por defecto (`usarFirme = false` en los `.bicepparam`: la firma queda bl
 | PostgreSQL Flexible Server | `psql-incrementa-preprod` (PostgreSQL 16) |
 | Blob Storage | cuenta `stincrementapreprod`, contenedores `documentos` y `firmados` (WORM) |
 | Container Registry | `acrincrementapreprod` |
-| Key Vault | secretos de runtime (`DATABASE-URL`, `RESEND-API-KEY`) |
+| Key Vault | secretos de runtime (`DATABASE-URL`, `FIRME-API-TOKEN`, `FIRME-LEGAL-ENTITY-ID`) |
 | Identidades | `id-incrementa-backend-preprod` (runtime), `id-incrementa-github-deploy-preprod` y `id-incrementa-github-infra-preprod` (CI/CD, OIDC) |

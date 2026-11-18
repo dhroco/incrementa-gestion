@@ -9,7 +9,7 @@ name: Infraestructura Pre-Prod (Bicep)
 #
 # Entra a Azure con OIDC (identidad id-incrementa-github-infra-preprod), sin claves.
 # La clave de PostgreSQL es el secreto INCREMENTA_PG_CLAVE del environment infra-preprod.
-# Los demás secretos (DATABASE-URL, RESEND-API-KEY) viven en Key Vault y no pasan por aquí.
+# Los demás secretos (DATABASE-URL, FIRME-*) viven en Key Vault y no pasan por aquí.
 
 on:
   workflow_dispatch:

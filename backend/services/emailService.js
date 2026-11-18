@@ -1,5 +1,3 @@
-const { Resend } = require('resend')
-const config = require('../config')
 const { parseEmailList } = require('../utils/emailList')
 
 /**
@@ -29,8 +27,6 @@ async function sendWithAcs({ endpoint, from, recipients, subject, html, pdfBuffe
 }
 
 async function sendSignedContractEmail({ to, proveedorNombre, templateName, pdfBuffer, fileName }) {
-  const apiKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY || ''
-  const from = config.RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
   const subject = `Contrato firmado — ${proveedorNombre} — ${templateName}`
 
   const html = `
@@ -46,39 +42,14 @@ async function sendSignedContractEmail({ to, proveedorNombre, templateName, pdfB
     return { ok: true, skipped: true }
   }
 
-  const acsEndpoint = process.env.ACS_EMAIL_ENDPOINT || ''
-  if (acsEndpoint) {
-    const acsFrom = process.env.ACS_EMAIL_FROM || ''
-    if (!acsFrom) {
-      console.error('[emailService] ACS_EMAIL_FROM ausente: se omite el envío de correo (skipped).')
-      return { ok: true, skipped: true }
-    }
-    await sendWithAcs({
-      endpoint: acsEndpoint,
-      from: acsFrom,
-      recipients,
-      subject,
-      html,
-      pdfBuffer,
-      fileName
-    })
-    return { ok: true }
-  }
-
-  if (!apiKey) {
-    console.error('[emailService] RESEND_API_KEY ausente: se omite el envío de correo (skipped).')
+  const endpoint = process.env.ACS_EMAIL_ENDPOINT || ''
+  const from = process.env.ACS_EMAIL_FROM || ''
+  if (!endpoint || !from) {
+    console.error('[emailService] ACS_EMAIL_ENDPOINT/ACS_EMAIL_FROM ausentes: se omite el envío de correo (skipped).')
     return { ok: true, skipped: true }
   }
 
-  const resend = new Resend(apiKey)
-  await resend.emails.send({
-    from,
-    to: recipients,
-    subject,
-    html,
-    attachments: [{ filename: fileName, content: pdfBuffer.toString('base64') }]
-  })
-
+  await sendWithAcs({ endpoint, from, recipients, subject, html, pdfBuffer, fileName })
   return { ok: true }
 }
 

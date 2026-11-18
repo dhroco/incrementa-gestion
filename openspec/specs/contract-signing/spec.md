@@ -11,7 +11,7 @@ Each returned item SHALL include: `id`, `supplier_name` (COALESCE empresa razon_
 
 `signee_suggestion` SHALL be `{ first_names, last_name, maternal_last_name, document_number, email }`. For a natural-person supplier the parts SHALL come from `supplier_persona_natural` (`first_names`, `last_name`, `maternal_last_name`, `document_number`) and `supplier.email`. For a company supplier the parts SHALL come from the legal representative (`rep_first_names`, `rep_last_name`, `rep_maternal_last_name`, `rep_document_number`) and `supplier.email`. A missing part SHALL be an empty string. Those columns SHALL be added to the `listPendingSignature` `select`.
 
-The response SHALL include `meta.email_enabled`, `true` when `RESEND_API_KEY` is set and `false` otherwise. When `createApp` is called without `firmeSigningService`, every item's `signing_mode` SHALL be `internal`.
+The response SHALL include `meta.email_enabled`, `true` when `ACS_EMAIL_ENDPOINT` and `ACS_EMAIL_FROM` are set and `false` otherwise. When `createApp` is called without `firmeSigningService`, every item's `signing_mode` SHALL be `internal`.
 
 #### Scenario: List pending contracts
 
