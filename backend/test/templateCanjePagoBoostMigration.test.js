@@ -16,7 +16,7 @@ const silent = async (fn) => {
 }
 
 function fakeKnex({ templates, backups = [], drafts = [] }) {
-  const state = { templates: templates.map((r) => structuredClone(r)), backups: [...backups], inserted: [], calls: [] }
+  const state = { templates: templates.map((r) => structuredClone(r)), standard: templates.map((r) => r.id), backups: [...backups], inserted: [], calls: [] }
   const knex = (table) => {
     if (table === 'template') {
       return {
@@ -36,8 +36,23 @@ function fakeKnex({ templates, backups = [], drafts = [] }) {
         },
         insert: async (row) => {
           state.calls.push(['insert', row.code])
-          state.templates.push({ id: `new-${row.code}`, ...structuredClone(row) })
+          state.templates.push({ ...structuredClone(row) })
           state.inserted.push(row)
+        }
+      }
+    }
+    if (table === 'template_standard') {
+      return {
+        where: ({ id }) => ({
+          first: async () => (state.standard.includes(id) ? { id } : undefined),
+          del: async () => {
+            state.calls.push(['delete-standard', id])
+            state.standard = state.standard.filter((x) => x !== id)
+          }
+        }),
+        insert: async (row) => {
+          state.calls.push(['insert-standard', row.id])
+          state.standard.push(row.id)
         }
       }
     }
@@ -76,6 +91,7 @@ test('up agrega el boost a 0018 (con respaldo previo), la renombra y crea 0019',
   assert.equal(t19.currency_code, 'CLP')
   assert.equal(t19.status, fx.meta_0018.status)
   assert.equal(t19.document_type_id, fx.meta_0018.document_type_id)
+  assert.ok(t19.id && state.standard.includes(t19.id), '0019 debe tener su fila en template_standard')
   assert.equal(state.backups.length, 1)
   assert.deepEqual(state.backups[0].content_json, fx.CONTRATO_0018)
   assert.equal(state.backups[0].note, 'plantillas-0018-0019')
@@ -120,4 +136,22 @@ test('down no borra 0019 si ya tiene borradores', async () => {
   await silent(() => migration.up(knex))
   await assert.rejects(() => migration.down(knex), /tiene borradores/)
   assert.ok(state.templates.find((t) => t.code === 'CONTRATO_0019'))
+})
+
+test('up crea la fila de template_standard de una 0019 que ya existía sin ella', async () => {
+  const { knex, state } = fakeKnex({ templates: [row18()] })
+  await silent(() => migration.up(knex))
+  const t19 = state.templates.find((t) => t.code === 'CONTRATO_0019')
+  state.standard = state.standard.filter((id) => id !== t19.id)
+  state.calls.length = 0
+  await silent(() => migration.up(knex))
+  assert.deepEqual(state.calls, [['insert-standard', t19.id]])
+})
+
+test('down también quita la fila de template_standard de 0019', async () => {
+  const { knex, state } = fakeKnex({ templates: [row18()] })
+  await silent(() => migration.up(knex))
+  const id19 = state.templates.find((t) => t.code === 'CONTRATO_0019').id
+  await migration.down(knex)
+  assert.ok(!state.standard.includes(id19))
 })

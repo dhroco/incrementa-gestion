@@ -3,9 +3,12 @@
  * CONTRATO_0019: la misma plantilla con personería por escritura pública. Lee el contenido vivo (conserva las ediciones a
  * mano), respalda 0018 en template_content_backup antes de tocarla y aborta sin escribir si la estructura no es la esperada.
  * Idempotente: si 0018 ya tiene el boost y 0019 existe, no hace nada (0019 no se pisa si alguien la editó).
+ * Cada plantilla estándar necesita además su fila en `template_standard` (la lista, `listar_plantillas` y el generador hacen join
+ * con esa tabla): se crea para 0019 y, si faltara, también para una 0019 ya existente.
  * Pre-prod: 0018 y 0019 se copian desde producción (la 0018 no existe allí); esta migración queda entonces sin cambios.
  */
 
+const crypto = require('crypto')
 const { addBoostToClause24, personeriaEscrituraPublica } = require('../utils/templateCanjePagoBoost')
 
 const BACKUP_NOTE = 'plantillas-0018-0019'
@@ -50,13 +53,18 @@ async function up(knex) {
   if (insert19) {
     const copied = {}
     for (const column of COPIED_COLUMNS) copied[column] = row18[column]
+    const id19 = crypto.randomUUID()
     await knex('template').insert({
+      id: id19,
       ...copied,
       code: CODE_19,
       name: NAME_19,
       description: NAME_19,
       content_json: insert19
     })
+    await knex('template_standard').insert({ id: id19 })
+  } else if (row19 && !(await knex('template_standard').where({ id: row19.id }).first())) {
+    await knex('template_standard').insert({ id: row19.id })
   }
   console.log(
     `[0018-0019] ${CODE_18}: ${boost.status === 'applied' ? 'boost agregado' : 'ya tenía el boost'}; ${CODE_19}: ${insert19 ? 'creada' : 'ya existía (no se toca)'}`
@@ -73,6 +81,7 @@ async function down(knex) {
   if (row19) {
     const used = await knex('draft_document').where({ template_id: row19.id }).first()
     if (used) throw new Error(`[0018-0019] ${CODE_19} tiene borradores; no se elimina.`)
+    await knex('template_standard').where({ id: row19.id }).del()
     await knex('template').where({ id: row19.id }).del()
   }
 }
