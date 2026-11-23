@@ -4,6 +4,7 @@ const { db: defaultDb } = require('../db/knex')
 const { storageService: defaultStorageService } = require('./storageService')
 const emailServiceDefault = require('./emailService')
 const { yearMonthInSantiago } = require('./documentBuilderService')
+const { buildSignedAttachmentName } = require('../utils/signedAttachmentName')
 const { buildPdfBytesFromTipTapWithReactPdf } = require('./documentBuilderTipTapReactPdf')
 
 function sanitizeFilePart(s) {
@@ -439,7 +440,11 @@ function createContractSigningService({
           proveedorNombre,
           templateName: template.name,
           pdfBuffer: signedBuffer,
-          fileName: newFileName
+          fileName: buildSignedAttachmentName({
+            productName: contractOverrides?.client_product_campaign,
+            supplierName: proveedorNombre,
+            signedAt
+          })
         })
         emailSent = Boolean(sent && sent.ok === true && !sent.skipped)
       } catch (err) {
