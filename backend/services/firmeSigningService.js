@@ -7,6 +7,7 @@ const { createFirmeClient, isFirmeConfigured, FirmeClientError } = require('../l
 const { verifySnsMessage, isSnsHttpsUrl } = require('../lib/snsVerify')
 const { parseRut } = require('../utils/rut')
 const { yearMonthInSantiago } = require('./documentBuilderService')
+const { buildSignedAttachmentName } = require('../utils/signedAttachmentName')
 const { buildSignedGcsPath, sanitizeFilePart, sha256Hex } = require('./contractSigningService')
 const { createFirmeStampService } = require('./firmeStampService')
 
@@ -673,7 +674,11 @@ function createFirmeSigningService({
         proveedorNombre,
         templateName: template?.name,
         signed,
-        fileName
+        fileName: buildSignedAttachmentName({
+          productName: draft.contract_overrides?.client_product_campaign,
+          supplierName: proveedorNombre,
+          signedAt: remote?.signedOn ? new Date(remote.signedOn) : verifiedAt
+        })
       }
     }
   }
