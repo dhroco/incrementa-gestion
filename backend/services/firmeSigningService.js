@@ -8,6 +8,7 @@ const { verifySnsMessage, isSnsHttpsUrl } = require('../lib/snsVerify')
 const { parseRut } = require('../utils/rut')
 const { yearMonthInSantiago } = require('./documentBuilderService')
 const { buildSignedAttachmentName } = require('../utils/signedAttachmentName')
+const { pickDueAlerts } = require('../utils/firmeExpiryAlerts')
 const { buildSignedGcsPath, sanitizeFilePart, sha256Hex } = require('./contractSigningService')
 const { createFirmeStampService } = require('./firmeStampService')
 
@@ -963,8 +964,79 @@ function createFirmeSigningService({
     return body
   }
 
+  function santiagoText(date) {
+    return new Intl.DateTimeFormat('es-CL', {
+      timeZone: 'America/Santiago',
+      dateStyle: 'long',
+      timeStyle: 'short'
+    }).format(date)
+  }
+
+  /**
+   * Avisa por correo a la empresa de los contratos cuyo enlace de firma vence en ≤48 h y ≤24 h. Un
+   * correo por empresa y tipo de aviso; solo se marca como enviado si el correo se aceptó, así que si
+   * falta la configuración o el destinatario, se reintenta en el próximo barrido.
+   */
+  async function sendExpiryAlerts() {
+    const out = { avisos: 0, contratos: 0 }
+    if (typeof emailService.sendExpiryAlertEmail !== 'function') return out
+    const pending = await rows(db, 'firme_signing', { status: 'pending_signature' })
+    const due = pickDueAlerts(pending, clock(), LINK_TTL_MS)
+    if (due.length === 0) return out
+
+    const groups = new Map()
+    for (const item of due) {
+      const draft = await db('draft_document').where({ id: item.attempt.draft_document_id }).first()
+      if (!draft) continue
+      const key = `${draft.company_id}|${item.hours}`
+      if (!groups.has(key)) groups.set(key, { companyId: draft.company_id, hours: item.hours, entries: [] })
+      const template = draft.template_id ? await db('template').where({ id: draft.template_id }).first() : null
+      groups.get(key).entries.push({
+        attempt: item.attempt,
+        mark: item.mark,
+        view: {
+          signeeName: [item.attempt.signee_first_name, item.attempt.signee_last_name].filter(Boolean).join(' '),
+          templateName: template?.name || 'Contrato',
+          productName: draft.contract_overrides?.client_product_campaign || '',
+          expiresAtText: santiagoText(item.expiresAt)
+        }
+      })
+    }
+
+    for (const group of groups.values()) {
+      const company = await db('company').where({ id: group.companyId }).first()
+      if (!company?.email) {
+        logError('aviso de vencimiento omitido: la empresa no tiene correo')
+        continue
+      }
+      try {
+        const result = await emailService.sendExpiryAlertEmail({
+          to: company.email,
+          hours: group.hours,
+          items: group.entries.map((entry) => entry.view)
+        })
+        if (!result || result.ok !== true || result.skipped) {
+          logError('aviso de vencimiento omitido')
+          continue
+        }
+      } catch (err) {
+        logError(`falló el aviso de vencimiento (${err.code || 'ERROR'})`)
+        continue
+      }
+      const sentAt = clock()
+      for (const entry of group.entries) {
+        const patch = {}
+        for (const column of entry.mark) patch[column] = sentAt
+        await db('firme_signing').where({ id: entry.attempt.id }).update(patch)
+      }
+      out.avisos += 1
+      out.contratos += group.entries.length
+    }
+    return out
+  }
+
   async function sweepPending() {
-    const summary = { revisados: 0, finalizados: 0, rechazados: 0, vencidos: 0, saltados: 0, errores: 0 }
+    const summary = { revisados: 0, finalizados: 0, rechazados: 0, vencidos: 0, saltados: 0, errores: 0, avisos: 0 }
     const current = clock()
     const sending = await rows(db, 'firme_signing', { status: 'sending' })
     for (const row of sending.filter((item) => isHung(item, current))) {
@@ -1002,6 +1074,13 @@ function createFirmeSigningService({
         logError(`barrido (${err.code || 'ERROR'})`)
         summary.errores += 1
       }
+    }
+    try {
+      const alerts = await sendExpiryAlerts()
+      summary.avisos = alerts.avisos
+    } catch (err) {
+      logError(`avisos de vencimiento (${err.code || 'ERROR'})`)
+      summary.errores += 1
     }
     return summary
   }
@@ -1110,7 +1189,8 @@ function createFirmeSigningService({
     handleWebhook,
     resendLink,
     resendLinkForDraft,
-    sweepPending
+    sweepPending,
+    sendExpiryAlerts
   }
 }
 

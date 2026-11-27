@@ -448,3 +448,17 @@ The following routes SHALL require `authorize('sign', 'Contract')`. `GET /api/co
 - **WHEN** the page approves a Firme contract
 - **THEN** `sendToFirme` posts `{ signee }` to `/api/contracts/:id/send-to-firme`
 
+
+### Requirement: Expiry alerts for pending signatures
+
+The sweep (`sweepPending`) SHALL email the company (`company.email`, one or more addresses) when a `pending_signature` attempt's link expires within 48 hours and again within 24 hours, using the same expiry instant as the `expired` rule (`link_renewed_at` if later than `approved_at`, otherwise `approved_at`, plus 10 days). One email SHALL be sent per company and alert level, listing every affected contract (signee, template, product, expiry in Santiago time). Each level SHALL be sent at most once per attempt, recorded in `firme_signing.expiry_alert_48_sent_at` / `expiry_alert_24_sent_at`; a sweep that finds ≤24 hours left with nothing sent SHALL send only the 24-hour alert and record both. The columns SHALL be set only when the email was accepted; if the company has no email, ACS is not configured, or sending fails, nothing is recorded and the next sweep retries. Renewing the link restarts the clock, but alerts already recorded are not cleared.
+
+#### Scenario: 48 hours before
+
+- **WHEN** a pending attempt has between 24 and 48 hours left and no 48-hour alert was recorded
+- **THEN** one email lists it and `expiry_alert_48_sent_at` is set
+
+#### Scenario: Not repeated
+
+- **WHEN** the next sweep runs with the same attempt still between 24 and 48 hours left
+- **THEN** no email is sent
